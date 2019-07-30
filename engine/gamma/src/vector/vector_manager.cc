@@ -59,6 +59,8 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info,
     RetrievalModel model = default_model_;
     if (!strcasecmp("IVFPQ", retrieval_type_str.c_str())) {
       model = RetrievalModel::IVFPQ;
+    } else if (!strcasecmp("GPU_IVFPQ", retrieval_type_str.c_str())) {
+      model = RetrievalModel::GPU_IVFPQ;
     } else if (!strcasecmp("SPTAG", retrieval_type_str.c_str())) {
       model = RetrievalModel::SPTAG;
     } else if (!strcasecmp("PACINS", retrieval_type_str.c_str())) {

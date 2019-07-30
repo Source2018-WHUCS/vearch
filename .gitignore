@@ -36,3 +36,4 @@ ps/engine/gammacb/lib/
 #gamma
 release/
 debug/
+.vscode/
