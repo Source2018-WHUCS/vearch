@@ -1,0 +1,117 @@
+// Copyright 2018 The ChuBao Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+package router
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"regexp"
+	"strings"
+	"time"
+
+	"github.com/tiglabs/baudengine/util/metrics/mserver"
+
+	"github.com/tiglabs/baudengine/client"
+	"github.com/tiglabs/baudengine/config"
+	"github.com/tiglabs/baudengine/router/document"
+	"github.com/tiglabs/baudengine/util"
+	"github.com/tiglabs/baudengine/util/baudlog"
+	_ "github.com/tiglabs/baudengine/util/init"
+	"github.com/tiglabs/baudengine/util/netutil"
+	"github.com/tiglabs/log"
+)
+
+const (
+	DefaultConnMaxLimit = 10000
+	DefaultCloseTimeout = 5 * time.Second
+)
+
+type Server struct {
+	httpServer *netutil.Server
+	ctx        context.Context
+	cancelFunc context.CancelFunc
+}
+
+func NewServer(ctx context.Context) (*Server, error) {
+	// master service load cfg and init
+	log.Regist(baudlog.NewBaudLog(config.Conf().GetLogDir(config.Router), "Router", config.Conf().GetLevel(config.Router), true))
+	cli, err := client.NewClient(config.Conf())
+	if err != nil {
+		return nil, err
+	}
+
+	addr := config.LocalCastAddr
+
+	httpServerConfig := &netutil.ServerConfig{
+		Name:         "HttpServer",
+		Addr:         util.BuildAddr(addr, config.Conf().Router.Port),
+		Version:      "v1",
+		ConnLimit:    DefaultConnMaxLimit,
+		CloseTimeout: DefaultCloseTimeout,
+	}
+	netutil.SetMode(netutil.RouterModeGorilla)
+	httpServer := netutil.NewServer(httpServerConfig)
+	document.ExportDocumentHandler(httpServer, cli , config.Conf().NewMonitor(config.Router))
+
+	// start router cache
+	if err := cli.Master().StartCacheJob(context.Background()); err != nil {
+		log.Error("Error in Start cache Job,Err:%v", err)
+		panic(err)
+	}
+	routerCtx, routerCancel := context.WithCancel(ctx)
+	return &Server{
+		httpServer: httpServer,
+		ctx:        routerCtx,
+		cancelFunc: routerCancel,
+	}, nil
+}
+
+func (server *Server) Start() error {
+	//find ip for server
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		panic(err)
+	}
+	for _, i := range ifaces {
+		addrs, _ := i.Addrs()
+		for _, addr := range addrs {
+			match, _ := regexp.MatchString(`^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$`, addr.String())
+			if !match {
+				continue
+			}
+			slit := strings.Split(addr.String(), "/")
+			mserver.SetIp(slit[0], false)
+			break
+		}
+	}
+
+	if err := server.httpServer.Run(); err != nil {
+		return fmt.Errorf("Fail to start http Server, %v", err)
+	}
+	log.Info("router exited!")
+
+	return nil
+}
+
+func (server *Server) Shutdown() {
+	server.cancelFunc()
+	log.Info("router shutdown... start")
+	if server.httpServer != nil {
+		server.httpServer.Close()
+		server.httpServer = nil
+	}
+	log.Info("router shutdown... end")
+}

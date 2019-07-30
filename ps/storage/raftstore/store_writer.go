@@ -1,0 +1,195 @@
+// Copyright 2018 The ChuBao Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+package raftstore
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/tiglabs/baudengine/proto"
+	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/tiglabs/baudengine/proto/pspb"
+	"github.com/tiglabs/baudengine/proto/pspb/raftpb"
+	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/tiglabs/baudengine/util/cbjson"
+	"github.com/tiglabs/log"
+)
+
+type RaftApplyResponse struct {
+	Results []*response.DocResult
+	Result  *response.DocResult
+	FlushC  chan error
+	Err     error
+}
+
+func (r *RaftApplyResponse) SetErr(err error) *RaftApplyResponse {
+	r.Err = err
+	return r
+}
+
+func (s *Store) UpdateSpace(ctx context.Context, space *entity.Space) error {
+	if err := s.checkWritable(); err != nil {
+		return err
+	}
+
+	bytes, err := cbjson.Marshal(space)
+	if err != nil {
+		return err
+	}
+
+	// Raft Commit
+	raftCmd := raftpb.CreateRaftCommand()
+	raftCmd.Type = raftpb.CmdType_UPDATESPACE
+	if raftCmd.UpdateSpace == nil {
+		raftCmd.UpdateSpace = new(pspb.UpdateSpace)
+	}
+	raftCmd.UpdateSpace.Version = space.Version
+	raftCmd.UpdateSpace.Space = bytes
+	defer func() {
+		if e := raftCmd.Close(); e != nil {
+			log.Error("raft cmd close err : %s", e.Error())
+		}
+	}()
+
+	data, err := raftCmd.Marshal()
+
+
+	if err != nil {
+		return err
+	}
+
+	future := s.RaftServer.Submit(uint64(s.Partition.Id), data)
+
+	response, err := future.Response()
+	if err != nil {
+		return err
+	}
+
+	if response.(*RaftApplyResponse).Err != nil {
+		return response.(*RaftApplyResponse).Err
+	}
+
+	return nil
+}
+
+func (s *Store) Write(ctx context.Context, request *pspb.DocCmd) (result *response.DocResult, err error) {
+
+	if err = s.checkWritable(); err != nil {
+		return nil, err
+	}
+	raftCmd := raftpb.CreateRaftCommand()
+	raftCmd.Type = raftpb.CmdType_WRITE
+	raftCmd.WriteCommand = request
+
+	if !*s.Space.StoreSource { //need del source when not open source
+		if request.Type == pspb.OpType_MERGE {
+			return nil, fmt.Errorf("can not merge when space disable the source")
+		}
+		request.Source = nil
+	}
+
+	//TODO: pspb.Replace not use check version
+	if (request.Type == pspb.OpType_MERGE || request.Type == pspb.OpType_DELETE) &&
+		request.Version == 0 {
+		log.Debug("use version check")
+		doc, err := s.GetRTDocument(ctx, true, request.DocId)
+		if err != nil {
+			return nil, fmt.Errorf("get document error 111:%v", err)
+		}
+
+		if doc != nil && doc.Failure != nil {
+			return nil, fmt.Errorf("get document failed 222:%v", doc.Failure)
+		}
+
+		if doc.Found {
+			raftCmd.WriteCommand.Version = doc.Version
+		} else if request.Type == pspb.OpType_MERGE || request.Type == pspb.OpType_DELETE {
+			return nil, pkg.ErrDocumentNotExist
+		}
+	}
+
+	data, err := raftCmd.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	if e := raftCmd.Close(); e != nil {
+		log.Error("raft cmd close err : %s", e.Error())
+	}
+
+	future := s.RaftServer.Submit(uint64(s.Partition.Id), data)
+
+	resp, err := future.Response()
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.(*RaftApplyResponse).Err != nil {
+		return nil, resp.(*RaftApplyResponse).Err
+	}
+
+	return resp.(*RaftApplyResponse).Result, nil
+}
+
+func (s *Store) Flush(ctx context.Context) error {
+
+	if err := s.checkWritable(); err != nil {
+		return err
+	}
+	raftCmd := raftpb.CreateRaftCommand()
+	raftCmd.Type = raftpb.CmdType_FLUSH
+
+	data, err := raftCmd.Marshal()
+	if err != nil {
+		return err
+	}
+
+	if e := raftCmd.Close(); e != nil {
+		log.Error("raft cmd close err : %s", e.Error())
+	}
+
+	future := s.RaftServer.Submit(uint64(s.Partition.Id), data)
+
+	response, err := future.Response()
+	if err != nil {
+		return err
+	}
+
+	if response.(*RaftApplyResponse).Err != nil {
+		return response.(*RaftApplyResponse).Err
+	}
+
+	err = <-response.(*RaftApplyResponse).FlushC
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Store) checkWritable() error {
+	switch s.Partition.GetStatus() {
+	case entity.PA_INVALID:
+		return pkg.ErrPartitionInvalid
+	case entity.PA_CLOSED:
+		return pkg.ErrPartitionClosed
+	case entity.PA_READONLY:
+		return pkg.ErrPartitionNotLeader
+	case entity.PA_READWRITE:
+		return nil
+	default:
+		return pkg.ErrGeneralInternalError
+	}
+}

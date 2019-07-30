@@ -1,0 +1,55 @@
+// Copyright 2018 The ChuBao Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+package os
+
+import (
+	"testing"
+)
+
+/*
+Copyright 2019 Tiglabs
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreedto in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+created by lvxin for project baseutil at 19-2-22 下午3:42
+*/
+
+func TestGetCurrentPath(t *testing.T) {
+	if curPath,err := GetCurrentPath(); err!=nil {
+		t.Error("error:",err)
+	} else {
+		t.Log("SUCCESS! The Current Path is:",curPath)
+	}
+
+}
+
+func  TestGetCurrentSourceCodePath(t *testing.T) {
+	if fileName,err := GetCurrentSourceCodePath(); nil != err {
+		t.Error("error:",err)
+	} else {
+		t.Log("SUCCESS! The Source Code  Path is:",fileName)
+	}
+
+}
