@@ -1,6 +1,3 @@
-//
-// steal from GitHub
-//
 #pragma once
 
 #include <cstdint>
