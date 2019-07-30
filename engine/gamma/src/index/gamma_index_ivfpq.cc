@@ -615,7 +615,7 @@ void GammaIVFPQIndex::search_preassigned(
           scanner->scan_codes(list_size, scodes.get(), ids, simi, idxi, topk);
 
       if (ids) {
-        invlists->release_ids(ids);
+        invlists->release_ids(key, ids);
       }
 
       return list_size;

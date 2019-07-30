@@ -19,11 +19,11 @@ FOREACH(source ${srcs})
 
     # Install
     INSTALL(TARGETS ${name} DESTINATION test)
-
-    ADD_TEST(NAME ${name} COMMAND ${name})
-    ADD_CUSTOM_COMMAND(TARGET ${name}
-                       POST_BUILD 
-                       COMMAND ${name}
-                       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                       COMMENT "Running ${name}" VERBATIM)
+    
+    # ADD_TEST(NAME ${name} COMMAND ${name})
+    # ADD_CUSTOM_COMMAND(TARGET ${name}
+    #                    POST_BUILD 
+    #                    COMMAND ${name}
+    #                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    #                    COMMENT "Running ${name}" VERBATIM)
 ENDFOREACH(source)

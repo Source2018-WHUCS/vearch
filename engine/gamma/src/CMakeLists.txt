@@ -38,7 +38,7 @@ INCLUDE_DIRECTORIES(${THIRD_PARTY_COMMON}/faiss/include/)
 
 #LINK LIBRARY
 SET(LIBRARIES
-    ${THIRD_PARTY_COMMON}/faiss/lib/libfaiss.a
+    ${THIRD_PARTY_COMMON}/faiss/lib/libfaiss.so
     ${THIRD_PARTY_COMMON}/crypto/lib/libcrypto.a
     ${THIRD_PARTY_COMMON}/glog/lib/libglog.a
     ${THIRD_PARTY_COMMON}/curl/lib/libcurl.a

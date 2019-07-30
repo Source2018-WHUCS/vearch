@@ -343,7 +343,7 @@ struct IVFPQScannerT : QueryTables {
   explicit IVFPQScannerT(const faiss::IndexIVFPQ &ivfpq,
                          const faiss::IVFSearchParameters *params)
       : QueryTables(ivfpq, params) {
-    FAISS_THROW_IF_NOT(pq.byte_per_idx == 1);
+    FAISS_THROW_IF_NOT(pq.nbits == 8);
     assert(METRIC_TYPE == metric_type);
   }
 

@@ -25,7 +25,7 @@ enum class ResultCode : std::uint16_t {
 };
 
 enum RawVectorType { MemoryOnly, MemoryWithDisk };
-enum RetrievalModel { IVFPQ, SPTAG, PACINS };
+enum RetrievalModel { IVFPQ, GPU_IVFPQ, SPTAG, PACINS };
 
 struct GammaSearchCondition {
   GammaSearchCondition() {

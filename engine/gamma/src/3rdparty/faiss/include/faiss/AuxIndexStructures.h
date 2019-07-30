@@ -1,8 +1,7 @@
 /**
- * Copyright (c) 2015-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the BSD+Patents license found in the
+ * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
 
@@ -19,7 +18,7 @@
 #include <vector>
 #include <unordered_set>
 #include <memory>
-
+#include <mutex>
 
 #include "Index.h"
 
@@ -85,15 +84,20 @@ struct IDSelectorBatch: IDSelector {
     int nbits;
     idx_t mask;
 
-    IDSelectorBatch (long n, const idx_t *indices);
+    IDSelectorBatch (size_t n, const idx_t *indices);
     bool is_member(idx_t id) const override;
     ~IDSelectorBatch() override {}
 };
 
-
-// Below are structures used only by Index implementations
-
-
+/****************************************************************
+ * Result structures for range search.
+ *
+ * The main constraint here is that we want to support parallel
+ * queries from different threads in various ways: 1 thread per query,
+ * several threads per query. We store the actual results in blocks of
+ * fixed size rather than exponentially increasing memory. At the end,
+ * we copy the block content to a linear result array.
+ *****************************************************************/
 
 /** List of temporary buffers used to store results before they are
  *  copied to the RangeSearchResult object. */
@@ -115,9 +119,10 @@ struct BufferList {
 
     ~BufferList ();
 
-    // create a new buffer
+    /// create a new buffer
     void append_buffer ();
 
+    /// add one result, possibly appending a new buffer if needed
     void add (idx_t id, float dis);
 
     /// copy elemnts ofs:ofs+n-1 seen as linear data in the buffers to
@@ -132,10 +137,11 @@ struct RangeSearchPartialResult;
 /// result structure for a single query
 struct RangeQueryResult {
     using idx_t = Index::idx_t;
-    idx_t qno;
-    size_t nres;
+    idx_t qno;    //< id of the query
+    size_t nres;  //< nb of results for this query
     RangeSearchPartialResult * pres;
 
+    /// called by search function to report a new result
     void add (float dis, idx_t id);
 };
 
@@ -143,20 +149,30 @@ struct RangeQueryResult {
 struct RangeSearchPartialResult: BufferList {
     RangeSearchResult * res;
 
+    /// eventually the result will be stored in res_in
     explicit RangeSearchPartialResult (RangeSearchResult * res_in);
 
+    /// query ids + nb of results per query.
     std::vector<RangeQueryResult> queries;
 
     /// begin a new result
     RangeQueryResult & new_result (idx_t qno);
 
+    /*****************************************
+     * functions used at the end of the search to merge the result
+     * lists */
     void finalize ();
 
     /// called by range_search before do_allocation
     void set_lims ();
 
     /// called by range_search after do_allocation
-    void set_result (bool incremental = false);
+    void copy_result (bool incremental = false);
+
+    /// merge a set of PartialResult's into one RangeSearchResult
+    /// on ouptut the partialresults are empty!
+    static void merge (std::vector <RangeSearchPartialResult *> &
+                       partial_results, bool do_delete=true);
 
 };
 
@@ -212,7 +228,7 @@ struct VectorIOWriter:IOWriter {
  * it maintains counters) so the distance functions are not const,
  * instanciate one from each thread if needed.
  ***********************************************************/
- struct DistanceComputer {
+struct DistanceComputer {
      using idx_t = Index::idx_t;
 
      /// called before computing distances
@@ -225,7 +241,7 @@ struct VectorIOWriter:IOWriter {
      virtual float symmetric_dis (idx_t i, idx_t j) = 0;
 
      virtual ~DistanceComputer() {}
- };
+};
 
 /***********************************************************
  * Interrupt callback
@@ -235,17 +251,23 @@ struct InterruptCallback {
     virtual bool want_interrupt () = 0;
     virtual ~InterruptCallback() {}
 
+    // lock that protects concurrent calls to is_interrupted
+    static std::mutex lock;
+
     static std::unique_ptr<InterruptCallback> instance;
+
+    static void clear_instance ();
 
     /** check if:
      * - an interrupt callback is set
      * - the callback retuns true
-     * if this is the case, then throw an exception
+     * if this is the case, then throw an exception. Should not be called
+     * from multiple threds.
      */
     static void check ();
 
     /// same as check() but return true if is interrupted instead of
-    /// throwing
+    /// throwing. Can be called from multiple threads.
     static bool is_interrupted ();
 
     /** assuming each iteration takes a certain number of flops, what

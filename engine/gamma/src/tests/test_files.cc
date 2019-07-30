@@ -138,10 +138,10 @@ int SearchThread(void *engine, int num) {
         MakeRangeFilter(StringToByteArray(cid), StringToByteArray(c1_lower),
                         StringToByteArray(c1_upper), false, true);
     SetRangeFilter(range_filters, 0, range_filter);
-    Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0,
-                                   range_filters, 1, nullptr, 0, 1);
-    // Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0,
-                                   // nullptr, 0, 1);
+    // Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0,
+    //                                range_filters, 1, nullptr, 0, 1);
+    Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0,
+                                   nullptr, 0, 1);
 
     Response *response = Search(engine, request);
     string msg = std::to_string(idx) + ", ";
@@ -300,7 +300,8 @@ TEST(Search, CreateTable) {
 
   VectorInfo **vectors_info = MakeVectorInfos(1);
   string model_id = "model";
-  string retrieval_type = "IVFPQ";
+  string retrieval_type = "GPU_IVFPQ";
+  // string retrieval_type = "IVFPQ";
   string store_type = "MemoryOnly";
   VectorInfo *vector_info = MakeVectorInfo(
       StringToByteArray(vector_name), FLOAT, d, StringToByteArray(model_id),
