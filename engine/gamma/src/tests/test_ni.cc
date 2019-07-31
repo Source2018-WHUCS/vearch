@@ -3,6 +3,7 @@
 //
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <omp.h>
 #include <string>
 #include <sys/time.h>
@@ -17,6 +18,7 @@
 using namespace std;
 using tig_gamma::NI::RangeFilter;
 using tig_gamma::NI::Timer;
+using tig_gamma::NI::lexical_cast;
 
 #define NI_TEST
 

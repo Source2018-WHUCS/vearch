@@ -5,7 +5,6 @@
 #ifndef SRC_SEARCHER_INDEX_NUMERIC_INDEX_H_
 #define SRC_SEARCHER_INDEX_NUMERIC_INDEX_H_
 
-#include <CLI11.hpp> // for lexical_cast
 #include <random.h>
 #include <string.h> // for memcpy
 
@@ -20,14 +19,14 @@
 #include <functional>
 #include <glog/logging.h>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <map>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include "../util/timer.h" // for Timer
-
-using CLI::detail::lexical_cast;
 
 namespace tig_gamma {
 namespace NI {
@@ -39,12 +38,19 @@ const int kDupNodeSize = 512;
 typedef int64_t Long; // make cpplint happy
 
 // used for dump & load
-template <typename T> inline const char *TypeName() { return typeid(T).name(); }
+template <typename T> const char *TypeName() { return typeid(T).name(); }
 
 template <> inline const char *TypeName<int>() { return "I"; }
 template <> inline const char *TypeName<Long>() { return "L"; }
 template <> inline const char *TypeName<float>() { return "F"; }
 template <> inline const char *TypeName<double>() { return "D"; }
+
+template <typename T> bool lexical_cast(const std::string &input, T &output) {
+  std::istringstream is;
+  is.str(input);
+  is >> output;
+  return !is.fail() && !is.rdbuf()->in_avail();
+}
 
 // forward declarations
 template <typename K, typename V> class SkipList;
@@ -91,10 +97,13 @@ public:
     int n = max_ - min_ + 1;
     assert(n > 0);
     bitmap_.resize(n, init_value);
-    docids.reserve(n / 10);  // reserve memory to store docids
+    docids.reserve(n / 10); // reserve memory to store docids
   }
 
-  void Set(int pos) { bitmap_[pos] = true; docids.push_back(pos + min_); }
+  void Set(int pos) {
+    bitmap_[pos] = true;
+    docids.push_back(pos + min_);
+  }
 
   int Min() const { return min_; }
   int Max() const { return max_; }
@@ -106,7 +115,7 @@ public:
 
   BitmapType &Ref() { return bitmap_; }
 
-  const std::vector<int>& GetDocIds() const {return docids;}
+  const std::vector<int> &GetDocIds() const { return docids; }
 
   /**
    * @return sorted docIDs
@@ -271,7 +280,9 @@ public:
     return docIDs;
   }
 
-  const std::vector<RangeQueryResultV1>& GetAllResult() const {return all_results_;}
+  const std::vector<RangeQueryResultV1> &GetAllResult() const {
+    return all_results_;
+  }
 
 private:
   int flags_;
