@@ -36,4 +36,5 @@ ps/engine/gammacb/lib/
 #gamma
 release/
 debug/
+build/
 .vscode/

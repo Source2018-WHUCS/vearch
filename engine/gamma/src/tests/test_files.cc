@@ -4,6 +4,7 @@
 #include <functional>
 #include <future>
 #include <sys/mman.h>
+#include <fstream>
 
 namespace Test {
 #define ADD_DOC_NUM 8000000
@@ -300,8 +301,7 @@ TEST(Search, CreateTable) {
 
   VectorInfo **vectors_info = MakeVectorInfos(1);
   string model_id = "model";
-  string retrieval_type = "GPU_IVFPQ";
-  // string retrieval_type = "IVFPQ";
+  string retrieval_type = "IVFPQ";
   string store_type = "MemoryOnly";
   VectorInfo *vector_info = MakeVectorInfo(
       StringToByteArray(vector_name), FLOAT, d, StringToByteArray(model_id),

@@ -2,7 +2,6 @@
 #define GAMMA_INDEX_FACTORY_H_
 
 #include "gamma_index_ivfpq.h"
-#include "gamma_index_ivfpq_gpu.h"
 #include "pacins_index.h"
 #include "raw_vector.h"
 #include "utils.h"
@@ -27,18 +26,6 @@ public:
       return (GammaIndex *)new GammaIVFPQIndex(coarse_quantizer, dimension,
                                                ncentroids, 32, 8, docids_bitmap,
                                                raw_vec, nprobe);
-      break;
-    }
-    case GPU_IVFPQ: {
-      faiss::IndexFlatL2 *coarse_quantizer = new faiss::IndexFlatL2(dimension);
-      int ncentroids = 256;
-      GammaIVFPQIndex *cpu_index =
-          new GammaIVFPQIndex(coarse_quantizer, dimension, ncentroids, 32, 8,
-                              docids_bitmap, raw_vec, nprobe);
-      GammaIVFPQGPUIndex *gpu_index =
-          new GammaIVFPQGPUIndex(cpu_index, dimension, docids_bitmap,
-                                    raw_vec);
-      return (GammaIndex *)gpu_index;
       break;
     }
 
