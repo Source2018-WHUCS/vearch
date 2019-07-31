@@ -24,8 +24,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/tiglabs/baudengine/ps/engine/mapping"
 	"github.com/tiglabs/baudengine/proto"
+	"github.com/tiglabs/baudengine/ps/engine/mapping"
 	"github.com/tiglabs/baudengine/util/netutil"
 
 	"github.com/gin-gonic/gin"
@@ -64,6 +64,8 @@ func ExportToClusterHandler(router *gin.Engine, masterService *masterService) {
 
 	c := &clusterApi{router: router, masterService: masterService, dh: dh}
 
+	router.Handle(http.MethodGet, "/", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.handleClusterInfo, dh.TimeOutEndHandler)
+
 	//cluster handler
 	router.Handle(http.MethodGet, "/_cluster/health", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.health, dh.TimeOutEndHandler)
 	router.Handle(http.MethodGet, "/_cluster/stats", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.stats, dh.TimeOutEndHandler)
@@ -94,6 +96,23 @@ func ExportToClusterHandler(router *gin.Engine, masterService *masterService) {
 	router.Handle(http.MethodPost, "/partition/append", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.appendPartition, dh.TimeOutEndHandler)
 	router.Handle(http.MethodPost, "/partition/delete", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.deletePartition, dh.TimeOutEndHandler)
 
+}
+
+func (this *clusterApi) handleClusterInfo(c *gin.Context) {
+
+	versionLayer := make(map[string]interface{})
+	versionLayer["build_version"] = config.BuildVersion
+	versionLayer["build_time"] = config.BuildTime
+	versionLayer["commit_id"] = config.CommitID
+
+	layer := make(map[string]interface{})
+	layer["name"] = config.Conf().Global.Name
+	layer["cluster_name"] = config.Conf().Global.Name
+	layer["cluster_uuid"] = ""
+	layer["version"] = versionLayer
+	layer["tagline"] = ""
+
+	ginutil.NewAutoMehtodName(c, this.monitor).SendJson(layer)
 }
 
 //got every partition servers system info

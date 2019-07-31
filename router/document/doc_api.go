@@ -257,19 +257,13 @@ func (handler *DocumentHandler) handleUpdateSpaceMapping(ctx context.Context, w 
 func (handler *DocumentHandler) handleClusterInfo(ctx context.Context, w http.ResponseWriter, r *http.Request, params netutil.UriParams) (context.Context, bool) {
 
 	versionLayer := make(map[string]interface{})
-	versionLayer["number"] = ""
-	versionLayer["build_flavor"] = ""
-	versionLayer["build_type"] = ""
-	versionLayer["build_hash"] = ""
-	versionLayer["build_date"] = ""
-	versionLayer["build_snapshot"] = ""
-	versionLayer["lucene_version"] = ""
-	versionLayer["minimum_wire_compatibility_version"] = ""
-	versionLayer["minimum_index_compatibility_version"] = ""
+	versionLayer["build_version"] = config.BuildVersion
+	versionLayer["build_time"] = config.BuildTime
+	versionLayer["commit_id"] = config.CommitID
 
 	layer := make(map[string]interface{})
 	layer["name"] = config.Conf().Global.Name
-	layer["cluster_name"] = ""
+	layer["cluster_name"] = config.Conf().Global.Name
 	layer["cluster_uuid"] = ""
 	layer["version"] = versionLayer
 	layer["tagline"] = ""
