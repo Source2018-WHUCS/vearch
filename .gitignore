@@ -32,6 +32,8 @@ baudengine
 
 ps/engine/gammacb/build/*
 ps/engine/gammacb/lib/
+build/bin/
+build/gamma_build/
 
 #gamma
 release/

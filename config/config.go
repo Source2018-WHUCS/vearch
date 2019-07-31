@@ -39,6 +39,12 @@ func Conf() *Config {
 	return single
 }
 
+var (
+	BuildVersion = "0.0"
+	BuildTime    = "0"
+	CommitID     = "xxxxx"
+)
+
 const (
 	Master Model = iota
 	PS

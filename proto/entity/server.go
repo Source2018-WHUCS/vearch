@@ -19,6 +19,12 @@ import (
 	"github.com/tiglabs/baudengine/util"
 )
 
+type BuildVersion struct {
+	BuildVersion string `json:"build_version"`
+	BuildTime    string `json:"build_time"`
+	CommitID     string `json:"commit_id"`
+}
+
 //server/id:[body] ttl 3m 3s
 type Server struct {
 	ID                NodeID        `json:"name,omitempty"` //unique name for raft
@@ -29,6 +35,7 @@ type Server struct {
 	PartitionIds      []PartitionID `json:"p_ids,omitempty"`
 	Size              uint64        `json:"size,omitempty"`
 	Private           bool          `json:"private"`
+	Version           *BuildVersion `json:"version"`
 }
 
 func (s *Server) RpcAddr() string {

@@ -39,6 +39,11 @@ func (s *Server) StartHeartbeatJob() {
 			RaftReplicatePort: config.Conf().PS.RaftReplicatePort,
 			PartitionIds:      make([]entity.PartitionID, 0, 10),
 			Private:           config.Conf().PS.Private,
+			Version: &entity.BuildVersion{
+				BuildVersion: config.BuildVersion,
+				BuildTime:    config.BuildTime,
+				CommitID:     config.CommitID,
+			},
 		}
 		var leaseId clientv3.LeaseID = 0
 		var lastPartitionIds []entity.PartitionID
