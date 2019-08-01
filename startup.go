@@ -39,8 +39,11 @@ import (
 )
 
 var (
-	confPath   string
-	masterName string
+	BuildVersion = "0.0"
+	BuildTime    = "0"
+	CommitID     = "xxxxx"
+	confPath     string
+	masterName   string
 )
 
 func init() {
@@ -56,6 +59,9 @@ const (
 )
 
 func main() {
+
+	log.Info("start server by version:[%s] commitID:[%s]", BuildVersion, CommitID)
+	config.SetConfigVersion(BuildVersion, BuildTime, CommitID)
 
 	flag.Parse()
 

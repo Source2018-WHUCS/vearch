@@ -23,6 +23,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/BurntSushi/toml"
 	"github.com/pkg/errors"
@@ -40,10 +41,29 @@ func Conf() *Config {
 }
 
 var (
-	BuildVersion = "0.0"
-	BuildTime    = "0"
-	CommitID     = "xxxxx"
+	versionOnce  sync.Once
+	buildVersion = "0.0"
+	buildTime    = "0"
+	commitID     = "xxxxx"
 )
+
+func SetConfigVersion(bv, bt, ci string) {
+	versionOnce.Do(func() {
+		buildVersion = bv
+		buildTime = bt
+		commitID = ci
+	})
+}
+
+func GetBuildVersion() string {
+	return buildVersion
+}
+func GetBuildTime() string {
+	return buildTime
+}
+func GetCommitID() string {
+	return commitID
+}
 
 const (
 	Master Model = iota

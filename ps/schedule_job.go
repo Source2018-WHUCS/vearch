@@ -40,9 +40,9 @@ func (s *Server) StartHeartbeatJob() {
 			PartitionIds:      make([]entity.PartitionID, 0, 10),
 			Private:           config.Conf().PS.Private,
 			Version: &entity.BuildVersion{
-				BuildVersion: config.BuildVersion,
-				BuildTime:    config.BuildTime,
-				CommitID:     config.CommitID,
+				BuildVersion: config.GetBuildVersion(),
+				BuildTime:    config.GetBuildTime(),
+				CommitID:     config.GetCommitID(),
 			},
 		}
 		var leaseId clientv3.LeaseID = 0

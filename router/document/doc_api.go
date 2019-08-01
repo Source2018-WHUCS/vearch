@@ -257,9 +257,9 @@ func (handler *DocumentHandler) handleUpdateSpaceMapping(ctx context.Context, w 
 func (handler *DocumentHandler) handleClusterInfo(ctx context.Context, w http.ResponseWriter, r *http.Request, params netutil.UriParams) (context.Context, bool) {
 
 	versionLayer := make(map[string]interface{})
-	versionLayer["build_version"] = config.BuildVersion
-	versionLayer["build_time"] = config.BuildTime
-	versionLayer["commit_id"] = config.CommitID
+	versionLayer["build_version"] = config.GetBuildVersion()
+	versionLayer["build_time"] = config.GetBuildTime()
+	versionLayer["commit_id"] = config.GetCommitID()
 
 	layer := make(map[string]interface{})
 	layer["name"] = config.Conf().Global.Name
