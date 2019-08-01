@@ -13,7 +13,7 @@ BUILD_VERSION="0.1"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOT/ps/engine/gammacb/lib/lib/;
 export Faiss_HOME=$ROOT/ps/engine/gammacb/lib/faiss
 
-flags="-X 'config.BuildVersion=$BUILD_VERSION' -X 'config.CommitID=$(git rev-parse HEAD)' -X 'config.BuildTime=$(date +"%Y-%m-%d %H:%M.%S")'"
+flags="-X 'main.BuildVersion=$BUILD_VERSION' -X 'main.CommitID=$(git rev-parse HEAD)' -X 'main.BuildTime=$(date +"%Y-%m-%d %H:%M.%S")'"
 
 echo "version info: $flags"
 
