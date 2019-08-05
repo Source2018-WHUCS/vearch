@@ -25,9 +25,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/ps/engine/mapping"
 	"github.com/tiglabs/baudengine/proto"
 	"github.com/tiglabs/baudengine/proto/pspb"
+	"github.com/tiglabs/baudengine/ps/engine/mapping"
 	"github.com/tiglabs/baudengine/util"
 	"github.com/tiglabs/baudengine/util/bytes"
 	"github.com/tiglabs/baudengine/util/cbjson"
@@ -343,9 +343,10 @@ func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 
 	temp := struct {
-		And    []json.RawMessage `json:"and"`
-		Sum    []json.RawMessage `json:"sum"`
-		Filter []json.RawMessage `json:"filter"`
+		And                   []json.RawMessage `json:"and"`
+		Sum                   []json.RawMessage `json:"sum"`
+		Filter                []json.RawMessage `json:"filter"`
+		DirectSearchThreshold int               `json:"direct_search_threshold"`
 	}{}
 
 	err := cbjson.Unmarshal(data, &temp)
@@ -360,11 +361,11 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 	var reqNum int
 
 	if len(temp.And) > 0 {
-		if reqNum,vqs, err = qb.parseVectors(reqNum, vqs, temp.And); err != nil {
+		if reqNum, vqs, err = qb.parseVectors(reqNum, vqs, temp.And); err != nil {
 			return err
 		}
 	} else if len(temp.Sum) > 0 {
-		if reqNum,vqs, err = qb.parseVectors(reqNum, vqs, temp.Sum); err != nil {
+		if reqNum, vqs, err = qb.parseVectors(reqNum, vqs, temp.Sum); err != nil {
 			return err
 		}
 	}
@@ -423,10 +424,14 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 
 	req.req_num = C.int(reqNum)
 
+	if temp.DirectSearchThreshold != 0 {
+		req.direct_search_threshold = C.int(temp.DirectSearchThreshold)
+	}
+
 	return nil
 }
 
-func (qb *queryBuilder) parseVectors(reqNum int, vqs []*C.struct_VectorQuery, tmpArr []json.RawMessage) (int,[]*C.struct_VectorQuery,  error) {
+func (qb *queryBuilder) parseVectors(reqNum int, vqs []*C.struct_VectorQuery, tmpArr []json.RawMessage) (int, []*C.struct_VectorQuery, error) {
 	var err error
 
 	for i := 0; i < len(tmpArr); i++ {
@@ -442,7 +447,7 @@ func (qb *queryBuilder) parseVectors(reqNum int, vqs []*C.struct_VectorQuery, tm
 		}
 
 		if vqTemp.Feature, err = rowDateToFloatArray(vqTemp.FeatureData, docField.FieldMappingI.(*mapping.VectortFieldMapping).Dimension); err != nil {
-			return reqNum,vqs,  err
+			return reqNum, vqs, err
 		}
 
 		queryNum := len(vqTemp.Feature) / docField.FieldMappingI.(*mapping.VectortFieldMapping).Dimension
@@ -471,7 +476,7 @@ func (qb *queryBuilder) parseVectors(reqNum int, vqs []*C.struct_VectorQuery, tm
 
 		vq, err := vqTemp.ToC()
 		if err != nil {
-			return reqNum,vqs,  err
+			return reqNum, vqs, err
 		}
 
 		vqs = append(vqs, vq)
