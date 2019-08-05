@@ -343,10 +343,10 @@ func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 
 	temp := struct {
-		And                   []json.RawMessage `json:"and"`
-		Sum                   []json.RawMessage `json:"sum"`
-		Filter                []json.RawMessage `json:"filter"`
-		DirectSearchThreshold int               `json:"direct_search_threshold"`
+		And              []json.RawMessage `json:"and"`
+		Sum              []json.RawMessage `json:"sum"`
+		Filter           []json.RawMessage `json:"filter"`
+		DirectSearchType int               `json:"direct_search_type"`
 	}{}
 
 	err := cbjson.Unmarshal(data, &temp)
@@ -424,8 +424,8 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 
 	req.req_num = C.int(reqNum)
 
-	if temp.DirectSearchThreshold != 0 {
-		req.direct_search_threshold = C.int(temp.DirectSearchThreshold)
+	if temp.DirectSearchType != 0 {
+		req.direct_search_threshold = C.int(temp.DirectSearchType)
 	}
 
 	return nil

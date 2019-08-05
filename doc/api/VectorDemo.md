@@ -79,10 +79,12 @@ curl -H "content-type: application/json" -XPOST -d'
           "feature": [0,0,0,0,0],
           "boost":0.9,
         }
-      ]
+      ],
+      "direct_search_type":0 
   },
   "size":10
 }
+
 {
     "query":{
         "sum": [
@@ -120,6 +122,7 @@ curl -H "content-type: application/json" -XPOST -d'
                }
            }
         ]
+        
     },
     "sort" : [
         { "_score" : {"order" : "asc"} }
