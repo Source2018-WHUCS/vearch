@@ -16,7 +16,7 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
       "dynamic_schema": "strict",
       "partition_num": 2,
       "replica_num": 1,
-      "engine": {"name":"gamma", "max_size":1000000},
+      "engine": {"name":"gamma", "max_size":1000000,"nprobe":10},
       "properties": {
           "area_code": {
               "type": "keyword"
