@@ -77,7 +77,8 @@ curl -H "content-type: application/json" -XPOST -d'
         {
           "field": "feature2",
           "feature": [0,0,0,0,0],
-          "boost":0.9,
+          "symbol":">=",
+          "value":0.9
         }
       ],
       "direct_search_type":0 
