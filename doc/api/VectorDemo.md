@@ -81,53 +81,22 @@ curl -H "content-type: application/json" -XPOST -d'
           "value":0.9
         }
       ],
+      "filter":[
+          {
+              "range":{
+                  "product_code":{
+                      "gte":1,
+                      "lte":3
+                  }
+              }
+          }
+       ]
       "direct_search_type":0 
   },
-  "size":10
-}
-
-{
-    "query":{
-        "sum": [
-           {
-             "field": "feature1",
-             "feature": [0,0,0,0,0],
-             "boost":0.8,
-           },
-           {
-             "field": "feature2",
-             "feature": [0,0,0,0,0],
-             "boost":0.9,
-           }
-         ],
-        "filter":[
-           {
-               "term":{
-                   "area_code":{
-                       "value":"test"
-                   }
-               }
-           },
-           {
-               "term":{
-                   "product_code":{
-                       "value":"test"
-                   }
-               }
-           },
-           {
-               "term":{
-                   "image_type":{
-                       "value":"test"
-                   }
-               }
-           }
-        ]
-        
-    },
-    "sort" : [
-        { "_score" : {"order" : "asc"} }
-    ]
+  "size":10,
+   "sort" : [
+       { "_score" : {"order" : "asc"} }
+   ]
 }
 ' http://11.3.149.73/tpy/tpy/_search?size=10
 ````

@@ -44,11 +44,11 @@ type VectorQuery struct {
 	FeatureData json.RawMessage `json:"feature"`
 	Feature     []float32       `json:"-"`
 	Symbol      string          `json:"symbol"`
-	Value       *float64        `json:"max_score"`
+	Value       *float64        `json:"value"`
 	Boost       *float64        `json:"boost"`
 	Format      *string         `json:"format,omitempty"`
-	minScore    float64         `json:"-"`
-	maxScore    float64         `json:"-"`
+	MinScore    *float64        `json:"min_score,omitempty"`
+	MaxScore    *float64        `json:"max_score,omitempty"`
 }
 
 var defaultBoost = util.PFloat64(1)
@@ -62,20 +62,24 @@ func (query *VectorQuery) ToC() (*C.struct_VectorQuery, error) {
 		return nil, err
 	}
 
-	query.minScore = -1
-	query.maxScore = -1
+	if query.MinScore == nil {
+		query.MinScore = util.PFloat64(-1)
+	}
+	if query.MaxScore == nil {
+		query.MaxScore = util.PFloat64(-1)
+	}
 
 	if query.Value != nil {
 
 		switch strings.TrimSpace(query.Symbol) {
 		case ">":
-			query.minScore = *query.Value + minOffset
+			query.MinScore = util.PFloat64(*query.Value + minOffset)
 		case ">=":
-			query.minScore = *query.Value
+			query.MinScore = util.PFloat64(*query.Value)
 		case "<":
-			query.maxScore = *query.Value - minOffset
+			query.MaxScore = util.PFloat64(*query.Value - minOffset)
 		case "<=":
-			query.maxScore = *query.Value
+			query.MaxScore = util.PFloat64(*query.Value)
 		default:
 			return nil, fmt.Errorf("symbol value unknow:[%s]", query.Symbol)
 		}
@@ -85,7 +89,7 @@ func (query *VectorQuery) ToC() (*C.struct_VectorQuery, error) {
 		query.Boost = defaultBoost
 	}
 
-	return C.MakeVectorQuery(byteArrayStr(query.Field), byteArray(code), C.double(query.minScore), C.double(query.maxScore), C.double(*query.Boost), C.int(1)), nil
+	return C.MakeVectorQuery(byteArrayStr(query.Field), byteArray(code), C.double(*query.MinScore), C.double(*query.MaxScore), C.double(*query.Boost), C.int(1)), nil
 
 }
 
