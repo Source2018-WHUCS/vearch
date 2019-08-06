@@ -57,7 +57,6 @@ type Store interface {
 	//decoupling of etcd and master logic, on the other hand Easy to extend other types of storage
 	STM(ctx context.Context, apply func(stm concurrency.STM) error) error
 	NewLock(ctx context.Context, key string, timeout time.Duration) *DistLock
-	LockCluster(ctx context.Context, key string, timeout time.Duration) (*DistLock, error)
 	//it to generate increment unique id
 	NewIDGenerate(ctx context.Context, key string, base int64, timeout time.Duration) (int64, error)
 	WatchPrefix(ctx context.Context, key string) (clientv3.WatchChan, error)

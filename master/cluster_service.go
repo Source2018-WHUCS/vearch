@@ -156,15 +156,13 @@ func (this *masterService) deleteDBService(ctx context.Context, dbstr string) (e
 		return err
 	}
 	//it will local cluster ,to create space
-	if mutex, err := this.Master().LockCluster(ctx, entity.PrefixLockCluster, time.Second*300); err != nil {
-		return err
-	} else {
-		defer func() {
-			if err := mutex.Unlock(); err != nil {
-				log.Error("unlock space err ")
-			}
-		}()
-	}
+	mutex := this.Master().NewLock(ctx, entity.PrefixLockCluster, time.Second*300);
+	defer func() {
+		if err := mutex.Unlock(); err != nil {
+			log.Error("unlock space err ")
+		}
+	}()
+
 	spaces, err := this.Master().QuerySpaces(ctx, db.Id)
 	if err != nil {
 		return err

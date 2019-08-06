@@ -66,14 +66,6 @@ func (store *EtcdStore) NewIDGenerate(ctx context.Context, key string, base int6
 	return nextID, nil
 }
 
-func (store *EtcdStore) LockCluster(ctx context.Context, key string, timeout time.Duration) (*DistLock, error) {
-	//it will local cluster ,to create space
-	mutex := store.NewLock(ctx, key, time.Second*300)
-	if err := mutex.Lock(); err != nil {
-		return nil, err
-	}
-	return mutex, nil
-}
 
 func (store *EtcdStore) NewLock(ctx context.Context, key string, timeout time.Duration) *DistLock {
 	return NewDistLock(ctx, store.cli, key, timeout)
