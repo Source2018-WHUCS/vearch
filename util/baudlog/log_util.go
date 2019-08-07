@@ -62,3 +62,13 @@ func LogErrAndReturn(err error) error {
 	log.Error(err.Error())
 	return err
 }
+
+func LogErrNotNil(err error) {
+	if err == nil {
+		return
+	}
+	if log.IsInfoEnabled() {
+		fmt.Println(string(debug.Stack()))
+	}
+	log.Error(err.Error())
+}

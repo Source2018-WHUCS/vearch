@@ -264,7 +264,6 @@ type RouterCfg struct {
 	Base
 	Port       uint16 `toml:"port,omitempty" json:"port"`
 	PprofPort  uint16 `toml:"pprof_port,omitempty" json:"pprof_port"`
-	PluginPath string `toml:"plugin_path,omitempty" json:"plugin_path"`
 }
 type PSCfg struct {
 	Base

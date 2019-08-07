@@ -69,71 +69,43 @@ func (this *spaceSender) SetWriteTryTimes(times int) *spaceSender {
 }
 
 func (this *spaceSender) GetDoc(id string) *response.DocResult {
-	resp, retry := this._getDoc(id)
-	if !retry {
-		return resp
-	}
-
-	for i := 0; i < spaceRetry && retry; i++ {
-		resp, retry = this._getDoc(id)
-		if resp != nil {
-			return resp
-		}
-	}
-	return response.NewErrDocResult(id, pkg.ErrPartitionNotExist)
-}
-
-func (this *spaceSender) _getDoc(id string) (*response.DocResult, bool) {
 	err := this.interceptFrozenFunc()
 	if err != nil {
-		return response.NewErrDocResult(id, err), false
+		return response.NewErrDocResult(id, err)
 	}
 
 	resp, err := this.partitionSlot(this.Slot(id)).getDoc(id)
 	if err != nil {
-		if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
-			this.ps.client.master.ReloadCacheAsync(this.Ctx.GetContext(), this.db, this.space)
-			time.Sleep(1 * time.Second)
-			return nil, true
-		}
 		log.Error("Fail to search ps.  db[%s], space[%s]. err[%v]", this.db, this.space, err)
-		return response.NewErrDocResult(id, err), false
+		if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
+			this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
+			resp, err = this.partitionSlot(this.Slot(id)).getDoc(id)
+			if err != nil {
+				return response.NewErrDocResult(id, err)
+			}
+			return resp
+		}
+		return response.NewErrDocResult(id, err)
 	}
-	return resp, false
+	return resp
 }
 
 //use this function by default slot hash [id , murmur3] ,
 // if you want define your slot method ,please use SetRoutingValue to define it
 // return entity.DocumentResponse
-func (this *spaceSender) GetDocs(ids ...string) response.DocResults {
-	resp, retry := this._getDocs(ids)
-	if !retry {
-		return resp
-	}
-
-	for i := 0; i < spaceRetry && retry; i++ {
-		resp, retry = this._getDocs(ids)
-		if resp != nil {
-			return resp
-		}
-	}
-	return response.NewErrDocResults(ids, pkg.ErrPartitionNotExist)
-}
-
-func (this *spaceSender) _getDocs(ids []string) (response.DocResults, bool) {
+func (this *spaceSender) GetDocs(ids []string) response.DocResults {
 	err := this.interceptFrozenFunc()
 	if err != nil {
-		return response.NewErrDocResults(ids, err), false
+		return response.NewErrDocResults(ids, err)
 	}
 
 	idMap, err := this.groupPartition(ids)
 	if err != nil {
-		return response.NewErrDocResults(ids, err), false
+		return response.NewErrDocResults(ids, err)
 	}
 
 	var wg sync.WaitGroup
 	respChain := make(chan response.DocResults, len(idMap))
-	retry := false
 
 	for pID, idArr := range idMap {
 		wg.Add(1)
@@ -149,24 +121,26 @@ func (this *spaceSender) _getDocs(ids []string) (response.DocResults, bool) {
 
 			if err != nil {
 				if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
-					this.ps.client.master.ReloadCacheAsync(this.Ctx.GetContext(), this.db, this.space)
-					time.Sleep(1 * time.Second)
-					retry = true
+					this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
+					resp, err = this.partitionId(paritionID).getDocs(idArr);
+					if err != nil {
+						resp = response.NewErrDocResults(idArr, err)
+					}
+
+				} else {
+					log.Error("Fail to search ps.  db[%s], space[%s]. err[%v]", this.db, this.space, err)
+					resp = response.NewErrDocResults(idArr, err)
 				}
-				log.Error("Fail to search ps.  db[%s], space[%s]. err[%v]", this.db, this.space, err)
-				resp = response.NewErrDocResults(idArr, err)
-			} else {
-				respChain <- resp
+
 			}
+
+			respChain <- resp
 		}(pID, idArr)
 
 	}
 
 	wg.Wait()
 	close(respChain)
-	if retry {
-		return nil, retry
-	}
 
 	result := make(response.DocResults, len(ids))
 	resultIdMap := make(map[string]int, len(ids))
@@ -180,44 +154,26 @@ func (this *spaceSender) _getDocs(ids []string) (response.DocResults, bool) {
 		}
 	}
 
-	return result, false
+	return result
 }
 
 //search from space, by partitions
 //clientType LEADER or RANDOM
 // return entity.SearchResult
 func (this *spaceSender) MSearch(req *request.SearchRequest) response.SearchResponses {
-	space, err := this.ps.Client().Master().SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
+	space, err := this.ps.Client().Master().cliCache.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
 	if err != nil {
 		return response.SearchResponses{response.NewSearchResponseErr(err)}
 	}
 
-	resp, retry, err := this.MSearchByPartitions(space.Partitions, req)
+	resp, err := this.MSearchByPartitions(space.Partitions, req)
 	if err != nil {
 		return response.SearchResponses{response.NewSearchResponseErr(err)}
 	}
-	if resp != nil {
-		return resp
-	}
-
-	for i := 0; i < spaceRetry && retry; i++ {
-		space, err = this.ps.Client().Master().SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
-		if err != nil {
-			return response.SearchResponses{response.NewSearchResponseErr(err)}
-		}
-		resp, retry, err = this.MSearchByPartitions(space.Partitions, req)
-		if err != nil {
-			return response.SearchResponses{response.NewSearchResponseErr(err)}
-		}
-		if resp != nil {
-			return resp
-		}
-	}
-
-	return response.SearchResponses{response.NewSearchResponseErr(pkg.ErrPartitionNotExist)}
+	return resp
 }
 
-func (this *spaceSender) MSearchByPartitions(partitions []*entity.Partition, req *request.SearchRequest) (resp response.SearchResponses, retry bool, err error) {
+func (this *spaceSender) MSearchByPartitions(partitions []*entity.Partition, req *request.SearchRequest) (resp response.SearchResponses, err error) {
 
 	var wg sync.WaitGroup
 	respChain := make(chan response.SearchResponses, len(partitions))
@@ -250,13 +206,16 @@ func (this *spaceSender) MSearchByPartitions(partitions []*entity.Partition, req
 			}()
 			resp, err := this.partitionId(par.Id).mSearch(req)
 			if err != nil {
-				if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
-					this.ps.client.master.ReloadCacheAsync(this.Ctx.GetContext(), this.db, this.space)
-					time.Sleep(1 * time.Second)
-					retry = true
-				}
 				log.Error("Fail to search ps. partition[%d], db[%s], space[%s]. err[%v]", par.Id, this.db, this.space, err)
 				resp = response.SearchResponses{newSearchResponseWithError(this.db, this.space, p.Id, err)}
+				if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
+					this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
+					resp, err = this.partitionId(par.Id).mSearch(req)
+					if err != nil {
+						resp = response.SearchResponses{newSearchResponseWithError(this.db, this.space, p.Id, err)}
+					}
+				}
+
 			}
 			respChain <- resp
 		}(p)
@@ -264,10 +223,6 @@ func (this *spaceSender) MSearchByPartitions(partitions []*entity.Partition, req
 
 	wg.Wait()
 	close(respChain)
-
-	if retry {
-		return nil, retry, nil
-	}
 
 	var result response.SearchResponses
 	for r := range respChain {
@@ -285,48 +240,30 @@ func (this *spaceSender) MSearchByPartitions(partitions []*entity.Partition, req
 		}
 
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 	}
 
-	return result, false, nil
+	return result, nil
 }
 
 //search from space, by partitions
 //clientType LEADER or RANDOM
 // return entity.SearchResult
 func (this *spaceSender) Search(req *request.SearchRequest) *response.SearchResponse {
-	space, err := this.ps.Client().Master().SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
+	space, err := this.ps.Client().Master().cliCache.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
 	if err != nil {
 		return response.NewSearchResponseErr(err)
 	}
 
-	resp, retry, err := this.SearchByPartitions(space.Partitions, req)
+	resp, err := this.SearchByPartitions(space.Partitions, req)
 	if err != nil {
 		return response.NewSearchResponseErr(err)
 	}
-	if resp != nil {
-		return resp
-	}
-
-	for i := 0; i < spaceRetry && retry; i++ {
-		space, err = this.ps.Client().Master().SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
-		if err != nil {
-			return response.NewSearchResponseErr(err)
-		}
-		resp, retry, err = this.SearchByPartitions(space.Partitions, req)
-		if err != nil {
-			return response.NewSearchResponseErr(err)
-		}
-		if resp != nil {
-			return resp
-		}
-	}
-
-	return response.NewSearchResponseErr(pkg.ErrPartitionNotExist)
+	return resp
 }
 
-func (this *spaceSender) SearchByPartitions(partitions []*entity.Partition, req *request.SearchRequest) (resp *response.SearchResponse, retry bool, err error) {
+func (this *spaceSender) SearchByPartitions(partitions []*entity.Partition, req *request.SearchRequest) (resp *response.SearchResponse, err error) {
 
 	var wg sync.WaitGroup
 	respChain := make(chan *response.SearchResponse, len(partitions))
@@ -359,13 +296,16 @@ func (this *spaceSender) SearchByPartitions(partitions []*entity.Partition, req 
 			}()
 			resp, err := this.partitionId(par.Id).search(req)
 			if err != nil {
-				if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
-					this.ps.client.master.ReloadCacheAsync(this.Ctx.GetContext(), this.db, this.space)
-					time.Sleep(1 * time.Second)
-					retry = true
-				}
 				log.Error("Fail to search ps. partition[%d], db[%s], space[%s]. err[%v]", par.Id, this.db, this.space, err)
 				resp = newSearchResponseWithError(this.db, this.space, p.Id, err)
+				if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
+					this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
+					resp, err = this.partitionId(par.Id).search(req)
+					if err != nil {
+						resp = newSearchResponseWithError(this.db, this.space, p.Id, err)
+					}
+				}
+
 			}
 			respChain <- resp
 		}(p)
@@ -374,14 +314,10 @@ func (this *spaceSender) SearchByPartitions(partitions []*entity.Partition, req 
 	wg.Wait()
 	close(respChain)
 
-	if retry {
-		return nil, retry, nil
-	}
-
 	sortOrder, err := req.SortOrder()
 
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	var maxTook int64
@@ -398,19 +334,19 @@ func (this *spaceSender) SearchByPartitions(partitions []*entity.Partition, req 
 		}
 		err := first.Merge(r, sortOrder, req.From, *req.Size)
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 	}
 
 	log.Debug("Max search partitionID:[%d] use time:[%d]", maxPID, maxTook/1000000)
 
-	return first, false, nil
+	return first, nil
 }
 
 func (this *spaceSender) StreamSearch(req *request.SearchRequest) *response.DocStreamResult {
 	dsr := response.NewDocStreamResult(this.Ctx.GetContext())
 
-	space, err := this.ps.Client().Master().SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
+	space, err := this.ps.Client().Master().cliCache.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
 	if err != nil {
 		dsr.AddErr(err)
 		return dsr
@@ -446,36 +382,18 @@ func (this *spaceSender) StreamSearch(req *request.SearchRequest) *response.DocS
 
 // Flush space, all partiitons
 func (this *spaceSender) Flush() (*response.Shards, error) {
-	space, err := this.ps.client.master.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
+	space, err := this.ps.client.master.cliCache.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
 	if err != nil {
 		return nil, err
 	}
-	resp, retry, err := this.FlushByPartitions(space.Partitions)
+	resp, err := this.FlushByPartitions(space.Partitions)
 	if err != nil {
 		return nil, err
 	}
-	if resp != nil {
-		return resp, nil
-	}
-
-	for i := 0; i < spaceRetry && retry; i++ {
-		space, err := this.ps.client.master.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
-		if err != nil {
-			return nil, err
-		}
-		resp, retry, err = this.FlushByPartitions(space.Partitions)
-		if err != nil {
-			return nil, err
-		}
-		if resp != nil {
-			return resp, nil
-		}
-	}
-
-	return nil, err
+	return resp, nil
 }
 
-func (this *spaceSender) FlushByPartitions(partitions []*entity.Partition) (resp *response.Shards, retry bool, err error) {
+func (this *spaceSender) FlushByPartitions(partitions []*entity.Partition) (resp *response.Shards, err error) {
 
 	var wg sync.WaitGroup
 	respChain := make(chan bool, len(partitions))
@@ -492,15 +410,17 @@ func (this *spaceSender) FlushByPartitions(partitions []*entity.Partition) (resp
 				}
 			}()
 			err := this.partitionId(par.Id).flush(LEADER)
+			flag := true
 			if err != nil {
-				if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
-					this.ps.client.master.ReloadCacheAsync(this.Ctx.GetContext(), this.db, this.space)
-					time.Sleep(1 * time.Second)
-					retry = true
-				}
+				flag = false
 				log.Error("Fail to flush. partition[%d], db[%s], space[%s], partitionId:[%d]. err[%v]", par.Id, this.db, this.space, par.Id, err)
+				if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
+					this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
+					flag = this.partitionId(par.Id).flush(LEADER) == nil
+				}
+
 			}
-			respChain <- true
+			respChain <- flag
 		}(p)
 	}
 
@@ -518,44 +438,24 @@ func (this *spaceSender) FlushByPartitions(partitions []*entity.Partition) (resp
 		}
 	}
 
-	if retry {
-		return nil, retry, nil
-	}
-	return resp, false, nil
+	return resp, nil
 }
 
 // ForceMerge space, all partiitons
 func (this *spaceSender) ForceMerge() (*response.Shards, error) {
-	space, err := this.ps.client.master.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
+	space, err := this.ps.client.master.cliCache.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
 	if err != nil {
 		return nil, err
 	}
-	resp, retry, err := this.ForceMergeByPartitions(space.Partitions)
+	resp, err := this.ForceMergeByPartitions(space.Partitions)
 	if err != nil {
 		return nil, err
 	}
-	if resp != nil {
-		return resp, nil
-	}
 
-	for i := 0; i < spaceRetry && retry; i++ {
-		space, perr := this.ps.client.master.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
-		if perr != nil {
-			return nil, err
-		}
-		resp, retry, err = this.ForceMergeByPartitions(space.Partitions)
-		if err != nil {
-			return nil, err
-		}
-		if resp != nil {
-			return resp, nil
-		}
-	}
-
-	return nil, err
+	return resp, nil
 }
 
-func (this *spaceSender) ForceMergeByPartitions(partitions []*entity.Partition) (resp *response.Shards, retry bool, err error) {
+func (this *spaceSender) ForceMergeByPartitions(partitions []*entity.Partition) (resp *response.Shards, err error) {
 
 	var wg sync.WaitGroup
 	respChain := make(chan bool, len(partitions))
@@ -572,15 +472,18 @@ func (this *spaceSender) ForceMergeByPartitions(partitions []*entity.Partition) 
 				}
 			}()
 			err := this.partitionId(par.Id).forceMerge(ALL)
+
+			flag := true
 			if err != nil {
-				if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
-					this.ps.client.master.ReloadCacheAsync(this.Ctx.GetContext(), this.db, this.space)
-					time.Sleep(1 * time.Second)
-					retry = true
-				}
+				flag = false
 				log.Error("Fail to forceMerge. partition[%d], db[%s], space[%s], partitionId:[%d]. err[%v]", par.Id, this.db, this.space, par.Id, err)
+				if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
+					this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
+					flag = this.partitionId(par.Id).forceMerge(ALL) == nil
+				}
+
 			}
-			respChain <- true
+			respChain <- flag
 		}(p)
 	}
 
@@ -598,10 +501,7 @@ func (this *spaceSender) ForceMergeByPartitions(partitions []*entity.Partition) 
 		}
 	}
 
-	if retry {
-		return nil, retry, nil
-	}
-	return resp, false, nil
+	return resp, nil
 }
 
 //batch handler , if you use it you must make sure it is docs type is right by slot
@@ -713,7 +613,7 @@ func (this *spaceSender) writeAndRetry(doc *pspb.DocCmd) *response.DocResult {
 
 		tryTimes++
 		// if for cycle, break force
-		if tryTimes > 100 {
+		if tryTimes > 10 {
 			return response.NewErrDocResult(doc.DocId, err)
 		}
 
@@ -722,14 +622,14 @@ func (this *spaceSender) writeAndRetry(doc *pspb.DocCmd) *response.DocResult {
 			if tryTimes > 5 {
 				return response.NewErrDocResult(doc.DocId, err)
 			}
-			this.ps.client.master.ReloadCacheAsync(this.Ctx.GetContext(), this.db, this.space)
+			this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
 			time.Sleep(1 * time.Second)
 		} else if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_FROZEN {
 			sender.pid = 0
 			if tryTimes > 5 {
 				return response.NewErrDocResult(doc.DocId, err)
 			}
-			this.ps.client.master.ReloadCacheAsync(this.Ctx.GetContext(), this.db, this.space)
+			this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
 			time.Sleep(1 * time.Second)
 		} else if pkg.ErrCode(err) == pkg.ERRCODE_PULL_OUT_VERSION_NOT_MATCH {
 			if this.writeTryTimes == 0 {
@@ -747,7 +647,7 @@ func (this *spaceSender) writeAndRetry(doc *pspb.DocCmd) *response.DocResult {
 }
 
 func (this *spaceSender) groupPartition(ids []string) (map[entity.PartitionID][]string, error) {
-	space, err := this.ps.client.master.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
+	space, err := this.ps.client.master.cliCache.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
 	if err != nil {
 		return nil, err
 	}
@@ -775,7 +675,7 @@ func doc2Ids(docs []*pspb.DocCmd) []string {
 }
 
 func (this *spaceSender) groupPartitionByDocs(docs []*pspb.DocCmd) (map[entity.PartitionID][]*pspb.DocCmd, error) {
-	space, err := this.ps.client.master.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
+	space, err := this.ps.client.master.cliCache.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
 	if err != nil {
 		return nil, err
 	}
@@ -800,7 +700,7 @@ func Slot(routingValue string) uint32 {
 }
 
 func (this *spaceSender) interceptFrozenFunc() error {
-	space, err := this.ps.client.master.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
+	space, err := this.ps.client.master.cliCache.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
 	if err != nil {
 		return err
 	}

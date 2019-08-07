@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/tiglabs/baudengine/config"
-	"go.uber.org/atomic"
 	"sync"
 	"time"
 
@@ -36,18 +35,39 @@ import (
 type masterClient struct {
 	client *Client
 	store.Store
-	cfg    *config.Config
-	cached atomic.Bool
-	once   sync.Once
+	cfg      *config.Config
+	once     sync.Once
+	cliCache *clientCache
 }
 
 func (this *masterClient) Client() *Client {
 	return this.client
 }
 
+func (this *masterClient) Cache() *clientCache {
+	return this.cliCache
+}
+
+func (this *masterClient) FlushCacheJob(ctx context.Context) error {
+	cliCache, err := newClientCache(ctx, this)
+	if err != nil {
+		return err
+	}
+
+	old := this.cliCache
+	this.cliCache = cliCache
+	if old != nil {
+		old.stopCacheJob()
+	}
+
+	return nil
+}
+
 //set cached
 func (client *masterClient) Stop() {
-	client.cached.Store(false)
+	if client.cliCache != nil {
+		client.cliCache.stopCacheJob()
+	}
 }
 
 // find name by id

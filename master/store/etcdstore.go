@@ -220,5 +220,6 @@ func (store *EtcdStore) WatchPrefix(ctx context.Context, key string) (clientv3.W
 	if watcher == nil {
 		return nil, fmt.Errorf("watch %v failed", key)
 	}
+
 	return watcher, nil
 }

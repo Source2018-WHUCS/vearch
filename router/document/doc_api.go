@@ -162,7 +162,7 @@ func (handler *DocumentHandler) cacheInfo(ctx context.Context, w http.ResponseWr
 
 	dbName := reqArgs[UrlParamDbName]
 	spaceName := reqArgs[UrlParamSpaceName]
-	space, err := handler.client.Master().SpaceByCache(context.Background(), dbName, spaceName)
+	space, err := handler.client.Master().Cache().SpaceByCache(context.Background(), dbName, spaceName)
 	if err != nil {
 		resp.SendErrorRootCause(ctx, w, 404, err.Error(), err.Error(), handler.monitor)
 	} else {
@@ -191,7 +191,7 @@ func (handler *DocumentHandler) handleAuth(ctx context.Context, w http.ResponseW
 		return ctx, false
 	}
 
-	user, _ := handler.client.Master().UserByCache(ctx, username)
+	user, _ := handler.client.Master().Cache().UserByCache(ctx, username)
 	if user == nil {
 		log.Warn("user visit %s not found , name:[%s]  ", r.URL, username)
 		resp.SendError(ctx, w, http.StatusBadRequest, resp.ErrReasonUserNotFound, handler.monitor)

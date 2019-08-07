@@ -69,10 +69,6 @@ const (
 	MaxMinZoneFieldHandler = "MaxMinHandler"
 	PartitionInfoHandler   = "PartitionInfoHandler"
 
-	// journal debug
-	JournalEnableHandler = "JournalEnableHandler"
-	JournalGetHandler    = "JournalGetHandler"
-	JournalAppendHandler = "JournalAppendHandler"
 )
 
 type psClient struct {
@@ -106,9 +102,9 @@ func (this *psClient) Begin(ctx context.Context, partitionNum int, msgId, router
 
 //when psclient stop , it will remove all client
 func (this *psClient) Stop() {
-	psClientCache.Range(func(key, value interface{}) bool {
+	this.Client().Master().cliCache.Range(func(key, value interface{}) bool {
 		value.(*rpcClient).close()
-		psClientCache.Delete(key)
+		this.Client().Master().cliCache.Delete(key)
 		return true
 	})
 }
@@ -139,10 +135,6 @@ func (this *sender) Admin(partitionServerRpcAddr string) *adminSender {
 	return &adminSender{sender: this, addr: partitionServerRpcAddr}
 }
 
-type clientCache struct {
-	sync.Map
-	lock sync.Mutex
-}
 
 var nilClient = &rpcClient{}
 
@@ -259,20 +251,20 @@ func (this *rpcClient) StreamExecute(servicePath string, request request.Request
 }
 
 func (ps *psClient) getOrCreateRpcClient(ctx context.Context, nodeId entity.NodeID) *rpcClient {
-	value, ok := psClientCache.Load(nodeId)
+	value, ok := ps.Client().Master().cliCache.Load(nodeId)
 	if ok {
 		return value.(*rpcClient).lastUse()
 	}
-	psClientCache.lock.Lock()
-	defer psClientCache.lock.Unlock()
+	ps.Client().Master().cliCache.lock.Lock()
+	defer ps.Client().Master().cliCache.lock.Unlock()
 
-	value, ok = psClientCache.Load(nodeId)
+	value, ok = ps.Client().Master().cliCache.Load(nodeId)
 	if ok {
 		return value.(*rpcClient).lastUse()
 	}
 
 	log.Info("psClient not in psClientCache, make new psClient, nodeId:[%d]", nodeId)
-	psServer, err := ps.client.master.ServerByCache(ctx, nodeId)
+	psServer, err := ps.Client().Master().cliCache.ServerByCache(ctx, nodeId)
 	if err != nil {
 		log.Error("Master().ServerByCache() err, can not get ps server from master, err: %s", err.Error())
 		return nilClient
@@ -286,7 +278,7 @@ func (ps *psClient) getOrCreateRpcClient(ctx context.Context, nodeId entity.Node
 
 	if client != nil {
 		c := &rpcClient{client: client, useTime: time.Now().UnixNano()}
-		psClientCache.Store(nodeId, c)
+		ps.Client().Master().cliCache.Store(nodeId, c)
 		return c.lastUse()
 	}
 

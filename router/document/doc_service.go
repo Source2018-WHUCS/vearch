@@ -28,6 +28,7 @@ import (
 	"github.com/tiglabs/baudengine/proto/response"
 	"github.com/tiglabs/baudengine/util/cbjson"
 	"github.com/tiglabs/baudengine/util/uuid"
+	"github.com/tiglabs/log"
 	"strings"
 )
 
@@ -88,9 +89,8 @@ func (this *docService) getDoc(ctx context.Context, dbName string, spaceName str
 }
 
 func (this *docService) getDocs(ctx context.Context, dbName string, spaceName string, docIDs []string, reqArgs RawReqArgs) response.DocResults {
-	return this.client.PS().B().Space(dbName, spaceName).SetRoutingValue(reqArgs[UrlQueryRouting]).GetDocs(docIDs...)
+	return this.client.PS().B().Space(dbName, spaceName).SetRoutingValue(reqArgs[UrlQueryRouting]).GetDocs(docIDs)
 }
-
 
 func (this *docService) mSearchDoc(ctx context.Context, dbName string, spaceName string, searchRequest *request.SearchRequest) (response.SearchResponses, response.NameCache, error) {
 	if searchRequest.Aggs == nil {
@@ -107,12 +107,14 @@ func (this *docService) mSearchDoc(ctx context.Context, dbName string, spaceName
 
 	for _, dbName = range dbNames {
 		for _, spaceName = range spaceNames {
-			if space, found := this.client.Master().SpaceByCacheWithOutRetry(ctx, dbName, spaceName); found {
+			if space, err := this.client.Master().Cache().SpaceByCache(ctx, dbName, spaceName); err == nil {
 				key := [2]int64{int64(space.DBId), int64(space.Id)}
 				if nameCache[key] == nil {
 					nameCache[key] = []string{dbName, spaceName}
 					searchSpaces = append(searchSpaces, [2]string{dbName, spaceName})
 				}
+			} else {
+				log.Error("can not find db:[%s] space:[%s] for search err:[%s] ", dbName, spaceName, err.Error())
 			}
 		}
 	}
@@ -139,12 +141,14 @@ func (this *docService) searchDoc(ctx context.Context, dbName string, spaceName 
 
 	for _, dbName = range dbNames {
 		for _, spaceName = range spaceNames {
-			if space, found := this.client.Master().SpaceByCacheWithOutRetry(ctx, dbName, spaceName); found {
+			if space, err := this.client.Master().Cache().SpaceByCache(ctx, dbName, spaceName); err == nil {
 				key := [2]int64{int64(space.DBId), int64(space.Id)}
 				if nameCache[key] == nil {
 					nameCache[key] = []string{dbName, spaceName}
 					searchSpaces = append(searchSpaces, [2]string{dbName, spaceName})
 				}
+			} else {
+				log.Error("can not find db:[%s] space:[%s] for search err:[%s] ", dbName, spaceName, err.Error())
 			}
 		}
 	}
@@ -167,12 +171,14 @@ func (this *docService) streamSearchDoc(ctx context.Context, dbName string, spac
 
 	for _, dbName = range dbNames {
 		for _, spaceName = range spaceNames {
-			if space, found := this.client.Master().SpaceByCacheWithOutRetry(ctx, dbName, spaceName); found {
+			if space, err := this.client.Master().Cache().SpaceByCache(ctx, dbName, spaceName); err == nil {
 				key := [2]int64{int64(space.DBId), int64(space.Id)}
 				if nameCache[key] == nil {
 					nameCache[key] = []string{dbName, spaceName}
 					searchSpaces = append(searchSpaces, [2]string{dbName, spaceName})
 				}
+			} else {
+				log.Error("can not find db:[%s] space:[%s] for search err:[%s] ", dbName, spaceName, err.Error())
 			}
 		}
 	}

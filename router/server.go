@@ -64,14 +64,15 @@ func NewServer(ctx context.Context) (*Server, error) {
 	}
 	netutil.SetMode(netutil.RouterModeGorilla)
 	httpServer := netutil.NewServer(httpServerConfig)
-	document.ExportDocumentHandler(httpServer, cli , config.Conf().NewMonitor(config.Router))
+	document.ExportDocumentHandler(httpServer, cli, config.Conf().NewMonitor(config.Router))
 
+	routerCtx, routerCancel := context.WithCancel(ctx)
 	// start router cache
-	if err := cli.Master().StartCacheJob(context.Background()); err != nil {
+	if err := cli.Master().FlushCacheJob(routerCtx); err != nil {
 		log.Error("Error in Start cache Job,Err:%v", err)
 		panic(err)
 	}
-	routerCtx, routerCancel := context.WithCancel(ctx)
+
 	return &Server{
 		httpServer: httpServer,
 		ctx:        routerCtx,

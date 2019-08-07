@@ -15,6 +15,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/smallnest/rpcx/protocol"
 	"github.com/tiglabs/baudengine/proto/request"
@@ -95,10 +96,8 @@ func (this *partitionSender) search(req *request.SearchRequest) (*response.Searc
 	searchResponse := result.(*response.SearchResponse)
 	searchResponse.PID = this.pid //set partition id to result
 
-
 	return searchResponse, err
 }
-
 
 func (this *partitionSender) mSearch(req *request.SearchRequest) (response.SearchResponses, error) {
 	partition, err := this.initPartition()
@@ -110,10 +109,10 @@ func (this *partitionSender) mSearch(req *request.SearchRequest) (response.Searc
 		return nil, err
 	}
 	searchResponses := *(result.(*response.SearchResponses))
-	for _, searchResponse := range searchResponses{
+	for _, searchResponse := range searchResponses {
 		searchResponse.PID = req.PartitionID //set partition id to result
 	}
-	return searchResponses, err
+	return searchResponses, nil
 }
 
 func (this *partitionSender) streamSearch(req *request.SearchRequest, dsr *response.DocStreamResult) {
@@ -242,37 +241,27 @@ func (this *partitionSender) needRefresh() error {
 //every method need to use it in partitionsender
 func (this *partitionSender) initPartition() (*entity.Partition, error) {
 	masterClient := this.spaceSender.ps.Client().Master()
-	space, err := masterClient.SpaceByCache(this.spaceSender.Ctx.GetContext(), this.spaceSender.db, this.spaceSender.space)
+	space, err := masterClient.cliCache.SpaceByCache(this.spaceSender.Ctx.GetContext(), this.spaceSender.db, this.spaceSender.space)
 	if err != nil {
 		return nil, err
 	}
 
 	if !*space.Enabled {
-		err = fmt.Errorf("the db:[%d] space[%s] is not enabled ", space.DBId, space.Name)
-		for i := 0; i < 10; i++ {
-			if *space.Enabled {
-				err = nil
-				break
-			}
-			log.Error(err.Error() + " to retry")
-			masterClient.ReloadCacheAsync(this.spaceSender.Ctx.GetContext(), this.spaceSender.db, this.spaceSender.space)
-			time.Sleep(1 * time.Second)
-			var e error
-			if space, e = masterClient.SpaceByCache(this.spaceSender.Ctx.GetContext(), this.spaceSender.db, this.spaceSender.space); err != nil {
-				return nil, e
-			}
+		masterClient.cliCache.DeleteSpaceCache(context.Background(), this.spaceSender.db, this.spaceSender.space)
+		if space, err = masterClient.cliCache.SpaceByCache(context.Background(), this.spaceSender.db, this.spaceSender.space); err != nil {
+			return nil, err
 		}
-	}
 
-	if err != nil {
-		return nil, err
+		if !*space.Enabled {
+			return nil, fmt.Errorf("the db:[%d] space[%s] is not enabled ", space.DBId, space.Name)
+		}
 	}
 
 	if this.pid == 0 {
 		this.pid = space.PartitionId(this.slot)
 	}
 
-	return masterClient.PartitionByCache(this.spaceSender.Ctx.GetContext(), space.Name, this.pid)
+	return masterClient.cliCache.PartitionByCache(this.spaceSender.Ctx.GetContext(), space.Name, this.pid)
 }
 
 func (this *partitionSender) getOrCreate(partition *entity.Partition, clientType ClientType) *partitionSender {
@@ -336,7 +325,6 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 						respChain <- &resp
 						return
 					}
-					time.Sleep(200 * time.Millisecond)
 					rpcClient = this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), addrs.NodeID)
 					log.Debug("%s invoke not leader retry, PartitionID: %d, PartitionRpcAddr: %s", servicePath, request.GetPartitionID(), rpcClient.client.GetAddress(0))
 					continue
