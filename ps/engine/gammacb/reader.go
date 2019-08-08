@@ -187,6 +187,12 @@ func (ri *readerImpl) singleSearchResult(reps *C.struct_Response, index int) *re
 		Status:   &caprice.SearchStatus{Total: 1, Successful: 1},
 	}
 
+	if reps.online_log_message != nil {
+		result.Explain = map[uint32]string{
+			ri.engine.partitionID: string(CbArr2ByteArray(reps.online_log_message)),
+		}
+	}
+
 	return &result
 }
 

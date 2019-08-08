@@ -45,6 +45,7 @@ type SearchResponse struct {
 	MaxScore float64                 `json:"max_score"`
 	Aggs     []aggregator.Aggregator `json:"aggs"`
 	Took     int64                   `json:"took"`
+	Explain  map[uint32]string       `json:"explain,omitempty"`
 }
 
 // Merge will merge together multiple SearchResults during a MultiSearch, two args :[sortOrder, size]
@@ -67,6 +68,16 @@ func (sr *SearchResponse) Merge(other *SearchResponse, so sort.SortOrder, from, 
 		sr.Aggs = other.Aggs
 	} else if err = aggregator.ReduceArr(sr.Aggs, other.Aggs); err != nil {
 		return
+	}
+
+	if other.Explain != nil {
+		if sr.Explain == nil {
+			sr.Explain = other.Explain //impossibility
+		}
+
+		for k, v := range other.Explain {
+			sr.Explain[k] = v
+		}
 	}
 
 	return
@@ -158,6 +169,12 @@ func (sr *SearchResponse) ToContent(from, size int, nameCache NameCache, typedKe
 		builder.ValueRaw(string(content))
 
 		builder.EndObject()
+	}
+
+	if sr.Explain != nil && len(sr.Explain) > 0 {
+		builder.More()
+		builder.Field("_explain")
+		builder.ValueInterface(sr.Explain)
 	}
 
 	builder.EndObject()
