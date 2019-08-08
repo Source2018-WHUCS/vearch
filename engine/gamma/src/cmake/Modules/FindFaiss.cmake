@@ -14,7 +14,6 @@ SET(Faiss_LIB_SEARCH_PATHS
     /usr/lib64
     /usr/local/lib
     /usr/local/lib64
-    $ENV{Faiss}/lib
     $ENV{Faiss_HOME}
     $ENV{Faiss_HOME}/lib
  )

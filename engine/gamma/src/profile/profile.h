@@ -2,8 +2,8 @@
 #define PROFILE_H_
 
 #include "gamma_api.h"
-#include "mem_cache.h"
-#include <glog/logging.h>
+#include "log.h"
+#include <cuckoohash_map.hh>
 #include <map>
 #include <string>
 #include <vector>
@@ -31,15 +31,8 @@ public:
    * @param doc_idx doc index number
    * @return 0 if successed
    */
-  int AddDoc(const std::vector<Field *> &fields, int doc_idx);
-
-  /** add a doc to table, if doc existed, update it
-   *
-   * @param doc     doc to add
-   * @param doc_idx doc index number
-   * @return 0 if successed
-   */
-  int AddOrUpdateDoc(const std::vector<Field *> &fields, int doc_idx);
+  int Add(const std::vector<Field *> &fields, int doc_id,
+             bool is_existed = false);
 
   /** get docid by key
    *
@@ -47,24 +40,23 @@ public:
    * @param doc_id output, the docid to key
    * @return 0 if successed, -1 key not found
    */
-  int GetDocIDbyKey(const std::string &key, int &doc_id);
+  int GetDocIDByKey(const std::string &key, int &doc_id);
 
   /** dump datas to disk
    *
    * @return ResultCode
    */
   // ResultCode Dump();
-  int Dump(const string &path, int doc_num);
+  int Dump(const std::string &path, int doc_num);
 
   long GetMemoryBytes();
 
-  Doc *GetDocByID(const std::string &id);
-  Doc *GetDocByDocid(const int &docid);
+  Doc *Get(const std::string &id);
+  Doc *Get(const int &docid);
 
   template <typename T>
   bool GetField(const int docid, const int field_id, T &value) const {
-    if ((docid < 0) or
-        (field_id < 0 || field_id >= field_num_))
+    if ((docid < 0) or (field_id < 0 || field_id >= field_num_))
       return false;
 
     size_t offset = docid * item_length_ + idx_attr_offset_[field_id];
@@ -83,13 +75,13 @@ public:
 
   int GetField(int docid, const std::string &field, char **value) const;
 
-  std::map<std::string, enum DataType> &getAttrType();
+  int GetAttrType(std::map<std::string, enum DataType> &attr_type_map);
 
-  std::map<std::string, int> &getAttrIsIndex();
+  int GetAttrIsIndex(std::map<std::string, int> &attr_is_index_map);
 
   int GetAttrIdx(const std::string &field) const;
 
-  int Load(const string &path, int &doc_num);
+  int Load(const std::string &path, int &doc_num);
 
 private:
   int FTypeSize(enum DataType fType);
@@ -97,7 +89,7 @@ private:
   void SetFieldValue(int docid, const std::string &field, const char *value,
                      uint16_t len);
 
-  int AddField(const string &name, enum DataType ftype, int is_index);
+  int AddField(const std::string &name, enum DataType ftype, int is_index);
 
   std::string name_;  // table name
   std::string path_;  // datas files path
@@ -112,8 +104,7 @@ private:
   std::map<std::string, int> attr_is_index_map_;
   std::vector<int> idx_attr_offset_;
   std::vector<enum DataType> attrs_;
-  int *docid_list_ptr_;
-  MemCache *item_to_docid_;
+  cuckoohash_map<std::string, int> item_to_docid_;
 
   char *mem_;
   char *str_mem_;

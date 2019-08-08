@@ -16,8 +16,8 @@ namespace realtime {
 struct RTInvertIndex {
 public:
   // bucket_keys should not be larger than bucket_keys_limit
- RTInvertIndex(faiss::Index *index, long max_vec_size,
-               size_t bucket_keys = 10000, size_t bucket_keys_limit = 1000000);
+  RTInvertIndex(faiss::Index *index, long max_vec_size,
+                size_t bucket_keys = 10000, size_t bucket_keys_limit = 1000000);
 
   ~RTInvertIndex();
 

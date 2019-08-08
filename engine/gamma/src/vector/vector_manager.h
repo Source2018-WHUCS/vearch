@@ -1,14 +1,14 @@
 #ifndef VECTOR_MANAGER_H_
 #define VECTOR_MANAGER_H_
 
+#include "log.h"
 #include <map>
 #include <string>
-#include <glog/logging.h>
 
 #include "gamma_api.h"
+#include "gamma_common_data.h"
 #include "gamma_index.h"
 #include "raw_vector.h"
-#include "utils.h"
 
 namespace tig_gamma {
 
@@ -16,8 +16,10 @@ class VectorManager {
 public:
   VectorManager(const RetrievalModel &model, const RawVectorType &store_type,
                 const char *docids_bitmap, int max_doc_size);
+  ~VectorManager();
 
-  int CreateVectorTable(VectorInfo **vectors_info, int vectors_num, int nprobe);
+  int CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
+                        IVFPQParameters *ivfpq_param);
 
   int AddToStore(int docid, std::vector<Field *> &fields);
 
@@ -30,7 +32,8 @@ public:
 
   long GetTotalMemBytes() {
     long index_total_mem_bytes = 0;
-    for (auto iter = vector_indexes_.begin(); iter != vector_indexes_.end(); iter++) {
+    for (auto iter = vector_indexes_.begin(); iter != vector_indexes_.end();
+         iter++) {
       index_total_mem_bytes += iter->second->GetTotalMemBytes();
     }
 
@@ -46,12 +49,15 @@ public:
   int Load(const std::string &path);
 
 private:
+  void Close();  // release all resource
+
+private:
   RetrievalModel default_model_;
   RawVectorType default_store_type_;
   const char *docids_bitmap_;
   int max_doc_size_;
   bool table_created_;
-  int nprobe;
+  IVFPQParameters *ivfpq_param_;
 
   std::map<std::string, RawVector *> raw_vectors_;
   std::map<std::string, GammaIndex *> vector_indexes_;

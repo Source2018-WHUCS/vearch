@@ -1,9 +1,8 @@
 #include "realtime_mem_data.h"
-#include <glog/logging.h>
+#include "log.h"
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include "utils.h"
 
 namespace tig_gamma {
 namespace realtime {
@@ -129,10 +128,8 @@ bool RTInvertBucketData::getBucketMemInfo(const size_t &bucket_no,
 
 RealTimeMemData::RealTimeMemData(size_t buckets_num, long max_vec_size,
                                  size_t bucket_keys, size_t code_bytes_per_vec)
-    : _buckets_num(buckets_num),
-      _bucket_keys(bucket_keys),
-      _code_bytes_per_vec(code_bytes_per_vec),
-      _max_vec_size(max_vec_size) {
+    : _buckets_num(buckets_num), _bucket_keys(bucket_keys),
+      _code_bytes_per_vec(code_bytes_per_vec), _max_vec_size(max_vec_size) {
   _cur_invert_ptr = new (std::nothrow) RTInvertBucketData();
   _extend_invert_ptr = NULL;
   _total_mem_bytes = 0;
@@ -189,8 +186,6 @@ bool RealTimeMemData::addKeys(size_t list_no, size_t n, std::vector<long> &keys,
     retrive_pos++;
   }
 
-  // retrive_pos += keys.size();
-
   // atomic switch retriving pos of list_no
   _cur_invert_ptr->_retrieve_idx_pos[list_no] = retrive_pos;
   return true;
@@ -223,7 +218,6 @@ bool RealTimeMemData::extendBucketMem(const size_t &bucket_no) {
 
   sleep(1);
 
-
   if (old_idx_array) {
     delete old_idx_array;
     old_idx_array = NULL;
@@ -236,8 +230,6 @@ bool RealTimeMemData::extendBucketMem(const size_t &bucket_no) {
     _total_mem_bytes -= old_keys * _code_bytes_per_vec * sizeof(uint8_t);
   }
 
-  // old_invert_ptr->releaseBucketMem(bucket_no, _code_bytes_per_vec,
-  //                                  _total_mem_bytes);
   delete old_invert_ptr;
   old_invert_ptr = NULL;
   _extend_invert_ptr = NULL;
@@ -294,9 +286,9 @@ int RealTimeMemData::RetrieveCodes(
       if (_vid_bucket_no_pos[vid] != -1) {
         int bucket_no = _vid_bucket_no_pos[vid] >> 32;
         int pos = _vid_bucket_no_pos[vid] & 0xffffffff;
-        bucket_codes[bucket_no]
-            .push_back(_cur_invert_ptr->_codes_array[bucket_no] +
-                       pos * _code_bytes_per_vec);
+        bucket_codes[bucket_no].push_back(
+            _cur_invert_ptr->_codes_array[bucket_no] +
+            pos * _code_bytes_per_vec);
         bucket_vids[bucket_no].push_back(vid);
       }
     }

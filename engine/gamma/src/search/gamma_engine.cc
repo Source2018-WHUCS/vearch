@@ -1,9 +1,9 @@
 #include "gamma_engine.h"
 
+#include "log.h"
 #include <chrono>
 #include <cstring>
 #include <fcntl.h>
-#include <glog/logging.h>
 #include <mutex>
 #include <sys/mman.h>
 #include <thread>
@@ -11,6 +11,7 @@
 
 #include "bitmap.h"
 #include "cJSON.h"
+#include "gamma_common_data.h"
 #include "utils.h"
 
 using std::string;
@@ -157,6 +158,8 @@ Response *GammaEngine::Search(const Request *request) {
     response_results->results[i] = result;
   }
 
+  response_results->online_log_message = nullptr;
+
   if (request->req_num <= 0) {
     string msg = "req_num should not less than 0";
     for (int i = 0; i < response_results->req_num; i++) {
@@ -168,7 +171,24 @@ Response *GammaEngine::Search(const Request *request) {
     return response_results;
   }
 
-  if (index_status_ != IndexStatus::INDEXED) {
+  std::string online_log_level;
+  if (request->online_log_level) {
+    online_log_level.assign(request->online_log_level->value,
+                            request->online_log_level->len);
+  }
+
+  OnlineLogger logger;
+  if (0 != logger.Init(online_log_level)) {
+    LOG(WARNING) << "init online logger error!";
+  }
+
+  OLOG(&logger, INFO, "online log level: " << online_log_level);
+
+  bool use_direct_search = ((request->direct_search_type == 1) ||
+                            ((request->direct_search_type == 0) &&
+                             (index_status_ != IndexStatus::INDEXED)));
+
+  if ((not use_direct_search) && (index_status_ != IndexStatus::INDEXED)) {
     string msg = "index not trained!";
     for (int i = 0; i < response_results->req_num; i++) {
       response_results->results[i]->msg =
@@ -180,6 +200,7 @@ Response *GammaEngine::Search(const Request *request) {
   }
 
   GammaQuery gamma_query;
+  gamma_query.logger = &logger;
   gamma_query.vec_query = request->vec_fields;
   gamma_query.vec_num = request->vec_fields_num;
   GammaSearchCondition condition;
@@ -188,6 +209,7 @@ Response *GammaEngine::Search(const Request *request) {
   condition.recall_num = request->topn; // TODO: recall number should be
                                         // transmitted from search request
   condition.has_rank = request->has_rank == 1 ? true : false;
+  condition.use_direct_search = use_direct_search;
 
   NI::RangeQueryResult numeric_filter_result; // Note its scope
   if (request->range_filters_num > 0) {
@@ -208,6 +230,13 @@ Response *GammaEngine::Search(const Request *request) {
             MakeByteArray(msg.c_str(), msg.length());
         response_results->results[i]->result_code = SearchResultCode::SUCCESS;
       }
+
+      const char *log_message = logger.Data();
+      if (log_message) {
+        response_results->online_log_message =
+            MakeByteArray(log_message, logger.Length());
+      }
+
       return response_results;
     }
 
@@ -240,21 +269,44 @@ Response *GammaEngine::Search(const Request *request) {
   // condition.max_dist = request->vec_fields[0]->max_score;
 
   gamma_query.condition = &condition;
+  if (request->vec_fields_num > 0) {
+    GammaResult gamma_results[request->req_num];
+    ret = vec_manager_->Search(gamma_query, gamma_results);
+    if (ret != 0) {
+      string msg = "search error [" + std::to_string(ret) + "]";
+      for (int i = 0; i < response_results->req_num; i++) {
+        response_results->results[i]->msg =
+            MakeByteArray(msg.c_str(), msg.length());
+        response_results->results[i]->result_code =
+            SearchResultCode::SEARCH_ERROR;
+      }
 
-  GammaResult gamma_results[request->req_num];
-  ret = vec_manager_->Search(gamma_query, gamma_results);
-  if (ret != 0) {
-    string msg = "search error [" + std::to_string(ret) + "]";
-    for (int i = 0; i < response_results->req_num; i++) {
-      response_results->results[i]->msg =
-          MakeByteArray(msg.c_str(), msg.length());
-      response_results->results[i]->result_code =
-          SearchResultCode::SEARCH_ERROR;
+      const char *log_message = logger.Data();
+      if (log_message) {
+        response_results->online_log_message =
+            MakeByteArray(log_message, logger.Length());
+      }
+
+      return response_results;
     }
-    return response_results;
-  }
 
-  PackResults(gamma_results, response_results);
+    PackResults(gamma_results, response_results);
+  } else {
+    GammaResult gamma_result;
+    gamma_result.topn = request->topn;
+    gamma_result.init(request->topn, nullptr, 0);
+    for (int docid = 0; docid < max_docid_; docid++) {
+      if (numeric_filter_result.Has(docid) &&
+          !bitmap::test(docids_bitmap_, docid)) {
+        ++gamma_result.total;
+        if (gamma_result.results_count < request->topn) {
+          gamma_result.docs[gamma_result.results_count++].docid = docid;
+        }
+      }
+    }
+    response_results->req_num = 1; // only one result
+    PackResults(&gamma_result, response_results);
+  }
 
 #ifdef PERFORMANCE_TESTING
   double search_time = utils::getmillisecs();
@@ -265,6 +317,12 @@ Response *GammaEngine::Search(const Request *request) {
   }
 #endif
 
+  const char *log_message = logger.Data();
+  if (log_message) {
+    response_results->online_log_message =
+        MakeByteArray(log_message, logger.Length());
+  }
+
   return response_results;
 }
 
@@ -273,12 +331,8 @@ int GammaEngine::CreateTable(const Table *table) {
     LOG(ERROR) << "vector and profile should not be null!";
     return -1;
   }
-  if (table->nprobe <= 0) {
-    LOG(ERROR) << "nprobe of table <= 0";
-    return -1;
-  }
-  int ret_vec =
-    vec_manager_->CreateVectorTable(table->vectors_info, table->vectors_num, table->nprobe);
+  int ret_vec = vec_manager_->CreateVectorTable(
+      table->vectors_info, table->vectors_num, table->ivfpq_param);
   int ret_profile = profile_->CreateTable(table);
 
   if (ret_vec != 0 || ret_profile != 0) {
@@ -289,12 +343,12 @@ int GammaEngine::CreateTable(const Table *table) {
 
   LOG(INFO) << "create table="
             << std::string(table->name->value, table->name->len)
-            << "success! nprobe=" << table->nprobe;
+            << "success!";
 
   return 0;
 }
 
-int GammaEngine::AddDoc(const Doc *doc) {
+int GammaEngine::Add(const Doc *doc) {
   if (max_docid_ >= max_doc_size_) {
     LOG(ERROR) << "Doc size reached upper size [" << max_docid_ << "]";
     return -1;
@@ -309,7 +363,7 @@ int GammaEngine::AddDoc(const Doc *doc) {
     }
   }
   // add fields into profile
-  if (profile_->AddDoc(fields_profile, max_docid_) != 0) {
+  if (profile_->Add(fields_profile, max_docid_, false) != 0) {
     return -1;
   }
 
@@ -329,7 +383,7 @@ int GammaEngine::AddDoc(const Doc *doc) {
   return 0;
 }
 
-int GammaEngine::AddOrUpdateDoc(const Doc *doc) {
+int GammaEngine::AddOrUpdate(const Doc *doc) {
   if (max_docid_ >= max_doc_size_) {
     LOG(ERROR) << "Doc size reached upper size [" << max_docid_ << "]";
     return -1;
@@ -351,14 +405,14 @@ int GammaEngine::AddOrUpdateDoc(const Doc *doc) {
   }
   // add fields into profile
   int docid = -1;
-  profile_->GetDocIDbyKey(key, docid);
+  profile_->GetDocIDByKey(key, docid);
   if (docid == -1) {
-    int ret = profile_->AddDoc(fields_profile, max_docid_);
+    int ret = profile_->Add(fields_profile, max_docid_, false);
     if (ret != 0)
       return -1;
   } else {
-    DelDoc(key);
-    int ret = profile_->AddOrUpdateDoc(fields_profile, max_docid_);
+    Del(key);
+    int ret = profile_->Add(fields_profile, max_docid_, true);
   }
 
   for (int i = 0; i < doc->fields_num; ++i) {
@@ -377,7 +431,7 @@ int GammaEngine::AddOrUpdateDoc(const Doc *doc) {
   return 0;
 }
 
-int GammaEngine::UpdateDoc(const Doc *doc) {
+int GammaEngine::Update(const Doc *doc) {
   string key;
   std::vector<Field *> fields_profile;
   std::vector<Field *> fields_vec;
@@ -393,15 +447,15 @@ int GammaEngine::UpdateDoc(const Doc *doc) {
   }
 
   int doc_id = -1;
-  if (profile_->GetDocIDbyKey(key, doc_id) < 0) {
+  if (profile_->GetDocIDByKey(key, doc_id) < 0) {
     return -1;
   }
 
-  if (DelDoc(key) != 0) {
+  if (Del(key) != 0) {
     return -1;
   }
 
-  if (profile_->AddOrUpdateDoc(fields_profile, max_docid_) != 0) {
+  if (profile_->Add(fields_profile, max_docid_, true) != 0) {
     return -1;
   }
 
@@ -420,9 +474,9 @@ int GammaEngine::UpdateDoc(const Doc *doc) {
   return 0;
 }
 
-int GammaEngine::DelDoc(const std::string &key) {
+int GammaEngine::Del(const std::string &key) {
   int docid = -1, ret = 0;
-  ret = profile_->GetDocIDbyKey(key, docid);
+  ret = profile_->GetDocIDByKey(key, docid);
   if (ret != 0 || docid < 0)
     return -1;
 
@@ -435,16 +489,58 @@ int GammaEngine::DelDoc(const std::string &key) {
   return ret;
 }
 
-Doc *GammaEngine::GetDocByID(const std::string &id) {
-  int docid = -1, ret = 0;
-  ret = profile_->GetDocIDbyKey(id, docid);
-  if (ret != 0 || docid < 0)
-    return nullptr;
+int GammaEngine::DelDocByQuery(Request *request) {
 
-  if (bitmap::test(docids_bitmap_, docid)) {
+#ifdef DEBUG
+  LOG(INFO) << "delete by query request:" << utils::RequestToString(request);
+#endif
+
+  int ret = 0;
+  if (request->range_filters_num <= 0) {
+    LOG(ERROR) << "no range filter";
+    return 1;
+  }
+  NI::RangeQueryResult numeric_filter_result; // Note its scope
+  std::vector<NI::RangeFilter> range_filters;
+  for (int i = 0; i < request->range_filters_num; i++) {
+    auto c = request->range_filters[i];
+    range_filters.emplace_back(
+        NI::RangeFilter{string(c->field->value, c->field->len),
+                        string(c->lower_value->value, c->lower_value->len),
+                        string(c->upper_value->value, c->upper_value->len)});
+  }
+
+  int retval = numeric_index_->Search(range_filters, numeric_filter_result);
+  if (retval == 0) {
+    LOG(ERROR) << "numeric index search error, ret=" << retval;
+    return 1;
+  }
+
+  std::vector<int> doc_ids = numeric_filter_result.ToDocs();
+  for (int i = 0; i < doc_ids.size(); i++) {
+    int docid = doc_ids[i];
+    if (bitmap::test(docids_bitmap_, docid)) {
+      continue;
+    }
+    ++delete_num;
+    bitmap::set(docids_bitmap_, docid);
+  }
+  return 0;
+}
+
+Doc *GammaEngine::GetDoc(const std::string &id) {
+  int docid = -1, ret = 0;
+  ret = profile_->GetDocIDByKey(id, docid);
+  if (ret != 0 || docid < 0) {
+    LOG(INFO) << "GetDocIDbyKey error!";
     return nullptr;
   }
-  return profile_->GetDocByID(id);
+
+  if (bitmap::test(docids_bitmap_, docid)) {
+    LOG(INFO) << "bitmap set error!";
+    return nullptr;
+  }
+  return profile_->Get(id);
 }
 
 int GammaEngine::BuildIndex() {
@@ -472,9 +568,7 @@ int GammaEngine::BuildIndex() {
   return ret;
 }
 
-int GammaEngine::GetDocsNum() {
-  return max_docid_ - delete_num;
-}
+int GammaEngine::GetDocsNum() { return max_docid_ - delete_num; }
 
 long GammaEngine::GetMemoryBytes() {
   long profile_mem_bytes = profile_->GetMemoryBytes();
@@ -522,8 +616,11 @@ int GammaEngine::Load() {
 
 int GammaEngine::IndexingNumericFields() {
   int retvals = 0;
-  auto &attr_type = profile_->getAttrType();
-  const auto &attr_index = profile_->getAttrIsIndex();
+  std::map<std::string, enum DataType> attr_type;
+  retvals = profile_->GetAttrType(attr_type);
+
+  std::map<std::string, int> attr_index;
+  retvals = profile_->GetAttrIsIndex(attr_index);
   for (const auto &it : attr_type) {
     string field_name = it.first;
     const auto &attr_index_it = attr_index.find(field_name);
@@ -592,7 +689,7 @@ void GammaEngine::PackResults(const GammaResult *gamma_results,
       result->result_items[j]->score = vec_doc->score;
 
       int &docid = vec_doc->docid;
-      result->result_items[j]->doc = profile_->GetDocByDocid(docid);
+      result->result_items[j]->doc = profile_->Get(docid);
 
       Doc *&doc_ptr = result->result_items[j]->doc;
       /*

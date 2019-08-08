@@ -1,12 +1,12 @@
 #ifndef GAMMA_INDEX_IVFPQ_H_
 #define GAMMA_INDEX_IVFPQ_H_
 
+#include "log.h"
+#include "gamma_common_data.h"
 #include "gamma_index.h"
 #include "numeric_index.h"
 #include "raw_vector.h"
 #include "realtime_invert_index.h"
-#include "utils.h"
-#include <glog/logging.h>
 
 #include "faiss/AuxIndexStructures.h"
 #include "faiss/FaissAssert.h"
@@ -360,35 +360,6 @@ struct IVFPQScannerT : QueryTables {
     }
   }
 
-  /*****************************************************
-   * Scaning the codes: simple PQ scan.
-   *****************************************************/
-
-  /// version of the scan where we use precomputed tables
-  /*size_t scan_list_with_table(size_t ncode, const uint8_t *codes,
-                              const long *ids, size_t k, float *heap_sim,
-                              long *heap_ids) const {
-    int nup = 0;
-    for (size_t j = 0; j < ncode; j++) {
-
-      float dis = dis0;
-      const float *tab = sim_table;
-
-      for (size_t m = 0; m < pq.M; m++) {
-        dis += tab[*codes++];
-        tab += pq.ksub;
-      }
-
-      if (C::cmp(heap_sim[0], dis)) {
-        faiss::heap_pop<C>(k, heap_sim, heap_ids);
-        long id = store_pairs ? (key << 32 | j) : ids[j];
-        faiss::heap_push<C>(k, heap_sim, heap_ids, dis, id);
-        nup++;
-      }
-    }
-    return nup;
-  }*/
-
   /// tables are not precomputed, but pointers are provided to the
   /// relevant X_c|x_r tables
   size_t scan_list_with_pointer(size_t ncode, const uint8_t *codes,
@@ -592,34 +563,34 @@ struct GammaIndexScanner : IVFPQScannerT<idx_t, store_pairs, C, METRIC_TYPE>,
 
     int nup = 0;
 
-#define HANDLE_ONE                                         \
-  do {                                                     \
-    int doc_id = raw_vec_->vid2docid_[ids[j]];             \
-    if ((numeric_index_ptr_ != nullptr &&                  \
-         (not numeric_index_ptr_->Has(doc_id))) ||         \
-        bitmap::test(docids_bitmap_, doc_id)) {            \
-      codes += this->pq.M; /* increment pointer */         \
-      j++;                 /* increment j*/                                \
-      continue;                                            \
-    }                                                      \
-                                                           \
-    float dis = this->dis0;                                \
-    const float *tab = this->sim_table;                    \
-    for (size_t m = 0; m < this->pq.M; m += 4) {           \
-      dis += tab[*codes++], tab += this->pq.ksub;          \
-      dis += tab[*codes++], tab += this->pq.ksub;          \
-      dis += tab[*codes++], tab += this->pq.ksub;          \
-      dis += tab[*codes++], tab += this->pq.ksub;          \
-    }                                                      \
-                                                           \
-    if (C::cmp(heap_sim[0], dis)) {                        \
-      faiss::heap_pop<C>(k, heap_sim, heap_ids);           \
-      long id = ids[j];                                    \
-      faiss::heap_push<C>(k, heap_sim, heap_ids, dis, id); \
-      nup++;                                               \
-    }                                                      \
-                                                           \
-    j++; /* increment j */                                 \
+#define HANDLE_ONE                                                             \
+  do {                                                                         \
+    int doc_id = raw_vec_->vid2docid_[ids[j]];                                 \
+    if ((numeric_index_ptr_ != nullptr &&                                      \
+         (not numeric_index_ptr_->Has(doc_id))) ||                             \
+        bitmap::test(docids_bitmap_, doc_id)) {                                \
+      codes += this->pq.M; /* increment pointer */                             \
+      j++;                 /* increment j*/                                    \
+      continue;                                                                \
+    }                                                                          \
+                                                                               \
+    float dis = this->dis0;                                                    \
+    const float *tab = this->sim_table;                                        \
+    for (size_t m = 0; m < this->pq.M; m += 4) {                               \
+      dis += tab[*codes++], tab += this->pq.ksub;                              \
+      dis += tab[*codes++], tab += this->pq.ksub;                              \
+      dis += tab[*codes++], tab += this->pq.ksub;                              \
+      dis += tab[*codes++], tab += this->pq.ksub;                              \
+    }                                                                          \
+                                                                               \
+    if (C::cmp(heap_sim[0], dis)) {                                            \
+      faiss::heap_pop<C>(k, heap_sim, heap_ids);                               \
+      long id = ids[j];                                                        \
+      faiss::heap_push<C>(k, heap_sim, heap_ids, dis, id);                     \
+      nup++;                                                                   \
+    }                                                                          \
+                                                                               \
+    j++; /* increment j */                                                     \
   } while (0)
     size_t j = 0;
     size_t loops = ncode / 8;
@@ -663,26 +634,26 @@ struct GammaIndexScanner : IVFPQScannerT<idx_t, store_pairs, C, METRIC_TYPE>,
     int nup = 0;
     assert(this->pq.M % 4 == 0);
 
-#define HANDLE_ONE                                         \
-  do {                                                     \
-    float dis = this->dis0;                                \
-    const float *tab = this->sim_table;                    \
-    const uint8_t *code = codes[j];                        \
-    for (size_t m = 0; m < this->pq.M; m += 4) {           \
-      dis += tab[*code++], tab += this->pq.ksub;           \
-      dis += tab[*code++], tab += this->pq.ksub;           \
-      dis += tab[*code++], tab += this->pq.ksub;           \
-      dis += tab[*code++], tab += this->pq.ksub;           \
-    }                                                      \
-                                                           \
-    if (C::cmp(heap_sim[0], dis)) {                        \
-      faiss::heap_pop<C>(k, heap_sim, heap_ids);           \
-      long id = ids[j];                                    \
-      faiss::heap_push<C>(k, heap_sim, heap_ids, dis, id); \
-      nup++;                                               \
-    }                                                      \
-                                                           \
-    j++; /* increment j */                                 \
+#define HANDLE_ONE                                                             \
+  do {                                                                         \
+    float dis = this->dis0;                                                    \
+    const float *tab = this->sim_table;                                        \
+    const uint8_t *code = codes[j];                                            \
+    for (size_t m = 0; m < this->pq.M; m += 4) {                               \
+      dis += tab[*code++], tab += this->pq.ksub;                               \
+      dis += tab[*code++], tab += this->pq.ksub;                               \
+      dis += tab[*code++], tab += this->pq.ksub;                               \
+      dis += tab[*code++], tab += this->pq.ksub;                               \
+    }                                                                          \
+                                                                               \
+    if (C::cmp(heap_sim[0], dis)) {                                            \
+      faiss::heap_pop<C>(k, heap_sim, heap_ids);                               \
+      long id = ids[j];                                                        \
+      faiss::heap_push<C>(k, heap_sim, heap_ids, dis, id);                     \
+      nup++;                                                                   \
+    }                                                                          \
+                                                                               \
+    j++; /* increment j */                                                     \
   } while (0)
 
     size_t j = 0;
@@ -764,8 +735,7 @@ struct GammaIndexScanner : IVFPQScannerT<idx_t, store_pairs, C, METRIC_TYPE>,
   }
 
   inline size_t scan_codes(size_t ncode, const uint8_t **codes, const long *ids,
-                           float *heap_sim, long *heap_ids,
-                           size_t k) {
+                           float *heap_sim, long *heap_ids, size_t k) {
     if (precompute_mode == 2) {
       this->scan_list_with_table(ncode, codes, ids, k, heap_sim, heap_ids);
     } else {
@@ -859,16 +829,18 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
 
   void search_preassigned(int n, const float *x,
                           const GammaSearchCondition *condition,
-                          std::vector<int> &total, const long *assign,
-                          const float *centroid_dis, float *distances,
-                          long *labels, bool store_pairs,
+                          const long *assign, const float *centroid_dis,
+                          float *distances, long *labels, int *total,
+                          bool store_pairs,
                           const faiss::IVFSearchParameters *params = nullptr);
 
-  /** assign the vectors, then call search_preassign */
-  void GammaIVFPQSearch(int n, const float *x,
-                        const GammaSearchCondition *condition,
-                        std::vector<int> &total, float *distances,
-                        long *labels);
+  // assign the vectors, then call search_preassign
+  void SearchIVFPQ(int n, const float *x, const GammaSearchCondition *condition,
+                   float *distances, long *labels, int *total);
+
+  void SearchDirectly(int n, const float *x,
+                      const GammaSearchCondition *condition, float *distances,
+                      long *labels, int *total);
 
   long GetTotalMemBytes() override {
     if (!rt_invert_index_ptr_) {

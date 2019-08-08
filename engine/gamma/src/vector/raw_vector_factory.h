@@ -1,7 +1,6 @@
 #ifndef RAW_VECTOR_FACTORY_H_
 #define RAW_VECTOR_FACTORY_H_
 
-#include "memory_disk_raw_vector.h"
 #include "memory_raw_vector.h"
 #include "raw_vector.h"
 #include <string>
@@ -15,9 +14,6 @@ public:
     switch (type) {
     case MemoryOnly:
       return (RawVector *)new MemoryRawVector(name, dimension, max_doc_size);
-    case MemoryWithDisk:
-      return (RawVector *)new MemoryDiskRawVector(name, dimension, 100000,
-                                                  100000 * 2, max_doc_size);
     default:
       throw std::invalid_argument("invalid raw feature type");
     }

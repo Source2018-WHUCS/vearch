@@ -1,6 +1,7 @@
 #include "test.h"
 #include <cmath>
 #include <fcntl.h>
+#include <fstream>
 #include <functional>
 #include <future>
 #include <sys/mman.h>
@@ -139,10 +140,10 @@ int SearchThread(void *engine, int num) {
         MakeRangeFilter(StringToByteArray(cid), StringToByteArray(c1_lower),
                         StringToByteArray(c1_upper), false, true);
     SetRangeFilter(range_filters, 0, range_filter);
-    // Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0,
-    //                                range_filters, 1, nullptr, 0, 1);
-    Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0,
-                                   nullptr, 0, 1);
+    Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0,
+                                   range_filters, 1, nullptr, 0, 1, 0, nullptr);
+    // Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr,
+    // 0, nullptr, 0, 1, 0, nullptr);
 
     Response *response = Search(engine, request);
     string msg = std::to_string(idx) + ", ";
@@ -206,9 +207,10 @@ void Search(void *engine) {
                       StringToByteArray(c1_upper), false, true);
   SetRangeFilter(range_filters, 0, range_filter);
   // Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0,
-  //                                range_filters, 1, nullptr, 0, 1);
-  Request *request =
-      MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0, nullptr, 0, 1);
+  //                                range_filters, 1, nullptr, 0, 1, 0,
+  //                                nullptr);
+  Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0,
+                                 nullptr, 0, 1, 0, nullptr);
 
   Response *response = Search(engine, request);
   string msg = std::to_string(idx) + ", ";
@@ -308,8 +310,8 @@ TEST(Search, CreateTable) {
       StringToByteArray(retrieval_type), StringToByteArray(store_type));
   SetVectorInfo(vectors_info, 0, vector_info);
 
-  Table *table =
-    MakeTable(table_name, field_infos, fields_vec.size(), vectors_info, 1, nprobe);
+  Table *table = MakeTable(table_name, field_infos, fields_vec.size(),
+                           vectors_info, 1, kIVFPQParam);
   enum ResponseCode ret = CreateTable(engine, table);
   DestroyTable(table);
   EXPECT_EQ(ret, 0);
@@ -457,7 +459,8 @@ TEST(Search, SearchThreadAfterLoad) {
   std::thread t_searchs[search_thread_num];
 
   int search_num = 10000 * 5;
-  std::function<int()> func_search = std::bind(SearchThread, engine, search_num);
+  std::function<int()> func_search =
+      std::bind(SearchThread, engine, search_num);
   std::future<int> search_futures[search_thread_num];
   std::packaged_task<int()> tasks[search_thread_num];
 
@@ -496,8 +499,8 @@ TEST(Search, Close) {
 }
 
 int main(int argc, char **argv) {
-    testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }
 
 } // namespace Test

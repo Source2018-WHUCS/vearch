@@ -1,14 +1,13 @@
 #include "realtime_invert_index.h"
+#include "log.h"
 #include "utils.h"
-#include <glog/logging.h>
 
 namespace tig_gamma {
 namespace realtime {
 
 RTInvertIndex::RTInvertIndex(faiss::Index *index, long max_vec_size,
                              size_t bucket_keys, size_t bucket_keys_limit)
-    : _bucket_keys(bucket_keys),
-      _bucket_keys_limit(bucket_keys_limit),
+    : _bucket_keys(bucket_keys), _bucket_keys_limit(bucket_keys_limit),
       _max_vec_size(max_vec_size) {
   _cur_ptr = NULL;
   if (index) {

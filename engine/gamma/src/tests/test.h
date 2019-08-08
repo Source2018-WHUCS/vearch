@@ -1,6 +1,6 @@
 #include <chrono>
 #include <faiss/utils.h>
-#include <glog/logging.h>
+#include "log.h"
 #include <gtest/gtest.h>
 #include <iostream>
 #include <stdio.h>
@@ -17,6 +17,8 @@
 
 using std::string;
 using namespace std;
+
+IVFPQParameters *kIVFPQParam = MakeIVFPQParameters(InnerProduct, 50, 256, 32, 8);
 
 inline ByteArray *StringToByteArray(const std::string &str) {
   ByteArray *ba = static_cast<ByteArray *>(malloc(sizeof(ByteArray)));
