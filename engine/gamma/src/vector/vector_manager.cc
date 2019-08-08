@@ -1,6 +1,8 @@
 #include "vector_manager.h"
 #include "gamma_index_factory.h"
 #include "raw_vector_factory.h"
+#include "utils.h"
+#include "ivfpq_param_helper.h"
 
 namespace tig_gamma {
 
@@ -16,13 +18,32 @@ VectorManager::VectorManager(const RetrievalModel &model,
     : default_model_(model), default_store_type_(store_type),
       docids_bitmap_(docids_bitmap), max_doc_size_(max_doc_size) {
   table_created_ = false;
-  nprobe = 0;
+  ivfpq_param_ = nullptr;
 }
 
-int VectorManager::CreateVectorTable(VectorInfo **vectors_info,
-                                     int vectors_num, int nprobe) {
+VectorManager::~VectorManager() { Close(); }
+
+int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
+                                     IVFPQParameters *ivfpq_param) {
   if (table_created_)
     return -1;
+
+  if (ivfpq_param == nullptr) {
+    LOG(ERROR) << "ivf pq parameters is null";
+    return -1;
+  }
+
+  // copy parameters
+  ivfpq_param_ = MakeIVFPQParameters(
+      ivfpq_param->metric_type, ivfpq_param->nprobe, ivfpq_param->ncentroids,
+      ivfpq_param->nsubvector, ivfpq_param->nbits_per_idx);
+  IVFPQParamHelper ivfpq_param_helper(ivfpq_param_);
+  ivfpq_param_helper.SetDefaultValue();
+  if (!ivfpq_param_helper.Validate()) {
+    LOG(ERROR) << "validate ivf qp parameters error";
+    return -1;
+  }
+  LOG(INFO) << ivfpq_param_helper.ToString();
 
   for (int i = 0; i < vectors_num; i++) {
     std::string vec_name(vectors_info[i]->name->value,
@@ -70,13 +91,12 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info,
                    << ", default to " << default_model_;
     }
 
-    GammaIndex *index = GammaIndexFactory::Create(model, dimension,
-                                                  docids_bitmap_, vec, nprobe);
+    GammaIndex *index = GammaIndexFactory::Create(
+        model, dimension, docids_bitmap_, vec, ivfpq_param_);
     if (index == nullptr) {
       LOG(ERROR) << "create gamma index " << vec_name << " error!";
       continue;
     }
-    this->nprobe = nprobe;
 
     vector_indexes_[vec_name] = index;
   }
@@ -128,6 +148,8 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
   VectorResult all_vector_results[query.vec_num];
 
   query.condition->sort_by_docid = query.vec_num > 1 ? true : false;
+  query.condition->metric_type =
+    static_cast<DistanceMetricType>(ivfpq_param_->metric_type);
   std::string vec_names[query.vec_num];
   for (int i = 0; i < query.vec_num; i++) {
     std::string name = std::string(query.vec_query[i]->name->value,
@@ -248,9 +270,27 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
 }
 
 int VectorManager::Dump(const string &path) {
+  string pq_param_file = path + "/" + "ivfpq.param";
+  FILE *param_fp = fopen(pq_param_file.c_str(), "wb");
+  if (param_fp == nullptr) {
+    LOG(ERROR) << "open error, file=" << pq_param_file.c_str();
+    return -1;
+  }
+  assert(1 == fwrite((void *)&ivfpq_param_->metric_type,
+                     sizeof(ivfpq_param_->metric_type), 1, param_fp));
+  assert(1 == fwrite((void *)&ivfpq_param_->nprobe,
+                     sizeof(ivfpq_param_->nprobe), 1, param_fp));
+  assert(1 == fwrite((void *)&ivfpq_param_->ncentroids,
+                     sizeof(ivfpq_param_->ncentroids), 1, param_fp));
+  assert(1 == fwrite((void *)&ivfpq_param_->nsubvector,
+                     sizeof(ivfpq_param_->nsubvector), 1, param_fp));
+  assert(1 == fwrite((void *)&ivfpq_param_->nbits_per_idx,
+                     sizeof(ivfpq_param_->nbits_per_idx), 1, param_fp));
+  fclose(param_fp);
+
   std::map<std::string, RawVector *>::iterator iter = raw_vectors_.begin();
   for (; iter != raw_vectors_.end(); iter++) {
-    if (0 != iter->second->Dump(path, this->nprobe)) {
+    if (0 != iter->second->Dump(path)) {
       LOG(ERROR) << "vector table " << iter->first << " dump failed!";
       return -1;
     }
@@ -259,23 +299,31 @@ int VectorManager::Dump(const string &path) {
 }
 
 int VectorManager::Load(const string &path) {
-  if (raw_vectors_.size() > 0) {
-    std::map<std::string, RawVector *>::iterator iter = raw_vectors_.begin();
-    for (; iter != raw_vectors_.end(); iter++) {
-      if (iter->second != nullptr) {
-        delete iter->second;
-      }
-    }
+  Close();
+  ivfpq_param_ = static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
+  string pq_param_file = path + "/ivfpq.param";
+  FILE *param_fp = fopen(pq_param_file.c_str(), "rb");
+  if (param_fp == nullptr) {
+    LOG(ERROR) << "open error, file=" << pq_param_file.c_str();
+    return -1;
   }
-
-  if (vector_indexes_.size() > 0) {
-    std::map<std::string, GammaIndex *>::iterator iter = vector_indexes_.begin();
-    for (; iter != vector_indexes_.end(); iter++) {
-      if (iter->second != nullptr) {
-        delete iter->second;
-      }
-    }
+  assert(1 == fread((void *)&ivfpq_param_->metric_type,
+                    sizeof(ivfpq_param_->metric_type), 1, param_fp));
+  assert(1 == fread((void *)&ivfpq_param_->nprobe, sizeof(ivfpq_param_->nprobe),
+                    1, param_fp));
+  assert(1 == fread((void *)&ivfpq_param_->ncentroids,
+                    sizeof(ivfpq_param_->ncentroids), 1, param_fp));
+  assert(1 == fread((void *)&ivfpq_param_->nsubvector,
+                    sizeof(ivfpq_param_->nsubvector), 1, param_fp));
+  assert(1 == fread((void *)&ivfpq_param_->nbits_per_idx,
+                    sizeof(ivfpq_param_->nbits_per_idx), 1, param_fp));
+  fclose(param_fp);
+  IVFPQParamHelper ivfpq_param_helper(ivfpq_param_);
+  if (!ivfpq_param_helper.Validate()) {
+    LOG(INFO) << "load: validate ivf pq parameters error";
+    return -1;
   }
+  LOG(INFO) <<"load: " << ivfpq_param_helper.ToString();
 
   const std::vector<string> files = utils::ls(path);
   for (const auto file : files) {
@@ -283,7 +331,7 @@ int VectorManager::Load(const string &path) {
     if (strs.size() == 2 && strs[1] == "fet") {
       string vec_name = strs[0];
       strs = utils::split(vec_name, "/");
-      vec_name = strs[strs.size() -1];
+      vec_name = strs[strs.size() - 1];
       FILE *fet_fp = fopen(file.c_str(), "rb");
       if (fet_fp == nullptr) {
         LOG(ERROR) << "open error: feature file=" << file.c_str();
@@ -291,8 +339,6 @@ int VectorManager::Load(const string &path) {
       }
       int dimension = 0;
       int type;
-      int nprobe = 0;
-      assert(1 == fread((void *)&nprobe, sizeof(nprobe), 1, fet_fp));
       assert(1 == fread((void *)&type, sizeof(type), 1, fet_fp));
       assert(1 == fread((void *)&dimension, sizeof(dimension), 1, fet_fp));
       fclose(fet_fp);
@@ -311,31 +357,46 @@ int VectorManager::Load(const string &path) {
                    << ", dimension=" << dimension << ", ret=" << ret;
         return -1;
       }
-      if (nprobe <= 0 || (this->nprobe != 0 && this->nprobe != nprobe)) {
-        LOG(ERROR) << "load error: invalid current nprobe=" << nprobe
-                   << ", pre nprobe=" << this->nprobe;
-        return -1;
-      }
-      if (this->nprobe == 0) {
-        this->nprobe = nprobe;
-      }
       raw_vectors_[vec_name] = raw_vec;
 
       RetrievalModel model = default_model_; // it should be retrieved from file
-      GammaIndex *index =
-        GammaIndexFactory::Create(model, dimension, docids_bitmap_, raw_vec, nprobe);
+      GammaIndex *index = GammaIndexFactory::Create(
+          model, dimension, docids_bitmap_, raw_vec, ivfpq_param_);
       if (index == nullptr) {
         LOG(ERROR) << "Load: create gamma index " << vec_name << " error!";
         return -1;
       }
-      LOG(ERROR) << "load vector success: vector name=" << vec_name
-                 << ", vector type=" << vec_type
-                 << ", dimension=" << dimension << ", ret=" << ret
-                 << ", nprobe=" << nprobe;
+      LOG(INFO) << "load vector success: vector name=" << vec_name
+                << ", vector type=" << vec_type << ", dimension=" << dimension;
       vector_indexes_[vec_name] = index;
     }
   }
   return 0;
 }
 
+void VectorManager::Close() {
+  if (raw_vectors_.size() > 0) {
+    std::map<std::string, RawVector *>::iterator iter = raw_vectors_.begin();
+    for (; iter != raw_vectors_.end(); iter++) {
+      if (iter->second != nullptr) {
+        delete iter->second;
+      }
+    }
+  }
+
+  if (vector_indexes_.size() > 0) {
+    std::map<std::string, GammaIndex *>::iterator iter =
+        vector_indexes_.begin();
+    for (; iter != vector_indexes_.end(); iter++) {
+      if (iter->second != nullptr) {
+        delete iter->second;
+      }
+    }
+  }
+
+  if (ivfpq_param_ != nullptr) {
+    DestroyIVFPQParameters(ivfpq_param_);
+    ivfpq_param_ = nullptr;
+  }
+}
 } // namespace tig_gamma

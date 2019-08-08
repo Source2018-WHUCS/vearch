@@ -6,7 +6,6 @@
 #include <fstream>
 #include <string>
 
-#include "thread_util.h"
 #include "utils.h"
 
 using std::move;
@@ -26,11 +25,8 @@ Profile::Profile(const int max_doc_size) {
   max_str_size_ = max_profile_size_ * 128;
   str_offset_ = 0;
 
-  docid_list_ptr_ = new int[max_profile_size_];
-  item_to_docid_ = new MemCache;
-  const uint64_t MAX_SIZE = (uint64_t) 1 << 32;
-  if (0 != item_to_docid_->init(MAX_SIZE, max_profile_size_)) {
-    LOG(ERROR) << "_item_to_docid init failed!";
+  if (!item_to_docid_.reserve(max_doc_size)) {
+    LOG(ERROR) << "item_to_docid reserve failed!";
   }
 
   table_created_ = false;
@@ -46,17 +42,6 @@ Profile::~Profile() {
   if (str_mem_ != nullptr) {
     delete[] str_mem_;
   }
-
-  if (docid_list_ptr_ != nullptr) {
-    delete[] docid_list_ptr_;
-  }
-
-  // TODO: there is a crash
-  /*
-  if (item_to_docid_ != nullptr) {
-    delete item_to_docid_;
-  }
-  */
 }
 
 int Profile::Load(const string &path, int &doc_num) {
@@ -66,7 +51,7 @@ int Profile::Load(const string &path, int &doc_num) {
     if (strs.size() == 2 && strs[1] == "prf") {
       name_ = strs[0];
       strs = utils::split(name_, "/");
-      name_ = strs[strs.size() -1];
+      name_ = strs[strs.size() - 1];
       break;
     }
   }
@@ -249,22 +234,17 @@ int Profile::AddField(const string &name, enum DataType ftype, int is_index) {
   return 0;
 }
 
-int Profile::GetDocIDbyKey(const std::string &key, int &doc_id) {
-  MCElem _key(const_cast<char *>(key.c_str()), key.length());
-  MCElem val;
-  if (item_to_docid_->get(_key, val) == 0) {
-    if (val.data != NULL) {
-      memcpy((void *)&doc_id, val.data, val.len);
-      delete[] val.data;
-      return 0;
-    }
+int Profile::GetDocIDByKey(const std::string &key, int &doc_id) {
+  if (item_to_docid_.find(key, doc_id)) {
+    return 0;
   }
 
   return -1;
 }
 
-int Profile::AddDoc(const std::vector<Field *> &fields, int doc_idx) {
-  if (doc_idx >= static_cast<int>(max_profile_size_)) {
+int Profile::Add(const std::vector<Field *> &fields, int doc_id,
+                    bool is_existed) {
+  if (doc_id >= static_cast<int>(max_profile_size_)) {
     LOG(ERROR) << "Doc num reached upper limit [" << max_profile_size_ << "]";
     return -1;
   }
@@ -285,30 +265,12 @@ int Profile::AddDoc(const std::vector<Field *> &fields, int doc_idx) {
     LOG(ERROR) << "Add item error : _id is null!";
     return -1;
   }
-  int docid = -1;
-  if (GetDocIDbyKey(key, docid) != -1) {
-    LOG(ERROR) << "Add item error : duplicated Id!";
-    return -2;
+
+  if (is_existed) {
+    item_to_docid_.erase(key);
   }
 
-  docid_list_ptr_[doc_idx] = doc_idx;
-  MCElem _key(const_cast<char *>(key.c_str()), key.length());
-  MCElem val;
-
-  if (item_to_docid_->get(_key, val) != 0) {
-    val.data = (char *)(docid_list_ptr_ + doc_idx);
-    val.len = sizeof(int);
-
-    int ret_put = item_to_docid_->put(_key, val);
-    if (ret_put != 0) {
-      LOG(ERROR) << "put cache fail, error=" << ret_put;
-      return -3;
-    }
-  } else {
-    if (val.data != NULL) {
-      delete[] val.data;
-    }
-  }
+  item_to_docid_.insert(key, doc_id);
 
   for (size_t i = 0; i < fields.size(); ++i) {
     const auto field_value = fields[i];
@@ -320,63 +282,12 @@ int Profile::AddDoc(const std::vector<Field *> &fields, int doc_idx) {
       LOG(ERROR) << "Cannot find field name : " << name;
       continue;
     }
-    SetFieldValue(doc_idx, name.c_str(), field_value->value->value,
+    SetFieldValue(doc_id, name.c_str(), field_value->value->value,
                   field_value->value->len);
   }
 
-  if (doc_idx % 10000 == 0) {
-    LOG(INFO) << "Add item _id = " << key << ", num " << doc_idx;
-  }
-  return 0;
-}
-
-int Profile::AddOrUpdateDoc(const std::vector<Field *> &fields, int doc_idx) {
-  if (doc_idx >= static_cast<int>(max_profile_size_)) {
-    LOG(ERROR) << "Doc num reached upper limit [" << max_profile_size_ << "]";
-    return -1;
-  }
-  string key;
-  for (size_t i = 0; i < fields.size(); ++i) {
-    const auto field_value = fields[i];
-    const string &name =
-        std::string(field_value->name->value, field_value->name->len);
-    if (name == "_id") {
-      key = string(field_value->value->value, field_value->value->len);
-      break;
-    }
-  }
-#ifdef DEBUG__
-  printDoc(doc);
-#endif
-  if (key.empty()) {
-    LOG(ERROR) << "Add item error : _id is null!";
-    return -1;
-  }
-  int docid = -1;
-  GetDocIDbyKey(key, docid);
-  if (docid == -1) {
-    LOG(ERROR) << "Cannot override id [" << docid << "]";
-    return -1;
-  }
-
-  docid_list_ptr_[doc_idx] = doc_idx;
-  docid_list_ptr_[docid] = doc_idx;
-
-  for (size_t i = 0; i < fields.size(); ++i) {
-    const auto field_value = fields[i];
-    const string &name =
-        std::string(fields[i]->name->value, fields[i]->name->len);
-
-    if (attr_idx_map_.find(name) == attr_idx_map_.end()) {
-      LOG(ERROR) << "Cannot find field name : " << name;
-      continue;
-    }
-    SetFieldValue(doc_idx, name, field_value->value->value,
-                  field_value->value->len);
-  }
-
-  if (doc_idx % 10000 == 0) {
-    LOG(INFO) << "Add item _id = " << key << ", num " << doc_idx;
+  if (doc_id % 10000 == 0) {
+    LOG(INFO) << "Add item _id = " << key << ", num " << doc_id;
   }
   return 0;
 }
@@ -429,7 +340,7 @@ long Profile::GetMemoryBytes() {
   return max_profile_size_ * item_length_ + max_str_size_;
 }
 
-Doc *Profile::GetDocByDocid(const int &docid) {
+Doc *Profile::Get(const int &docid) {
   Doc *doc = static_cast<Doc *>(malloc(sizeof(Doc)));
 
   doc->fields_num = attr_type_map_.size();
@@ -482,13 +393,13 @@ Doc *Profile::GetDocByDocid(const int &docid) {
   return doc;
 }
 
-Doc *Profile::GetDocByID(const std::string &id) {
+Doc *Profile::Get(const std::string &key) {
   int doc_id = 0;
-  int ret = GetDocIDbyKey(id, doc_id);
+  int ret = GetDocIDByKey(key, doc_id);
   if (ret < 0) {
     return nullptr;
   }
-  Doc *doc = GetDocByDocid(doc_id);
+  Doc *doc = Get(doc_id);
   return doc;
 }
 
@@ -509,12 +420,18 @@ int Profile::GetField(int docid, const std::string &field, char **value) const {
   return len;
 }
 
-std::map<std::string, enum DataType> &Profile::getAttrType() {
-  return attr_type_map_;
+int Profile::GetAttrType(std::map<std::string, enum DataType> &attr_type_map) {
+  for (const auto attr_type : attr_type_map_) {
+    attr_type_map.insert(attr_type);
+  }
+  return 0;
 }
 
-std::map<std::string, int> &Profile::getAttrIsIndex() {
-  return attr_is_index_map_;
+int Profile::GetAttrIsIndex(std::map<std::string, int> &attr_is_index_map) {
+  for (const auto attr_is_index : attr_is_index_map_) {
+    attr_is_index_map.insert(attr_is_index);
+  }
+  return 0;
 }
 
 int Profile::GetAttrIdx(const std::string &field) const {

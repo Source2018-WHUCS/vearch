@@ -136,7 +136,7 @@ enum ResponseCode DestroyVectorInfos(VectorInfo **vectorInfo, int num);
 typedef struct FieldInfo {
   ByteArray *name;
   enum DataType data_type;
-  BOOL is_index;           // whether index numeric field
+  BOOL is_index; // whether index numeric field
 } FieldInfo;
 
 /** make FieldInfo array
@@ -224,6 +224,35 @@ enum ResponseCode DestroyField(Field *field);
  */
 enum ResponseCode DestroyFields(Field **fields, int num);
 
+typedef struct IVFPQParameters {
+  int metric_type;
+  int nprobe;        // scan nprobe
+  int ncentroids;    // coarse cluster center number
+  int nsubvector;
+  int nbits_per_idx; // bit number of sub cluster center
+} IVFPQParameters;
+
+/** make a IVFPQParameters pointer
+ *
+ * @param metric_type   metric type, 0 inner product, 1 L2, default(-1) inner
+ * product
+ * @param nprobe        scan nprobe, default(-1) 10, it should be less than ncentroids
+ * @param ncentroids    coarse cluster center number, default(-1) 256
+ * @param nsubvector    the number of sub vector, default(-1) 32, only the value which is multiple of 4 is supported now
+ * @param nbits_per_idx bit number of sub cluster center, default(-1) 8, and 8 is the only value now
+ * @return IVFPQParameters pointer
+ */
+IVFPQParameters *
+MakeIVFPQParameters(int metric_type, int nprobe, int ncentroids, int nsubvector,
+                    int nbits_per_idx);
+
+/** destroy IVFPQParameters pointer
+ *
+ * @param param IVFPQParameters pointer
+ * @return ResponseCode
+ */
+enum ResponseCode DestroyIVFPQParameters(IVFPQParameters *param);
+
 // table info
 typedef struct Table {
   ByteArray *name;           // table name
@@ -231,7 +260,7 @@ typedef struct Table {
   int fields_num;            // field num
   VectorInfo **vectors_info; // VectorInfo array head pointer
   int vectors_num;           // vector num
-  int nprobe;                // gamma ivfpq nprobe
+  IVFPQParameters *ivfpq_param;
 } Table;
 
 /** make a Table pointer
@@ -244,7 +273,8 @@ typedef struct Table {
  * @return a Table pointer
  */
 Table *MakeTable(ByteArray *name, FieldInfo **fields, int fields_num,
-                 VectorInfo **vectors_info, int vectors_num, int nprobe);
+                 VectorInfo **vectors_info, int vectors_num,
+                 IVFPQParameters *ivfpq_param);
 
 /** destroy Table
  *
@@ -550,6 +580,8 @@ enum ResponseCode DestroyVectorQuerys(VectorQuery **vector_querys, int num);
 typedef struct Request {
   int req_num;
   int topn;
+  int direct_search_type; // -1: no direct search, 0: auto, 1: always direct
+                          // search, default 0
 
   int has_rank; // default 0, has not rank; 1, has rank
   VectorQuery **vec_fields;
@@ -564,6 +596,9 @@ typedef struct Request {
   TermFilter **term_filters;
   int term_filters_num;
   enum DistanceMetricType metric_type;
+
+  // online log level: debug|info|warn|error|none
+  ByteArray *online_log_level;
 } Request;
 
 /** make a Request
@@ -584,7 +619,8 @@ Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
                      ByteArray **fields, int fields_num,
                      RangeFilter **range_filters, int range_filters_num,
                      TermFilter **term_filters, int term_filters_num,
-                     int req_num);
+                     int req_num, int direct_search_type,
+                     ByteArray *online_log_level);
 
 /** destroy Request
  *
@@ -599,11 +635,7 @@ typedef struct ResultItem {
   ByteArray *extra;
 } ResultItem;
 
-enum SearchResultCode {
-  SUCCESS = 0,
-  INDEX_NOT_TRAINED,
-  SEARCH_ERROR
-};
+enum SearchResultCode { SUCCESS = 0, INDEX_NOT_TRAINED, SEARCH_ERROR };
 
 typedef struct SearchResult {
   int total;
@@ -617,6 +649,8 @@ typedef struct SearchResult {
 typedef struct Response {
   int req_num;
   SearchResult **results;
+
+  ByteArray *online_log_message; // may be null
 } Response;
 
 /** query vectors to index
@@ -628,6 +662,14 @@ typedef struct Response {
 Response *Search(void *engine, Request *request);
 // enum ResponseCode Search(void *engine, int n, struct Request *request,
 //                        struct Response **response);
+
+/** delete docs from table by query
+ *
+ * @param engine  search engine pointer
+ * @param request delete request pointer
+ * @return ResponseCode
+ */
+enum ResponseCode DelDocByQuery(void *engine, Request *request);
 
 /** get SearchResult from response
  *

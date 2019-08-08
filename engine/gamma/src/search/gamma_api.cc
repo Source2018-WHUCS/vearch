@@ -1,10 +1,12 @@
 #include "gamma_api.h"
 
+#include "log.h"
 #include "gamma_engine.h"
 #include "utils.h"
 #include <fcntl.h>
-#include <glog/logging.h>
 #include <sys/stat.h>
+
+INITIALIZE_EASYLOGGINGPP
 
 using std::string;
 
@@ -151,7 +153,8 @@ Field **MakeFields(int num) {
   return fields;
 }
 
-Field *MakeField(ByteArray *name, ByteArray *value, ByteArray *source, enum DataType data_type) {
+Field *MakeField(ByteArray *name, ByteArray *value, ByteArray *source,
+                 enum DataType data_type) {
   Field *field_info = static_cast<Field *>(malloc(sizeof(Field)));
   memset(field_info, 0, sizeof(Field));
   field_info->name = name;
@@ -186,8 +189,28 @@ enum ResponseCode DestroyFields(Field **field, int num) {
   return ResponseCode::SUCCESSED;
 }
 
+IVFPQParameters *
+MakeIVFPQParameters(int metric_type, int nprobe, int ncentroids, int nsubvector,
+                    int nbits_per_idx) {
+  IVFPQParameters * param = static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
+  memset(param, 0, sizeof(IVFPQParameters));
+  param->metric_type = metric_type;
+  param->nprobe = nprobe;
+  param->ncentroids = ncentroids;
+  param->nsubvector = nsubvector;
+  param->nbits_per_idx = nbits_per_idx;
+  return param;
+}
+
+enum ResponseCode DestroyIVFPQParameters(IVFPQParameters *param) {
+  if (param != nullptr) {
+    free(param);
+  }
+  return ResponseCode::SUCCESSED;
+}
+
 Table *MakeTable(ByteArray *name, FieldInfo **fields, int fields_num,
-                 VectorInfo **vectors_info, int vectors_num, int nprobe) {
+                 VectorInfo **vectors_info, int vectors_num, IVFPQParameters *ivfpq_param) {
   Table *table = static_cast<Table *>(malloc(sizeof(Table)));
   memset(table, 0, sizeof(Table));
   table->name = name;
@@ -195,7 +218,7 @@ Table *MakeTable(ByteArray *name, FieldInfo **fields, int fields_num,
   table->fields_num = fields_num;
   table->vectors_info = vectors_info;
   table->vectors_num = vectors_num;
-  table->nprobe = nprobe;
+  table->ivfpq_param = ivfpq_param;
 
   return table;
 }
@@ -205,6 +228,7 @@ enum ResponseCode DestroyTable(Table *table) {
     DestroyByteArray(table->name);
     DestroyFieldInfos(table->fields, table->fields_num);
     DestroyVectorInfos(table->vectors_info, table->vectors_num);
+    DestroyIVFPQParameters(table->ivfpq_param);
     free(table);
   }
   return ResponseCode::SUCCESSED;
@@ -231,14 +255,30 @@ enum ResponseCode SetLogDictionary(ByteArray *log_dir) {
   if (!utils::isFolderExist(dir.c_str())) {
     mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   }
-  FLAGS_log_dir = dir.c_str();
-  FLAGS_max_log_size = 100;
-  FLAGS_logbuflevel = -1;
-  FLAGS_logbufsecs = 0;
-  FLAGS_stop_logging_if_full_disk = true;
-  google::InitGoogleLogging("gamma");
-  google::SetStderrLogging(google::INFO);
-  google::InstallFailureSignalHandler();
+  // FLAGS_log_dir = dir.c_str();
+  // FLAGS_max_log_size = 100;
+  // FLAGS_logbuflevel = -1;
+  // FLAGS_logbufsecs = 0;
+  // FLAGS_stop_logging_if_full_disk = true;
+  // google::InitGoogleLogging("gamma");
+  // google::SetStderrLogging(google::INFO);
+  // google::InstallFailureSignalHandler();
+
+  el::Configurations defaultConf;
+  defaultConf.setToDefault();
+  // Values are always std::string
+  // defaultConf.set(el::Level::Info, el::ConfigurationType::Format,
+  //                 "%level %datetime %msg");
+  // default logger uses default configurations
+  el::Loggers::reconfigureLogger("default", defaultConf);
+  LOG(INFO) << "Log using default file";
+  // To set GLOBAL configurations you may use
+  defaultConf.setGlobally(el::ConfigurationType::Format,
+                          "%level %datetime %fbase:%line %msg");
+  defaultConf.setGlobally(el::ConfigurationType::ToFile, "true");
+  defaultConf.setGlobally(el::ConfigurationType::Filename,
+                          dir + "/gamma.log.%datetime{%Y%M%d-%h%m%s}");
+  el::Loggers::reconfigureLogger("default", defaultConf);
   return ResponseCode::SUCCESSED;
 }
 
@@ -268,28 +308,32 @@ enum ResponseCode CreateTable(void *engine, Table *table) {
 
 enum ResponseCode AddDoc(void *engine, Doc *doc) {
   enum ResponseCode ret = static_cast<enum ResponseCode>(
-      static_cast<tig_gamma::GammaEngine *>(engine)->AddDoc(doc));
+      static_cast<tig_gamma::GammaEngine *>(engine)->Add(doc));
   return ret;
 }
 
 enum ResponseCode AddOrUpdateDoc(void *engine, Doc *doc) {
   enum ResponseCode ret = static_cast<enum ResponseCode>(
-      static_cast<tig_gamma::GammaEngine *>(engine)->AddOrUpdateDoc(doc));
+      static_cast<tig_gamma::GammaEngine *>(engine)->AddOrUpdate(doc));
   return ret;
 }
 
 enum ResponseCode UpdateDoc(void *engine, Doc *doc) {
   enum ResponseCode ret = static_cast<enum ResponseCode>(
-      static_cast<tig_gamma::GammaEngine *>(engine)->UpdateDoc(doc));
+      static_cast<tig_gamma::GammaEngine *>(engine)->Update(doc));
   return ret;
 }
 
 enum ResponseCode DelDoc(void *engine, ByteArray *doc_id) {
   string doc_id_str = string(doc_id->value, doc_id->len);
   enum ResponseCode ret = static_cast<enum ResponseCode>(
-      static_cast<tig_gamma::GammaEngine *>(engine)->DelDoc(
-          doc_id_str));
+      static_cast<tig_gamma::GammaEngine *>(engine)->Del(doc_id_str));
   return ret;
+}
+
+enum ResponseCode DelDocByQuery(void *engine, Request *request) {
+  return static_cast<enum ResponseCode>(
+      static_cast<tig_gamma::GammaEngine *>(engine)->DelDocByQuery(request));
 }
 
 int GetDocsNum(void *engine) {
@@ -303,8 +347,7 @@ long GetMemoryBytes(void *engine) {
 Doc *GetDocByID(void *engine, ByteArray *doc_id) {
   string doc_id_str = string(doc_id->value, doc_id->len);
 
-  Doc *doc = static_cast<tig_gamma::GammaEngine *>(engine)->GetDocByID(
-      doc_id_str);
+  Doc *doc = static_cast<tig_gamma::GammaEngine *>(engine)->GetDoc(doc_id_str);
   return doc;
 }
 
@@ -472,20 +515,24 @@ enum ResponseCode DestroyVectorQuerys(VectorQuery **vector_querys, int num) {
 Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
                      ByteArray **fields, int fields_num,
                      RangeFilter **range_filters, int range_filters_num,
-                     TermFilter **term_filters, int term_filters_num, int req_num) {
-  Request *requset = static_cast<Request *>(malloc(sizeof(Request)));
-  memset(requset, 0, sizeof(Request));
-  requset->topn = topn;
-  requset->vec_fields = vec_fields;
-  requset->vec_fields_num = vec_fields_num;
-  requset->fields = fields;
-  requset->fields_num = fields_num;
-  requset->range_filters = range_filters;
-  requset->range_filters_num = range_filters_num;
-  requset->term_filters = term_filters;
-  requset->term_filters_num = term_filters_num;
-  requset->req_num = req_num;
-  return requset;
+                     TermFilter **term_filters, int term_filters_num,
+                     int req_num, int direct_search_type,
+                     ByteArray *online_log_level) {
+  Request *request = static_cast<Request *>(malloc(sizeof(Request)));
+  memset(request, 0, sizeof(Request));
+  request->topn = topn;
+  request->vec_fields = vec_fields;
+  request->vec_fields_num = vec_fields_num;
+  request->fields = fields;
+  request->fields_num = fields_num;
+  request->range_filters = range_filters;
+  request->range_filters_num = range_filters_num;
+  request->term_filters = term_filters;
+  request->term_filters_num = term_filters_num;
+  request->req_num = req_num;
+  request->direct_search_type = direct_search_type;
+  request->online_log_level = online_log_level;
+  return request;
 }
 
 enum ResponseCode DestroyRequest(Request *request) {
@@ -494,6 +541,7 @@ enum ResponseCode DestroyRequest(Request *request) {
     DestroyByteArrays(request->fields, request->fields_num);
     DestroyRangeFilters(request->range_filters, request->range_filters_num);
     DestroyTermFilters(request->term_filters, request->term_filters_num);
+    DestroyByteArray(request->online_log_level);
     free(request);
   }
   return ResponseCode::SUCCESSED;
@@ -538,6 +586,7 @@ enum ResponseCode DestroyResponse(Response *response) {
       free(response->results[i]);
     }
   }
+  DestroyByteArray(response->online_log_message);
   free(response->results);
   free(response);
 

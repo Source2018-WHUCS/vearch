@@ -63,7 +63,6 @@ public:
                     std::vector<std::vector<const uint8_t *>> &bucket_codes,
                     std::vector<std::vector<long>> &bucket_vids);
 
-
   RTInvertBucketData *_cur_invert_ptr;
   RTInvertBucketData *_extend_invert_ptr;
 

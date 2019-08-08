@@ -10,30 +10,23 @@ public:
   MemoryRawVector(const std::string name, int dimension, int max_doc_size);
   virtual ~MemoryRawVector();
 
-  int Init();
-  void Close();
-  const float *GetVectors(int expected_doc_num);
-  const float *GetVector(long doc_id) const;
-  void Get(std::vector<int> &doc_id, std::vector<const float *> &vec);
-  void DestroyVector(const float *vector);
-  int AddWithIds(int n, const float *x, const int *xids, int timeout);
+  int Init() override;
+  void Close() override;
+  const float *GetVector(long vid) const override;
+  int Add(int docid, Field *&field) override;
+  const float *GetVectorHeader() override;
+  int Gets(int k, long *ids_list,
+           std::vector<const float *> &results) const override;
+  int GetSource(int vid, char *&str, int &len) override;
 
-  int Add(int docid, int n, const float *x);
-  int Add(int docid, Field *&field);
-
-  float *GetVectorHeader();
-
-  int Gets(int k, long *ids_list, std::vector<const float *> &results) const;
-  int GetSource(int vid, char *&str, int &len);
-
-  int Dump(const std::string &path, int nprobe);
-  int Load(const std::string &path);
+  int Dump(const std::string &path) override;
+  int Load(const std::string &path) override;
 
 private:
   float *vector_mem_; // vector memory
-  char *str_mem_ptr_;
+  char *str_mem_ptr_; // source memory
 
-  std::vector<long> source_mem_pos_;
+  std::vector<long> source_mem_pos_; // position of each source
 };
 
 } // namespace tig_gamma

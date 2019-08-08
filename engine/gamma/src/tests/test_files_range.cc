@@ -11,8 +11,8 @@
 #include <vector>
 
 #include "test.h"
-#include "util/utils.h"
 #include "util/cJSON.h"
+#include "util/utils.h"
 
 using std::string;
 int nprobe = 50;
@@ -21,14 +21,21 @@ void PrintResponse(Response *response, int k = 10) {
   cerr << "response req_num=" << response->req_num << endl;
   for (int j = 0; j < response->req_num; j++) {
     struct SearchResult *search_result = response->results[j];
+    printf("req id=%d, result number=%d, total=%d, code=%d\n", j,
+           search_result->result_num, search_result->total,
+           search_result->result_code);
     for (int i = 0; i < search_result->result_num; ++i) {
       struct ResultItem *result_item = GetResultItem(search_result, i);
       printf("req id=%d, i=%d, score [%f],  ", j, i, result_item->score);
       string msg = "";
       printDoc(result_item->doc, msg);
-      printf("%s extra=%s \n\n", msg.c_str(),
-             ByteArrayToString(result_item->extra).c_str());
-      if (i >= k - 1) break;
+      string extra = "";
+      if (result_item->extra) {
+        extra = ByteArrayToString(result_item->extra);
+      }
+      printf("%s extra=%s \n\n", msg.c_str(), extra.c_str());
+      if (i >= k - 1)
+        break;
     }
   }
 }
@@ -56,8 +63,7 @@ void GetResponseDocIds(Response *response, int req_id,
   }
 }
 
-template <typename T>
-string VectorToString(T *v, int n) {
+template <typename T> string VectorToString(T *v, int n) {
   std::stringstream msg;
   msg << "[";
   for (int i = 0; i < n; i++) {
@@ -70,8 +76,7 @@ string VectorToString(T *v, int n) {
   return msg.str();
 }
 
-template <class K, class V>
-string MapToString(std::map<K, V> m) {
+template <class K, class V> string MapToString(std::map<K, V> m) {
   std::stringstream msg;
   msg << "{";
   for (auto ite = m.begin(); ite != m.end(); ite++) {
@@ -119,7 +124,7 @@ void TestMultiUrl() {
   SetVectorInfo(vectors_info, 0, vector_info);
 
   struct Table *table = MakeTable(table_name, field_infos, fields_vec.size(),
-                                  vectors_info, 1, nprobe);
+                                  vectors_info, 1, kIVFPQParam);
   enum ResponseCode ret = CreateTable(engine, table);
   DestroyTable(table);
 
@@ -141,7 +146,8 @@ void TestMultiUrl() {
   std::vector<float> xb(d * 1);
   while (!fin.eof()) {
     std::getline(fin, str);
-    if (str == "") break;
+    if (str == "")
+      break;
 
     struct Field **fields = MakeFields(fields_vec.size() + 2);
     std::vector<string> profiles = utils::split(str, "\t");
@@ -255,8 +261,8 @@ void TestMultiUrl() {
   SetRangeFilter(range_filters, 1, c2_range_filter);
 
   // request number = 1
-  struct Request *request =
-      MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0, nullptr, 0, 1);
+  struct Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0,
+                                        nullptr, 0, nullptr, 0, 1, 0, nullptr);
 
   struct Response *response = Search(engine, request);
   PrintResponse(response);
@@ -266,7 +272,7 @@ void TestMultiUrl() {
 
   // request number = 1, range filter number = 2
   request = MakeRequest(10, vector_querys, 1, nullptr, 0, range_filters, 2,
-                        nullptr, 0, 1);
+                        nullptr, 0, 1, 0, nullptr);
   response = Search(engine, request);
   PrintResponse(response);
   ASSERT_EQ(1, response->req_num);
@@ -277,8 +283,8 @@ void TestMultiUrl() {
     Field *cid1_field = GetField(result_item->doc, 1);
     string cid1_name = ByteArrayToString(cid1_field->name);
     int cid1_value = ByteArrayToInt(cid1_field->value);
-    ASSERT_EQ(fields_vec[1], cid1_name) << "i=" << i
-                                        << ", cid1_name=" << cid1_name;
+    ASSERT_EQ(fields_vec[1], cid1_name)
+        << "i=" << i << ", cid1_name=" << cid1_name;
     ASSERT_GE(cid1_value, std::stoi(c1_lower)) << "i=" << i;
     ASSERT_LE(cid1_value, std::stoi(c1_upper)) << "i=" << i;
 
@@ -293,7 +299,7 @@ void TestMultiUrl() {
 
   // request number = 2
   request = MakeRequest(10, vector_querys, 1, nullptr, 0, range_filters, 2,
-                        nullptr, 0, 2);
+                        nullptr, 0, 2, 0, nullptr);
   response = Search(engine, request);
   PrintResponse(response);
   ASSERT_EQ(2, response->req_num);
@@ -345,7 +351,7 @@ void TestOneUrl() {
   SetVectorInfo(vectors_info, 0, vector_info);
 
   struct Table *table = MakeTable(table_name, field_infos, fields_vec.size(),
-                                  vectors_info, 1, nprobe);
+                                  vectors_info, 1, kIVFPQParam);
   enum ResponseCode ret = CreateTable(engine, table);
   DestroyTable(table);
 
@@ -366,11 +372,12 @@ void TestOneUrl() {
   long idx = 0;
   std::vector<float> xb(d * 1);
   std::vector<float> search_feat(d * 1);
-  long search_doc_id = 4;  // small
+  long search_doc_id = 4; // small
   // long search_doc_id = 13;
   while (!fin.eof()) {
     std::getline(fin, str);
-    if (str == "") break;
+    if (str == "")
+      break;
 
     struct Field **fields = MakeFields(fields_vec.size() + 1);
     auto profiles = std::move(utils::split(str, "\t"));
@@ -427,7 +434,8 @@ void TestOneUrl() {
 
   while (!fin.eof()) {
     std::getline(fin, str);
-    if (str == "") break;
+    if (str == "")
+      break;
 
     struct Field **fields = MakeFields(fields_vec.size() + 1);
     auto profiles = std::move(utils::split(str, "\t"));
@@ -505,19 +513,20 @@ void TestOneUrl() {
   string cid3 = fields_vec[4];
   cerr << "cid1 filed=" << cid1 << ", cid2 field=" << cid2
        << ", cid3 field=" << cid3 << endl;
-  string c3_lower = "1371";  // 1349, 1371_small
-  string c3_upper = "1371";  // 1349, 1371
+  string c3_lower = "1371"; // 1349, 1371_small
+  string c3_upper = "1371"; // 1349, 1371
   RangeFilter *range_filter =
       MakeRangeFilter(StringToByteArray(cid3), StringToByteArray(c3_lower),
                       StringToByteArray(c3_upper), false, true);
   RangeFilter *range_filter1 =
-    MakeRangeFilter(StringToByteArray(cid2), StringToByteArray("1342"),
-                    StringToByteArray("1342"), false, true);
+      MakeRangeFilter(StringToByteArray(cid2), StringToByteArray("1342"),
+                      StringToByteArray("1342"), false, true);
   SetRangeFilter(range_filters, 0, range_filter);
   SetRangeFilter(range_filters, 1, range_filter1);
 
-  struct Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0,
-                                        range_filters, 1, nullptr, 0, 1);
+  struct Request *request =
+      MakeRequest(10, vector_querys, 1, nullptr, 0, range_filters, 1, nullptr,
+                  0, 1, 0, nullptr);
   // range_filters, 1, nullptr, 0, 1);
 
   start = utils::getmillisecs();
@@ -551,11 +560,10 @@ void TestOneUrl() {
   printf("Finshed!\n");
 }
 
-/*
-void TestOneUrlPerf() {
+void TestSearchWithoutVector() {
   setvbuf(stdout, (char *)NULL, _IONBF, 0);
-  string path = "TestOneUrlPerf_files";
-  string log_dir = "TestOneUrlPerf_log";
+  string path = "TestSearchWithoutVector_files";
+  string log_dir = "TestSearchWithoutVector_log";
   int max_doc_size = 5000000;
   struct Config *config = MakeConfig(StringToByteArray(path), max_doc_size);
   SetLogDictionary(StringToByteArray(log_dir));
@@ -588,8 +596,8 @@ void TestOneUrlPerf() {
       StringToByteArray(retrieval_type), StringToByteArray(store_type));
   SetVectorInfo(vectors_info, 0, vector_info);
 
-  struct Table *table =
-      MakeTable(table_name, field_infos, fields_vec.size(), vectors_info, 1);
+  struct Table *table = MakeTable(table_name, field_infos, fields_vec.size(),
+                                  vectors_info, 1, kIVFPQParam);
   enum ResponseCode ret = CreateTable(engine, table);
   DestroyTable(table);
 
@@ -612,9 +620,11 @@ void TestOneUrlPerf() {
   std::vector<float> search_feat(d * 1);
   long search_doc_id = 4;
   // long search_doc_id = 13;
+  int total_send_num = 70000;
   while (!fin.eof()) {
     std::getline(fin, str);
-    if (str == "") break;
+    if (str == "")
+      break;
 
     struct Field **fields = MakeFields(fields_vec.size() + 1);
     auto profiles = std::move(utils::split(str, "\t"));
@@ -661,7 +671,7 @@ void TestOneUrlPerf() {
     }
 
     ++idx;
-    if (idx > 70000) {
+    if (idx >= total_send_num) {
       break;
     }
   }
@@ -669,12 +679,133 @@ void TestOneUrlPerf() {
   std::thread t(BuildIndex, engine);
   t.detach();
 
+  fin.close();
+  fclose(fp_feature);
+
+  double add_time = utils::getmillisecs() - start;
+
+  printf("Add use time [%.1f]ms, num=%d\n", add_time, idx);
+
+  while (GetIndexStatus(engine) != INDEXED) {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+  }
+
+  cerr << "waiting 1 seconds, then to search.....";
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  RangeFilter **range_filters = MakeRangeFilters(1);
+  string cid1 = fields_vec[2];
+  string cid2 = fields_vec[3];
+  string cid3 = fields_vec[4];
+  cerr << "cid1 filed=" << cid1 << ", cid2 field=" << cid2
+       << ", cid3 field=" << cid3 << endl;
+  RangeFilter *range_filter =
+      MakeRangeFilter(StringToByteArray(cid3), StringToByteArray("1371"),
+                      StringToByteArray("1371"), false, true);
+  RangeFilter *range_filter1 =
+      MakeRangeFilter(StringToByteArray(cid2), StringToByteArray("1345"),
+                      StringToByteArray("1345"), false, true);
+  SetRangeFilter(range_filters, 0, range_filter);
+  SetRangeFilter(range_filters, 1, range_filter1);
+
+  // search without range filter
+  int topn = 10;
+  struct Request *request = MakeRequest(topn, nullptr, 0, nullptr, 0, nullptr,
+                                        0, nullptr, 0, 1, 0, nullptr);
+  struct Response *response = Search(engine, request);
+  PrintResponse(response);
+  ASSERT_EQ(1, response->req_num);
+  ASSERT_EQ(total_send_num, response->results[0]->total);
+  ASSERT_EQ(topn, response->results[0]->result_num);
+  DestroyResponse(response);
+
+  // search with range filter
+  request->range_filters = range_filters;
+  request->range_filters_num = 2;
+  response = Search(engine, request);
+  PrintResponse(response);
+  ASSERT_EQ(1, response->req_num);
+  ASSERT_EQ(1001, response->results[0]->total);
+  ASSERT_EQ(topn, response->results[0]->result_num);
+  DestroyResponse(response);
+
+  Dump(engine);
+
+  Close(engine);
+
+  printf("Finshed!\n");
+}
+
+void TestDelDocByQuery() {
+  setvbuf(stdout, (char *)NULL, _IONBF, 0);
+  string path = "TestDelDocByQuery_files";
+  string log_dir = "TestDelDocByQuery_log";
+  int max_doc_size = 5000000;
+  struct Config *config = MakeConfig(StringToByteArray(path), max_doc_size);
+  SetLogDictionary(StringToByteArray(log_dir));
+  void *engine = Init(config);
+  DestroyConfig(config);
+
+  EXPECT_NE(engine, nullptr);
+
+  struct ByteArray *table_name = MakeByteArray("test", 4);
+  int d = 512;
+
+  std::vector<string> fields_vec = {"sku", "_id", "cid1", "cid2", "cid3"};
+  std::vector<enum DataType> fields_type = {LONG, STRING, INT, INT, INT};
+
+  struct FieldInfo **field_infos = MakeFieldInfos(fields_vec.size());
+
+  for (size_t i = 0; i < fields_vec.size(); ++i) {
+    struct FieldInfo *field_info =
+        MakeFieldInfo(StringToByteArray(fields_vec[i]), fields_type[i], 1);
+    SetFieldInfo(field_infos, i, field_info);
+  }
+
+  struct VectorInfo **vectors_info = MakeVectorInfos(1);
+  string model_id = "model";
+  string vector_name = "abc";
+  string retrieval_type = "IVFPQ";
+  string store_type = "MemoryOnly";
+  struct VectorInfo *vector_info = MakeVectorInfo(
+      StringToByteArray(vector_name), FLOAT, d, StringToByteArray(model_id),
+      StringToByteArray(retrieval_type), StringToByteArray(store_type));
+  SetVectorInfo(vectors_info, 0, vector_info);
+
+  struct Table *table = MakeTable(table_name, field_infos, fields_vec.size(),
+                                  vectors_info, 1, kIVFPQParam);
+  enum ResponseCode ret = CreateTable(engine, table);
+  DestroyTable(table);
+
+  printf("Create table ret [%d]\n", ret);
+
+  double start = utils::getmillisecs();
+  int doc_id = 0;
+
+  string profile_file = "/root/wxd/feat_dir/sku_url_cid0_1.txt";
+  string feature_file = "/root/wxd/feat_dir/feat_same0_0.dat";
+
+  FILE *fp_feature = fopen(feature_file.c_str(), "rb");
+  EXPECT_NE(fp_feature, nullptr);
+
+  std::ifstream fin;
+  fin.open(profile_file.c_str());
+  std::string str;
+  long idx = 0;
+  std::vector<float> xb(d * 1);
+  std::vector<float> search_feat(d * 1);
+  long search_doc_id = 4;
+  // long search_doc_id = 13;
+  int total_send_num = 70000;
+  std::vector<std::vector<string>> added_profiles;
   while (!fin.eof()) {
     std::getline(fin, str);
-    if (str == "") break;
+    if (str == "")
+      break;
 
     struct Field **fields = MakeFields(fields_vec.size() + 1);
     auto profiles = std::move(utils::split(str, "\t"));
+    added_profiles.push_back(profiles);
 
     for (size_t i = 0; i < fields_vec.size(); ++i) {
       enum DataType data_type = fields_type[i];
@@ -713,11 +844,18 @@ void TestOneUrlPerf() {
     AddDoc(engine, doc);
     DestroyDoc(doc);
 
+    if (idx == search_doc_id) {
+      search_feat.assign(xb.begin(), xb.end());
+    }
+
     ++idx;
-    if (idx > 2000000) {
+    if (idx >= total_send_num) {
       break;
     }
   }
+
+  std::thread t(BuildIndex, engine);
+  t.detach();
 
   fin.close();
   fclose(fp_feature);
@@ -733,17 +871,85 @@ void TestOneUrlPerf() {
   cerr << "waiting 1 seconds, then to search.....";
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  request->topn = 1000;
+  RangeFilter **range_filters = MakeRangeFilters(1);
+  string cid1 = fields_vec[2];
+  string cid2 = fields_vec[3];
+  string cid3 = fields_vec[4];
+  cerr << "cid1 filed=" << cid1 << ", cid2 field=" << cid2
+       << ", cid3 field=" << cid3 << endl;
+  RangeFilter *range_filter =
+      MakeRangeFilter(StringToByteArray(cid3), StringToByteArray("1371"),
+                      StringToByteArray("1371"), false, true);
+  RangeFilter *range_filter1 =
+      MakeRangeFilter(StringToByteArray(cid2), StringToByteArray("1345"),
+                      StringToByteArray("1345"), false, true);
+  SetRangeFilter(range_filters, 0, range_filter);
+  SetRangeFilter(range_filters, 1, range_filter1);
+
+  // search without range filter
+  int topn = 10;
+  struct Request *request = MakeRequest(topn, nullptr, 0, nullptr, 0, nullptr,
+                                        0, nullptr, 0, 1, 0, nullptr);
   struct Response *response = Search(engine, request);
   PrintResponse(response);
+  ASSERT_EQ(1, response->req_num);
+  ASSERT_EQ(total_send_num, response->results[0]->total);
+  ASSERT_EQ(topn, response->results[0]->result_num);
+  DestroyResponse(response);
+
+  // search with range filter
+  request->range_filters = range_filters;
+  request->range_filters_num = 2;
+  response = Search(engine, request);
+  PrintResponse(response);
+  ASSERT_EQ(1, response->req_num);
+  ASSERT_EQ(1001, response->results[0]->total);
+  ASSERT_EQ(topn, response->results[0]->result_num);
+  DestroyResponse(response);
+
+  // delete by range filter
+  ASSERT_EQ(0, DelDocByQuery(engine, request));
+
+  // search with range filter after delete by query
+  response = Search(engine, request);
+  PrintResponse(response);
+  ASSERT_EQ(1, response->req_num);
+  ASSERT_EQ(0, response->results[0]->total);
+  ASSERT_EQ(0, response->results[0]->result_num);
+  DestroyResponse(response);
+
+  // search without range filter after delete by query
+  request->range_filters = nullptr;
+  request->range_filters_num = 0;
+  response = Search(engine, request);
+  PrintResponse(response);
+  ASSERT_EQ(1, response->req_num);
+  ASSERT_EQ(total_send_num - 1001, response->results[0]->total);
+  ASSERT_EQ(topn, response->results[0]->result_num);
+  DestroyResponse(response);
+
+  int count = 0;
+  for (int i = 0; i < added_profiles.size(); i++) {
+    std::vector<string> profile = added_profiles[i];
+    if (profile[4] == "1371") {
+      ASSERT_EQ(nullptr,
+                GetDocByID(engine, MakeByteArray(profile[1].c_str(),
+                                                 profile[1].length())));
+      count++;
+    } else {
+      ASSERT_NE(nullptr,
+                GetDocByID(engine, MakeByteArray(profile[1].c_str(),
+                                                 profile[1].length())));
+    }
+  }
+  ASSERT_EQ(1001, count);
 
   Dump(engine);
 
   Close(engine);
 
   printf("Finshed!\n");
- }
-*/
+}
 
 int FillFields(struct Field **fields, std::vector<string> fields_vec,
                std::vector<enum DataType> fields_type,
@@ -837,7 +1043,7 @@ void TestMultiIndex() {
   }
 
   struct Table *table = MakeTable(table_name, field_infos, fields_vec.size(),
-                                  vectors_info, vector_num, nprobe);
+                                  vectors_info, vector_num, kIVFPQParam);
   enum ResponseCode ret = CreateTable(engine, table);
   DestroyTable(table);
 
@@ -867,7 +1073,8 @@ void TestMultiIndex() {
 
   while (!fin.eof()) {
     std::getline(fin, str);
-    if (str == "") break;
+    if (str == "")
+      break;
 
     struct Field **fields = MakeFields(fields_vec.size() + vector_num);
     std::vector<string> profiles = utils::split(str, " ");
@@ -943,7 +1150,7 @@ void TestMultiIndex() {
   SetVectorQuery(vector_querys, 0, vector_query0);
   SetVectorQuery(vector_querys, 1, vector_query1);
   Request *request = MakeRequest(10, vector_querys, vector_query_num, nullptr,
-                                 0, nullptr, 0, nullptr, 0, 1);
+                                 0, nullptr, 0, nullptr, 0, 1, 0, nullptr);
 
   Response *response = Search(engine, request);
   PrintResponse(response);
@@ -1069,7 +1276,7 @@ void TestMultiIndexResultConsistent() {
   }
 
   struct Table *table = MakeTable(table_name, field_infos, fields_vec.size(),
-                                  vectors_info, vector_num, nprobe);
+                                  vectors_info, vector_num, kIVFPQParam);
   enum ResponseCode ret = CreateTable(engine, table);
   DestroyTable(table);
 
@@ -1099,7 +1306,8 @@ void TestMultiIndexResultConsistent() {
 
   while (!fin.eof()) {
     std::getline(fin, str);
-    if (str == "") break;
+    if (str == "")
+      break;
 
     struct Field **fields = MakeFields(fields_vec.size() + vector_num);
     std::vector<string> profiles = utils::split(str, " ");
@@ -1174,8 +1382,9 @@ void TestMultiIndexResultConsistent() {
 
     // request by vector 0
     SetVectorQuery(vector_querys, 0, vector_query0);
-    struct Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0,
-                                          nullptr, 0, nullptr, 0, 1);
+    struct Request *request =
+        MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0, nullptr, 0, 1,
+                    0, nullptr);
     struct Response *response = Search(engine, request);
     PrintResponse(response);
     ASSERT_EQ(1, response->req_num);
@@ -1193,7 +1402,7 @@ void TestMultiIndexResultConsistent() {
     // request by vector 1
     SetVectorQuery(vector_querys, 0, vector_query1);
     request = MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0, nullptr,
-                          0, 1);
+                          0, 1, 0, nullptr);
 
     response = Search(engine, request);
     PrintResponse(response);
@@ -1217,7 +1426,7 @@ void TestMultiIndexResultConsistent() {
     SetVectorQuery(vector_querys, 0, vector_query0);
     SetVectorQuery(vector_querys, 1, vector_query1);
     request = MakeRequest(10, vector_querys, vector_query_num, nullptr, 0,
-                          nullptr, 0, nullptr, 0, 1);
+                          nullptr, 0, nullptr, 0, 1, 0, nullptr);
 
     response = Search(engine, request);
     PrintResponse(response);
@@ -1282,7 +1491,7 @@ void TestMultiIndexSearchPerf() {
   }
 
   struct Table *table = MakeTable(table_name, field_infos, fields_vec.size(),
-                                  vectors_info, vector_num, nprobe);
+                                  vectors_info, vector_num, kIVFPQParam);
   enum ResponseCode ret = CreateTable(engine, table);
   DestroyTable(table);
 
@@ -1312,7 +1521,8 @@ void TestMultiIndexSearchPerf() {
 
   while (!fin.eof()) {
     std::getline(fin, str);
-    if (str == "") break;
+    if (str == "")
+      break;
 
     struct Field **fields = MakeFields(fields_vec.size() + vector_num);
     std::vector<string> profiles = utils::split(str, " ");
@@ -1375,8 +1585,8 @@ void TestMultiIndexSearchPerf() {
 
   // request by vector 0
   SetVectorQuery(vector_querys, 0, vector_query0);
-  struct Request *request =
-      MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0, nullptr, 0, 1);
+  struct Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0,
+                                        nullptr, 0, nullptr, 0, 1, 0, nullptr);
 
   int search_num = 10000;
   double sstart = utils::getmillisecs();
@@ -1391,7 +1601,7 @@ void TestMultiIndexSearchPerf() {
   SetVectorQuery(vector_querys, 0, vector_query0);
   SetVectorQuery(vector_querys, 1, vector_query1);
   request = MakeRequest(10, vector_querys, vector_query_num, nullptr, 0,
-                        nullptr, 0, nullptr, 0, 1);
+                        nullptr, 0, nullptr, 0, 1, 0, nullptr);
   for (int n = 0; n < search_num; n++) {
     struct Response *response = Search(engine, request);
     // PrintResponse(response);
@@ -1498,7 +1708,7 @@ void TestGetDocAfterUpdate() {
   }
 
   struct Table *table = MakeTable(table_name, field_infos, field_names.size(),
-                                  vectors_info, vector_num, nprobe);
+                                  vectors_info, vector_num, kIVFPQParam);
   enum ResponseCode ret = CreateTable(engine, table);
   DestroyTable(table);
 
@@ -1518,6 +1728,9 @@ void TestGetDocAfterUpdate() {
   AddOrUpdateDoc(engine, doc);
   Doc *actual_doc = GetDocByID(engine, StringToByteArray(doc_key));
   ASSERT_NE(nullptr, actual_doc);
+  string msg;
+  printDoc(actual_doc, msg);
+  cerr << "doc=" << msg << endl;
   DestroyDoc(doc);
 
   field_values[1] = "12";
@@ -1526,6 +1739,20 @@ void TestGetDocAfterUpdate() {
   AddOrUpdateDoc(engine, doc);
   actual_doc = GetDocByID(engine, StringToByteArray(doc_key));
   ASSERT_NE(nullptr, actual_doc);
+  msg = "";
+  printDoc(actual_doc, msg);
+  cerr << "after update, doc=" << msg << endl;
+
+  field_values[1] = "1212";
+  doc = MakeAndFillDoc(field_names, field_types, field_values, vec_field_names,
+                       vec_field_values, d, vec_field_sources);
+  AddOrUpdateDoc(engine, doc);
+  actual_doc = GetDocByID(engine, StringToByteArray(doc_key));
+  ASSERT_NE(nullptr, actual_doc);
+  msg = "";
+  printDoc(actual_doc, msg);
+  cerr << "after twice update, doc=" << msg << endl;
+
   DestroyDoc(doc);
 }
 
@@ -1553,6 +1780,9 @@ void PrintUsage() {
   cerr << "\t 3:TestMultiIndex" << endl;
   cerr << "\t 4:TestMultiIndexResultconsistent" << endl;
   cerr << "\t 5:TestMultiIndexSearchPerf" << endl;
+  cerr << "\t 6:TestSearchWithoutVector" << endl;
+  cerr << "\t 7:TestGetDocAfterUpdate" << endl;
+  cerr << "\t 8:TestDelDocByQuery" << endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -1563,24 +1793,33 @@ int main(int argc, char *argv[]) {
   int case_id = std::stoi(argv[1]);
   cerr << "case id=" << case_id << endl;
   switch (case_id) {
-    case 1:
-      TestMultiUrl();
-      break;
-    case 2:
-      TestOneUrl();
-      break;
-    case 3:
-      TestMultiIndex();
-      break;
-    case 4:
-      TestMultiIndexResultConsistent();
-      break;
-    case 5:
-      TestMultiIndexSearchPerf();
-      break;
-    default:
-      PrintUsage();
-      return -1;
+  case 1:
+    TestMultiUrl();
+    break;
+  case 2:
+    TestOneUrl();
+    break;
+  case 3:
+    TestMultiIndex();
+    break;
+  case 4:
+    TestMultiIndexResultConsistent();
+    break;
+  case 5:
+    TestMultiIndexSearchPerf();
+    break;
+  case 6:
+    TestSearchWithoutVector();
+    break;
+  case 7:
+    TestGetDocAfterUpdate();
+    break;
+  case 8:
+    TestDelDocByQuery();
+    break;
+  default:
+    PrintUsage();
+    return -1;
   }
   // TestMultiUrl();
   // TestOneUrl();

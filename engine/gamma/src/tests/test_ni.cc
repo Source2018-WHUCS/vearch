@@ -3,6 +3,7 @@
 //
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <omp.h>
 #include <string>
 #include <sys/time.h>
@@ -17,6 +18,7 @@
 using namespace std;
 using tig_gamma::NI::RangeFilter;
 using tig_gamma::NI::Timer;
+using tig_gamma::NI::lexical_cast;
 
 #define NI_TEST
 
@@ -28,7 +30,7 @@ enum FType { UNKNOWN = 0, INT, LONG, FLOAT, DOUBLE, STRING };
 
 class Profile {
 public:
-  Profile() : rnd_(0x12345678) {}
+  Profile() : random_(0x12345678) {}
 
   void Init(const int nDocs) {
     doc_num_ = nDocs > 0 ? nDocs : 0;
@@ -48,8 +50,8 @@ public:
       values_[i] = vector<int>(doc_num_);
       for (unsigned j = 0; j < doc_num_; j++) {
         values_[i][j] =
-            // 100 * i + j % 43 + static_cast<int>(rnd_.Uniform(34));
-            100000 * i + j % 50000 + static_cast<int>(rnd_.Uniform(2019));
+            // 100 * i + j % 43 + static_cast<int>(random_.Uniform(34));
+            100000 * i + j % 50000 + static_cast<int>(random_.Uniform(2019));
       }
     }
   }
@@ -84,7 +86,7 @@ private:
   unsigned long doc_num_;
   uint8_t field_num_;
 
-  tig_gamma::NI::Random rnd_;
+  tig_gamma::NI::Random random_;
   std::vector<vector<int>> values_;
 };
 

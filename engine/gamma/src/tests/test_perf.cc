@@ -14,7 +14,7 @@ using std::map;
 using std::string;
 using std::vector;
 
-constexpr int kMaxDocSize = 10000000;
+constexpr int kDefaultMaxDocSize = 1000000;
 
 namespace tig_gamma {
 
@@ -33,7 +33,8 @@ struct TableInfo {
 
 class PerfTest {
 public:
-  explicit PerfTest(int max_doc_size) : engine_(nullptr), exit_(false) {}
+  explicit PerfTest(int max_doc_size)
+      : max_doc_size_(max_doc_size), engine_(nullptr), exit_(false) {}
 
   ~PerfTest() {
     exit_ = true;
@@ -47,7 +48,7 @@ public:
 
 public:
   void Init(const string &path, const string &log_dir) {
-    engine_ = _InitEngine(path, log_dir);
+    engine_ = _InitEngine(path, log_dir, max_doc_size_);
   }
 
   void CreateTable(TableInfo t) {
@@ -75,9 +76,9 @@ public:
         return;
       }
 
-      int d = table_info_.meta.dimension;
+      size_t d = table_info_.meta.dimension;
 
-      int times = kMaxDocSize;
+      int times = max_doc_size_;
       while (not exit_ && times--) {
         int branch = 7;
         int product_code = 0;
@@ -128,18 +129,22 @@ public:
     std::this_thread::sleep_for(std::chrono::seconds(10));
   }
 
-  void Search(int times) {
+  double Search(const int count, int direct_search_type = 0) {
+    assert(count > 0);
     long fsize = utils::get_file_size("./data/querys.dat");
 
     FILE *fp = fopen("./data/querys.dat", fsize > 0 ? "rb" : "wb");
     if (not fp) {
       LOG(ERROR) << "open file error!";
-      return;
+      return -1;
     }
 
-    int d = table_info_.meta.dimension;
+    size_t d = table_info_.meta.dimension;
+    double total_cost_ms = 0;
+    bool the_1st = true;
 
     LOG(INFO) << ">>> Search ...";
+    int times = count;
     while (times--) {
       vector<float> xb(d * 1);
       srand48(times);
@@ -149,18 +154,24 @@ public:
         if (fread(xb.data(), sizeof(float), d, fp) != d) {
           LOG(ERROR) << "read file error!";
         }
-
       } else {
         if (fwrite(xb.data(), sizeof(float), d, fp) != d) {
           LOG(ERROR) << "write file error!";
         }
       }
 
-      auto time_cost_ms = _Search(engine_, table_info_, xb);
+      auto time_cost_ms = _Search(engine_, table_info_, xb, direct_search_type);
       LOG(INFO) << "time cost " << time_cost_ms << " ms.";
+
+      if (the_1st) {
+        the_1st = false; // discard the 1st one
+      } else {
+        total_cost_ms += time_cost_ms;
+      }
     }
 
     fclose(fp);
+    return (total_cost_ms / count);
   }
 
   void GetDoc(int doc_id) {
@@ -172,8 +183,9 @@ public:
   }
 
 private:
-  static void *_InitEngine(const string &path, const string &log_dir) {
-    Config *config = MakeConfig(StringToByteArray(path), kMaxDocSize);
+  static void *_InitEngine(const string &path, const string &log_dir,
+                           int max_doc_size) {
+    Config *config = MakeConfig(StringToByteArray(path), max_doc_size);
     SetLogDictionary(StringToByteArray(log_dir));
     void *engine = ::Init(config);
     DestroyConfig(config);
@@ -208,7 +220,7 @@ private:
                              field_infos,             // fields
                              t.field_mappings.size(), // fields_num
                              vector_infos,            // vectors_info
-                             1, 50);                      // vectors_num
+                             1, kIVFPQParam);                  // vectors_num
     ResponseCode code = ::CreateTable(engine, table);
     DestroyTable(table);
 
@@ -222,7 +234,7 @@ private:
     static int doc_id = 0;
     int field_num = t.field_mappings.size() + 1; // the last one is VECTOR
 
-    int d = t.meta.dimension;
+    size_t d = t.meta.dimension;
     Field **fields = MakeFields(field_num);
     int i = 0;
     for (auto _ : t.field_mappings) {
@@ -261,8 +273,9 @@ private:
     }
   }
 
-  static double _Search(void *engine, TableInfo &t, const vector<float> &xb) {
-    int d = t.meta.dimension;
+  static double _Search(void *engine, TableInfo &t, const vector<float> &xb,
+                        int direct_search_type) {
+    size_t d = t.meta.dimension;
     VectorQuery **querys = MakeVectorQuerys(1);
 
     assert(xb.size() == d);
@@ -293,15 +306,18 @@ private:
     add_filter(1, "product_code", 101);
     add_filter(2, "type", 1);
 
-    Request *request = MakeRequest(100,     // topk
-                                   querys,  // vector querys
-                                   1,       // vector querys num
-                                   nullptr, // fields
-                                   0,       // fields_num
-                                   filters, // range_filters
-                                   3,       // range_filters_num
-                                   nullptr, // term_filters
-                                   0, 1);   // term_filters_num
+    Request *request = MakeRequest(100,                // topk
+                                   querys,             // vector querys
+                                   1,                  // vector querys num
+                                   nullptr,            // fields
+                                   0,                  // fields_num
+                                   filters,            // range_filters
+                                   3,                  // range_filters_num
+                                   nullptr,            // term_filters
+                                   0,                  // term_filters_num
+                                   1,                  // req_num
+                                   direct_search_type, // direct_search_type
+                                   StringToByteArray("debug"));
 
     auto t0 = utils::getmillisecs();
     Response *response = ::Search(engine, request);
@@ -323,11 +339,20 @@ private:
              string(result->msg->value, result->msg->len).c_str());
     }
 
+    if (response->online_log_message) {
+      printf("online debug message: %s\n",
+             string(response->online_log_message->value,
+                    response->online_log_message->len)
+                 .c_str());
+    }
+
     DestroyResponse(response);
     return (t1 - t0);
   }
 
 private:
+  int max_doc_size_;
+
   TableInfo table_info_;
   void *engine_;
 
@@ -339,7 +364,7 @@ private:
 
 using tig_gamma::PerfTest;
 
-void test_perf() {
+void test_perf(int max_doc_size, int direct_search_type) {
   tig_gamma::TableInfo t;
   t.table_name = "pac";
   t.field_mappings = {
@@ -355,7 +380,7 @@ void test_perf() {
   t.meta.store_type = "MemoryOnly";
   t.meta.model_id = "VGG";
 
-  PerfTest pt(kMaxDocSize);
+  PerfTest pt(max_doc_size);
 
   pt.Init("table", "logs");
   pt.CreateTable(t);
@@ -366,14 +391,27 @@ void test_perf() {
 
   tig_gamma::NI::Timer t0;
   t0.Start("Search");
-  pt.Search(100);
+  auto avg_cost_ms = pt.Search(1000, direct_search_type);
   t0.Stop();
   t0.Output();
 
-  LOG(INFO) << "finish test_perf!";
+  LOG(INFO) << "finish test_perf, AVG cost -> " << avg_cost_ms << " ms.";
 }
 
 int main(int argc, char *argv[]) {
-  test_perf();
+  int max_doc_size = kDefaultMaxDocSize;
+  int direct_search_type = 0;
+
+  if (argc > 1) {
+    max_doc_size = std::stoi(argv[1]);
+  }
+  if (argc > 2) {
+    direct_search_type = std::stoi(argv[2]);
+  }
+
+  fprintf(stderr, "set max_doc_size to %d\n", max_doc_size);
+  fprintf(stderr, "set direct_search_type to %d\n", direct_search_type);
+
+  test_perf(max_doc_size, direct_search_type);
   return 0;
 }

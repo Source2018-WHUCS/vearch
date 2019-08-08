@@ -5,7 +5,6 @@
 #include "utils.h"
 #include <string>
 #include <vector>
-#include "mem_cache.h"
 
 namespace tig_gamma {
 
@@ -13,69 +12,90 @@ const static int MAX_VECTOR_NUM_PER_DOC = 10;
 
 class RawVector {
 public:
-  RawVector(const std::string name, int dimension, int max_doc_size)
-      : vector_name_(name), dimension_(dimension), max_doc_size_(max_doc_size),
-    ntotal_(0), total_mem_bytes_(0){};
+  RawVector(const std::string name, int dimension, int max_vector_size)
+      : vector_name_(name), dimension_(dimension),
+        max_vector_size_(max_vector_size), ntotal_(0), total_mem_bytes_(0){};
   virtual ~RawVector(){};
 
+  /** initialize resource
+   *
+   * @return 0 if successed
+   */
   virtual int Init() = 0;
+  /** release resource
+   *
+   * @return
+   */
   virtual void Close() = 0;
-  virtual const float *GetVectors(int expected_doc_num) = 0;
-  virtual const float *GetVector(long doc_id) const = 0;
-  virtual void Get(std::vector<int> &doc_id, std::vector<const float *> &vec) {
-    return;
-  };
-  virtual void DestroyVector(const float *vec) = 0;
 
-  virtual int AddWithIds(int n, const float *x, const int *xids,
-                         int timeout) = 0;
-
-  virtual int Add(int docid, int n, const float *x) = 0;
-  virtual int Add(int docid, Field *&field) = 0;
-
-  virtual float *GetVectorHeader() = 0;
-
-  virtual int GetSource(int vid, char *&str, int &len) = 0;
-
-  virtual int Dump(const std::string &path, int nprobe) = 0;
-  virtual int Load(const std::string &path) = 0;
-
-  long GetTotalMemBytes() {return total_mem_bytes_;};
-
-  const std::string &GetName() { return vector_name_; };
-
-  void SetName(const std::string &name) { vector_name_ = name; };
-
-  int GetDimension() { return dimension_; };
-
-  void SetDimension(int dimension) { dimension_ = dimension; };
-
-  DataType GetDataType() { return data_type_; };
-
-  void SetDataType(DataType data_type) { data_type_ = data_type; };
-
+  /** get vector by id
+   *
+   * @param id vector id
+   * @return vector if successed, null if failed
+   */
+  virtual const float *GetVector(long vid) const = 0;
+  /** get vectors by vecotor id list
+   *
+   * @param k the length of vector id list
+   * @param ids_list vector id list
+   * @param resultss(output) vectors
+   * @return 0 if successed
+   */
   virtual int Gets(int k, long *ids_list,
                    std::vector<const float *> &resultss) const = 0;
+  /** get the header of all vectors, so it can access all vecotors through the
+   * header if dimension is known
+   *
+   * @param id vector id
+   * @return vector if successed, null if failed
+   */
+  virtual const float *GetVectorHeader() = 0;
 
-  std::vector<int> &GetIds() { return vid2docid_; };
+  /** get source of one vector, source is a string, for example the image url of
+   * vector
+   *
+   * @param vid vector id
+   * @param str(output) the pointer of source string
+   * @param len(output) the len of source string
+   * @return 0 if successed
+   */
+  virtual int GetSource(int vid, char *&str, int &len) = 0;
+
+  /** add one vector field
+   *
+   * @param docid doc id, one doc may has multiple vectors
+   * @param field vector field, it contains vector(float array) and
+   * source(string)
+   * @return 0 if successed
+   */
+  virtual int Add(int docid, Field *&field) = 0;
+
+  /** dump vectors and sources to disk file
+   *
+   * @param path the disk directory path
+   * @return 0 if successed
+   */
+  virtual int Dump(const std::string &path) = 0;
+  /** load vectors and sources from disk file
+   *
+   * @param path the disk directory path
+   * @return 0 if successed
+   */
+  virtual int Load(const std::string &path) = 0;
+
+  long GetTotalMemBytes() { return total_mem_bytes_; };
 
   int GetVectorNum() const { return ntotal_; };
-  int GetMaxDocSize() const { return max_doc_size_; }
+  int GetMaxVectorSize() const { return max_vector_size_; }
 
-  void SetFilePath(const std::string file_path) { file_path_ = file_path; };
-  void SetOffset(int len) { offset_ = len; };
-
-  std::vector<int> vid2docid_; // vector id to doc id
-  std::vector<int *> docid2vid_;  // doc id to vector id list
+  std::vector<int> vid2docid_;   // vector id to doc id
+  std::vector<int *> docid2vid_; // doc id to vector id list
 protected:
   std::string vector_name_; // vector name
   int dimension_;           // vector dimension
-  int max_doc_size_;
-  DataType data_type_; // vector data type, float only supported now
-  int ntotal_;         // vector num
-  std::string file_path_;
-  int offset_;
-  long total_mem_bytes_;
+  int max_vector_size_;
+  int ntotal_;           // vector num
+  long total_mem_bytes_; // total used memory bytes
 };
 } // namespace tig_gamma
 #endif /* RAW_VECTOR_H_ */

@@ -24,20 +24,27 @@ public:
 
   int CreateTable(const Table *table);
 
-  int AddDoc(const Doc *doc);
+  int Add(const Doc *doc);
 
-  int AddOrUpdateDoc(const Doc *doc);
+  int AddOrUpdate(const Doc *doc);
 
-  int UpdateDoc(const Doc *doc);
+  int Update(const Doc *doc);
 
   /**
    * Delete doc
    * @param doc_id
    * @return 0 if successed
    */
-  int DelDoc(const std::string &doc_id);
+  int Del(const std::string &doc_id);
 
-  Doc *GetDocByID(const std::string &id);
+  /**
+   * Delete doc by query
+   * @param request delete request
+   * @return 0 if successed
+   */
+  int DelDocByQuery(Request *request);
+
+  Doc *GetDoc(const std::string &id);
 
   /**
    * blocking to build index
@@ -56,7 +63,7 @@ public:
   long GetMemoryBytes();
 
 private:
-  GammaEngine(const string &index_root_path);
+  GammaEngine(const std::string &index_root_path);
   std::string index_root_path_;
 
   char *docids_bitmap_;

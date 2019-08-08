@@ -44,6 +44,7 @@ bool floatArrayEquals(const float *a, int m, const float *b, int n) {
   return true;
 }
 
+/*
 void TestNormal(string file_path = "test_memory_raw_vector.fet") {
   int max_doc_size = 100000;
   int dimension = 512;
@@ -56,8 +57,8 @@ void TestNormal(string file_path = "test_memory_raw_vector.fet") {
 
   MemoryRawVector *raw_vector =
       new MemoryRawVector("test_memory_raw_vector", max_doc_size, dimension);
-  raw_vector->SetFilePath(file_path);
-  raw_vector->SetOffset(head.length());
+  // raw_vector->SetFilePath(file_path);
+  // raw_vector->SetOffset(head.length());
   assert(0 == raw_vector->Init());
 
   // batch add
@@ -115,12 +116,13 @@ void TestNormal(string file_path = "test_memory_raw_vector.fet") {
   assert(nullptr == raw_vector->GetVector(max_doc_size));
   delete raw_vector;
 }
+*/
 
 int main(int argc, char **argv) {
   if (argc != 2) {
     return 0;
   }
   string file_path = string(argv[1]);
-  TestNormal(file_path);
+  // TestNormal(file_path);
   return 0;
 }

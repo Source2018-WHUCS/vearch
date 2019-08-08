@@ -1,8 +1,8 @@
 #ifndef GAMMA_INDEX_H_
 #define GAMMA_INDEX_H_
 
+#include "gamma_common_data.h"
 #include "raw_vector.h"
-#include "utils.h"
 #include <vector>
 
 namespace tig_gamma {
