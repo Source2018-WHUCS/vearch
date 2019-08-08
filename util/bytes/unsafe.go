@@ -1,5 +1,3 @@
-// +build !appengine
-
 package bytes
 
 // ByteToString convert bytes to string

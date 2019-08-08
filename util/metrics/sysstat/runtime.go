@@ -16,6 +16,7 @@ package sysstat
 
 import (
 	"context"
+	"github.com/tiglabs/baudengine/config"
 	"os"
 	"runtime"
 	"time"
@@ -26,11 +27,10 @@ import (
 	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/process"
 
-	"github.com/tiglabs/baudengine/util/build"
-	"github.com/tiglabs/log"
 	"github.com/tiglabs/baudengine/util/metrics"
 	"github.com/tiglabs/baudengine/util/metrics/metric"
 	"github.com/tiglabs/baudengine/util/routine"
+	"github.com/tiglabs/log"
 )
 
 const (
@@ -193,14 +193,9 @@ func NewRuntimeStatSampler(option RuntimeStatOption) *RuntimeStatSampler {
 	}
 
 	// Build Info
-	info := build.GetInfo()
-	timestamp, err := info.Timestamp()
-	if err != nil {
-		log.Warn("Could not parse build timestamp: %v", err)
-		timestamp = time.Now().Unix()
-	}
-	metaBuildTime.AddLabel("tag", info.Tag)
-	metaBuildTime.AddLabel("go_version", info.GoVersion)
+
+	metaBuildTime.AddLabel("commit_id", config.GetCommitID())
+	metaBuildTime.AddLabel("build_version", config.GetBuildVersion())
 
 	s := &RuntimeStatSampler{
 		RuntimeStatOption: option,
@@ -247,7 +242,6 @@ func NewRuntimeStatSampler(option RuntimeStatOption) *RuntimeStatSampler {
 		BuildTimestamp: metric.NewGauge(metaBuildTime),
 	}
 
-	s.BuildTimestamp.Update(timestamp)
 	s.CPUTotal.Update(int64(runtime.NumCPU()))
 	return s
 }
