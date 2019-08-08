@@ -434,7 +434,7 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 	}
 
 	if temp.OnlineLogLevel != "" {
-		req.OnlineLogLevel = byteArrayStr(temp.OnlineLogLevel)
+		req.online_log_level = byteArrayStr(temp.OnlineLogLevel)
 	}
 
 	return nil
