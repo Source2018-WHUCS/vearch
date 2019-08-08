@@ -430,7 +430,7 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 	req.req_num = C.int(reqNum)
 
 	if temp.DirectSearchType != 0 {
-		req.direct_search_threshold = C.int(temp.DirectSearchType)
+		req.direct_search_type = C.int(temp.DirectSearchType)
 	}
 
 	if temp.OnlineLogLevel != "" {
