@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/tiglabs/baudengine/proto"
+	"github.com/tiglabs/baudengine/util"
 	"math/rand"
 	"strings"
 	"unicode"
@@ -44,7 +45,11 @@ type Engine struct {
 	MaxSize      int64  `json:"max_size"`
 	ZoneField    string `json:"zone_field"`
 	ExpireMinute int64  `json:"expire_minute"`
-	Nprobe       int64  `json:"nprobe"`
+	Nprobe       *int   `json:"nprobe,omitempty"`
+	MetricType   *int   `json:"metric_type,omitempty"`
+	Ncentroids   *int   `json:"ncentroids,omitempty"`
+	Nsubvector   *int   `json:"nsubvector,omitempty"`
+	NbitsPerIdx  *int   `json:"nbits_per_idx,omitempty"`
 }
 
 func NewDefaultEngine() *Engine {
@@ -145,9 +150,12 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 		MaxSize      int64  `json:"max_size"`
 		ZoneField    string ` json:"zone_field"`
 		ExpireMinute int64  `json:"expire_minute"`
-		Nprobe       int64  `json:"nprobe"`
+		Nprobe       *int   `json:"nprobe"`
+		MetricType   *int   `json:"metric_type"`
+		Ncentroids   *int   `json:"ncentroids"`
+		Nsubvector   *int   `json:"nsubvector"`
+		NbitsPerIdx  *int   `json:"nbits_per_idx"`
 	}{}
-
 
 	if err := json.Unmarshal(bs, tempEngine); err != nil {
 		return err
@@ -159,14 +167,31 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 		if tempEngine.MaxSize <= 0 {
 			tempEngine.MaxSize = 10000000
 		}
-		if tempEngine.Nprobe <= 0 {
-			tempEngine.Nprobe = 10
+
+		defVal := util.PInt(-1)
+
+		if tempEngine.Nprobe == nil {
+			tempEngine.Nprobe = defVal
+		}
+
+		if tempEngine.MetricType == nil {
+			tempEngine.MetricType = defVal
+		}
+
+		if tempEngine.Ncentroids == nil {
+			tempEngine.Ncentroids = defVal
+		}
+
+		if tempEngine.Nsubvector == nil {
+			tempEngine.Nsubvector = defVal
+		}
+
+		if tempEngine.NbitsPerIdx == nil {
+			tempEngine.NbitsPerIdx = defVal
 		}
 	default:
 		return pkg.ErrPartitionEngineNameInvalid
 	}
-
-
 
 	*engine = Engine{
 		Name:         tempEngine.Name,
@@ -175,6 +200,10 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 		ZoneField:    tempEngine.ZoneField,
 		ExpireMinute: tempEngine.ExpireMinute,
 		Nprobe:       tempEngine.Nprobe,
+		MetricType:   tempEngine.MetricType,
+		Ncentroids:   tempEngine.Ncentroids,
+		Nsubvector:   tempEngine.Nsubvector,
+		NbitsPerIdx:  tempEngine.NbitsPerIdx,
 	}
 
 	if engine.ExpireMinute > 0 {

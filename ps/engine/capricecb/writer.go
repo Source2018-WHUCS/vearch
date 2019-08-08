@@ -19,11 +19,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/ps/engine"
 	"github.com/tiglabs/baudengine/proto"
 	"github.com/tiglabs/baudengine/proto/entity"
 	"github.com/tiglabs/baudengine/proto/pspb"
 	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/tiglabs/baudengine/ps/engine"
 	"github.com/tiglabs/baudengine/util"
 	"github.com/tiglabs/baudengine/util/ioutil2"
 	"github.com/tiglabs/caprice"
@@ -278,7 +278,7 @@ func (wi *writerImpl) getDocForUpdate(ctx context.Context, docId string) *respon
 		return wi.DocCmd2DocResult(lastDocCmd)
 	}
 
-	panic(fmt.Sprintf("unreachable value:[%v] type:[%d]",lastDocCmd, lastDocCmd.Type))
+	panic(fmt.Sprintf("unreachable value:[%v] type:[%d]", lastDocCmd, lastDocCmd.Type))
 }
 
 func (wi *writerImpl) Flush(ctx context.Context, sn int64) error {

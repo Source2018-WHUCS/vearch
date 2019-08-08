@@ -247,6 +247,15 @@ func (this *spaceSender) MSearchByPartitions(partitions []*entity.Partition, req
 	return result, nil
 }
 
+func (this *spaceSender) DeleteByQuery(req *request.SearchRequest) *response.Response {
+	space, err := this.ps.Client().Master().cliCache.SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
+	if err != nil {
+		return &response.Response{Status: pkg.ErrCode(err), Err: err}
+	}
+
+	return this.DeleteByPartitions(space.Partitions, req)
+}
+
 //search from space, by partitions
 //clientType LEADER or RANDOM
 // return entity.SearchResult
@@ -261,6 +270,66 @@ func (this *spaceSender) Search(req *request.SearchRequest) *response.SearchResp
 		return response.NewSearchResponseErr(err)
 	}
 	return resp
+}
+
+func (this *spaceSender) DeleteByPartitions(partitions []*entity.Partition, req *request.SearchRequest) (resp *response.Response) {
+
+	var wg sync.WaitGroup
+	respChain := make(chan *response.Response, len(partitions))
+
+	if req.Start == nil { //filter query range
+		req.Start = util.PInt64(0)
+	}
+	if req.End == nil {
+		req.End = util.PInt64(math.MaxUint32)
+	}
+
+	for _, p := range partitions {
+
+		if *req.Start > p.MaxValue {
+			continue
+		}
+
+		if *req.End < p.MinValue {
+			continue
+		}
+
+		wg.Add(1)
+		go func(par *entity.Partition) {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					log.Error("search has panic :[%s]", r)
+					respChain <- &response.Response{Status: pkg.ERRCODE_INTERNAL_ERROR, Err: fmt.Errorf(cast.ToString(r))}
+				}
+			}()
+			resp := this.partitionId(par.Id).DeleteByQuery(req)
+			if resp.Err != nil {
+				log.Error("Fail to search ps. partition[%d], db[%s], space[%s]. err[%v]", par.Id, this.db, this.space, resp.Err)
+				if pkg.ErrCode(resp.Err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
+					this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
+					resp = this.partitionId(par.Id).DeleteByQuery(req)
+				}
+
+			}
+			respChain <- resp
+		}(p)
+	}
+
+	wg.Wait()
+	close(respChain)
+
+	var first *response.Response
+
+	for r := range respChain {
+		if first == nil {
+			first = r
+			continue
+		}
+		first.Resp = cast.ToInt(first.Resp) + cast.ToInt(r.Resp)
+	}
+
+	return first
 }
 
 func (this *spaceSender) SearchByPartitions(partitions []*entity.Partition, req *request.SearchRequest) (resp *response.SearchResponse, err error) {

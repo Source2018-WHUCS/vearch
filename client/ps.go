@@ -50,15 +50,16 @@ const (
 
 const (
 	//doc handler
-	SearchHandler       = "SearchHandler"
-	MSearchHandler      = "MSearchHandler"
-	StreamSearchHandler = "StreamSearchHandler"
-	GetDocHandler       = "GetDocHandler"
-	GetDocsHandler      = "GetDocsHandler"
-	WriteHandler        = "WriteHandler"
-	BatchHandler        = "BatchHandler"
-	FlushHandler        = "FlushHandler"
-	ForceMergeHandler   = "ForceMergeHandler"
+	SearchHandler        = "SearchHandler"
+	DeleteByQueryHandler = "DeleteByQueryHandler"
+	MSearchHandler       = "MSearchHandler"
+	StreamSearchHandler  = "StreamSearchHandler"
+	GetDocHandler        = "GetDocHandler"
+	GetDocsHandler       = "GetDocsHandler"
+	WriteHandler         = "WriteHandler"
+	BatchHandler         = "BatchHandler"
+	FlushHandler         = "FlushHandler"
+	ForceMergeHandler    = "ForceMergeHandler"
 
 	//admin handler
 	CreatePartitionHandler = "CreatePartitionHandler"
@@ -68,7 +69,6 @@ const (
 	IsLiveHandler          = "IsLiveHandler"
 	MaxMinZoneFieldHandler = "MaxMinHandler"
 	PartitionInfoHandler   = "PartitionInfoHandler"
-
 )
 
 type psClient struct {
@@ -134,7 +134,6 @@ func (this *sender) Space(db, space string) *spaceSender {
 func (this *sender) Admin(partitionServerRpcAddr string) *adminSender {
 	return &adminSender{sender: this, addr: partitionServerRpcAddr}
 }
-
 
 var nilClient = &rpcClient{}
 

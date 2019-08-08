@@ -17,12 +17,13 @@ package raftstore
 import (
 	"context"
 	"fmt"
-
 	"github.com/tiglabs/baudengine/proto"
 	"github.com/tiglabs/baudengine/proto/entity"
 	"github.com/tiglabs/baudengine/proto/pspb"
 	"github.com/tiglabs/baudengine/proto/pspb/raftpb"
+	"github.com/tiglabs/baudengine/proto/request"
 	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/tiglabs/baudengine/util"
 	"github.com/tiglabs/baudengine/util/cbjson"
 	"github.com/tiglabs/log"
 )
@@ -65,7 +66,6 @@ func (s *Store) UpdateSpace(ctx context.Context, space *entity.Space) error {
 
 	data, err := raftCmd.Marshal()
 
-
 	if err != nil {
 		return err
 	}
@@ -82,6 +82,66 @@ func (s *Store) UpdateSpace(ctx context.Context, space *entity.Space) error {
 	}
 
 	return nil
+}
+
+func (s *Store) DeleteByQuery(ctx context.Context, readLeader bool, query *request.SearchRequest) (delCount int, err error) {
+	if err := s.checkWritable(); err != nil {
+		return delCount, err
+	}
+
+	query.Size = util.PInt(10000)
+	query.Fields = []string{"_id"}
+
+	for {
+		result := s.Engine.Reader().Search(ctx, query)
+
+		if len(result.Status.Errors) > 0 {
+			for _, v := range result.Status.Errors {
+				return delCount, v
+			}
+		}
+
+		if len(result.Hits) == 0 {
+			return delCount, nil
+		}
+
+		raftCmd := raftpb.CreateRaftCommand()
+
+		raftCmd.Type = raftpb.CmdType_WRITE
+		raftCmd.WriteCommand = &pspb.DocCmd{
+			Type:    pspb.OpType_DELETE,
+			Version: -1,
+		}
+		for _, hit := range result.Hits {
+
+			raftCmd.WriteCommand.DocId = hit.Id
+			data, err := raftCmd.Marshal()
+			if err != nil {
+				return delCount, err
+			}
+
+			future := s.RaftServer.Submit(uint64(s.Partition.Id), data)
+
+			resp, err := future.Response()
+			if err != nil {
+				return delCount, err
+			}
+
+			if resp.(*RaftApplyResponse).Err != nil {
+				return delCount, resp.(*RaftApplyResponse).Err
+			}
+
+			if resp.(*RaftApplyResponse).Result.Failure != nil && resp.(*RaftApplyResponse).Result.Failure.Reason != "" {
+				return delCount, fmt.Errorf(resp.(*RaftApplyResponse).Result.Failure.Reason)
+			}
+			delCount++
+		}
+
+		if err := s.Engine.Writer().Flush(ctx, s.Sn); err != nil {
+			return delCount, err
+		}
+	}
+
 }
 
 func (s *Store) Write(ctx context.Context, request *pspb.DocCmd) (result *response.DocResult, err error) {
@@ -101,8 +161,7 @@ func (s *Store) Write(ctx context.Context, request *pspb.DocCmd) (result *respon
 	}
 
 	//TODO: pspb.Replace not use check version
-	if (request.Type == pspb.OpType_MERGE || request.Type == pspb.OpType_DELETE) &&
-		request.Version == 0 {
+	if (request.Type == pspb.OpType_MERGE || request.Type == pspb.OpType_DELETE) && request.Version == 0 {
 		log.Debug("use version check")
 		doc, err := s.GetRTDocument(ctx, true, request.DocId)
 		if err != nil {

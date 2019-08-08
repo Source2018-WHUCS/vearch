@@ -52,6 +52,10 @@ func ExportToRpcHandler(server *Server) {
 		panic(err)
 	}
 
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.DeleteByQueryHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, new(DeleteByQueryHandler)), ""); err != nil {
+		panic(err)
+	}
+
 	if err := server.rpcServer.RegisterName(handler.NewChain(client.MSearchHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, new(MSearchHandler)), ""); err != nil {
 		panic(err)
 	}
@@ -345,6 +349,25 @@ func (*GetDocsHandler) Execute(req *handler.RpcRequest, resp *handler.RpcRespons
 	}
 	return nil
 
+}
+
+//deleteByQuery handler
+type DeleteByQueryHandler int
+
+func (*DeleteByQueryHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
+	reqs := req.GetArg().(*request.SearchRequest)
+	if reqs.SearchDocumentRequest == nil {
+		reqs.SearchDocumentRequest = &request.SearchDocumentRequest{}
+	}
+
+	delCount, err := reqs.GetStore().(PartitionStore).DeleteByQuery(req.Ctx, reqs.Leader, reqs)
+	if err != nil {
+		return err
+	}
+
+	resp.Result = delCount
+
+	return nil
 }
 
 //search handler

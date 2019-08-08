@@ -85,6 +85,7 @@ type Writer interface {
 
 	// commit is renew a memory block, return a chan to client, client get the chan to wait the old memory flush to segment
 	Commit(ctx context.Context, sn int64) (chan error, error)
+
 }
 
 // Engine is the interface that wraps the core operations of a document store.

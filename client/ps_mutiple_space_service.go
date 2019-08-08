@@ -17,6 +17,7 @@ package client
 import (
 	"fmt"
 	"github.com/spf13/cast"
+	"github.com/tiglabs/baudengine/proto"
 	"github.com/tiglabs/baudengine/proto/request"
 	"github.com/tiglabs/baudengine/proto/response"
 	"sync"
@@ -47,9 +48,6 @@ func (this *multipleSpaceSender) MSearch(req *request.SearchRequest) (result res
 	wg.Wait()
 	close(respChain)
 
-
-
-
 	for r := range respChain {
 		if result == nil {
 			result = r
@@ -58,11 +56,11 @@ func (this *multipleSpaceSender) MSearch(req *request.SearchRequest) (result res
 
 		var err error
 
-		if len(result) < len(r){
-			err = mergeResultArr(r , result,req)
+		if len(result) < len(r) {
+			err = mergeResultArr(r, result, req)
 			result = r
-		}else{
-			err = mergeResultArr(result,r,req)
+		} else {
+			err = mergeResultArr(result, r, req)
 		}
 
 		if err != nil {
@@ -79,15 +77,15 @@ func mergeResultArr(dest response.SearchResponses, src response.SearchResponses,
 		return fmt.Errorf("sort err [%s]", string(req.Sort))
 	}
 
-	if len(dest)==len(src){
-		for index := range dest{
+	if len(dest) == len(src) {
+		for index := range dest {
 			err := dest[index].Merge(src[index], sortOrder, req.From, *req.Size)
 			if err != nil {
 				return fmt.Errorf("merge err [%s]")
 			}
 		}
-	}else{
-		for index := range dest{
+	} else {
+		for index := range dest {
 			err := dest[index].Merge(src[0], sortOrder, req.From, *req.Size)
 			if err != nil {
 				return fmt.Errorf("merge err [%s]")
@@ -97,6 +95,39 @@ func mergeResultArr(dest response.SearchResponses, src response.SearchResponses,
 
 	return nil
 
+}
+
+func (this *multipleSpaceSender) DeleteByQuery(req *request.SearchRequest) *response.Response {
+	var wg sync.WaitGroup
+	respChain := make(chan *response.Response, len(this.senders))
+
+	for _, s := range this.senders {
+		wg.Add(1)
+		go func(par *spaceSender) {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Println(r)
+					respChain <- &response.Response{Status: pkg.ERRCODE_INTERNAL_ERROR, Err: fmt.Errorf(cast.ToString(r))}
+				}
+			}()
+			respChain <- s.DeleteByQuery(req)
+		}(s)
+	}
+
+	wg.Wait()
+	close(respChain)
+
+	var result *response.Response
+	for r := range respChain {
+		if r.Err != nil {
+			return r
+		}
+		if result == nil {
+			result = r
+		}
+	}
+	return result
 }
 
 func (this *multipleSpaceSender) Search(req *request.SearchRequest) (result *response.SearchResponse) {

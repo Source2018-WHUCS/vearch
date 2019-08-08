@@ -20,8 +20,8 @@ import (
 	"github.com/spf13/cast"
 	"github.com/tiglabs/baudengine/proto"
 	"github.com/tiglabs/baudengine/proto/entity"
-    "github.com/tiglabs/baudengine/proto/response"
-    "github.com/tiglabs/baudengine/util"
+	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/tiglabs/baudengine/util"
 	"github.com/tiglabs/baudengine/util/cbjson"
 	"github.com/tiglabs/baudengine/util/metrics/mserver"
 	"github.com/tiglabs/baudengine/util/netutil"
@@ -266,7 +266,7 @@ func (client *CBClient) SpaceDelete(dbName, spaceName string) (*Response, error)
 	return NewResponse(response), nil
 }
 
-func (client *CBClient) SpaceGet(dbName , spaceName string) (*entity.Space, error) {
+func (client *CBClient) SpaceGet(dbName, spaceName string) (*entity.Space, error) {
 	address := "http://" + client.MasterAddr
 	query := netutil.NewQuery().SetHeader("Authorization", util.AuthEncrypt(C().RootName, C().RootPassword))
 	query.SetMethod(http.MethodGet)
@@ -492,7 +492,7 @@ func (client *CBClient) UserDelete(name string) (*Response, error) {
 	return NewResponse(response), nil
 }
 
-func (client *CBClient) UserAddDB(userName , dbName string) (*Response, error) {
+func (client *CBClient) UserAddDB(userName, dbName string) (*Response, error) {
 
 	form := url.Values{}
 	form.Add("user_name", userName)
@@ -665,7 +665,6 @@ func (client *CBClient) DocumentCreate(docID string, doc interface{}) (*response
 	return dr, nil
 }
 
-
 func (client *CBClient) DocumentBulk(data string) (*Response, error) {
 	address := "http://" + client.RouterAddr
 	query := netutil.NewQuery().SetHeader("Authorization", util.AuthEncrypt(C().UserName, C().UserPassword))
@@ -819,6 +818,25 @@ func (client *CBClient) DocumentReplace(docID string, doc interface{}) (*respons
 	}
 
 	return dr, nil
+}
+
+func (client *CBClient) DeleteByQuery(method, data string) (*Response, error) {
+	address := "http://" + client.RouterAddr
+	sender := netutil.NewQuery().SetHeader("Authorization", util.AuthEncrypt(C().UserName, C().UserPassword))
+	sender.SetMethod(method)
+	sender.SetAddress(address)
+	sender.SetUrlPath("/" + client.DbName + "/" + client.SpaceName + "/_delete_by_query")
+	sender.SetReqBody(data)
+	sender.SetContentTypeJson()
+	url := sender.GetUrl()
+	log.Info("\n test es normal ciSearchTerm doc url %v", url)
+	log.Info("\n test es normal ciSearchTerm doc reqBody %v", data)
+	resp, err := sender.Do()
+
+	if err != nil {
+		return nil, err
+	}
+	return NewResponse(resp), nil
 }
 
 func (client *CBClient) Search(method, data string) (*Response, error) {

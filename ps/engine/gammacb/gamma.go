@@ -25,11 +25,11 @@ import (
 	"fmt"
 	_ "github.com/blevesearch/bleve/config"
 	"github.com/tiglabs/baudengine/config"
+	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/tiglabs/baudengine/proto/pspb"
 	"github.com/tiglabs/baudengine/ps/engine"
 	"github.com/tiglabs/baudengine/ps/engine/mapping"
 	"github.com/tiglabs/baudengine/ps/engine/register"
-	"github.com/tiglabs/baudengine/proto/entity"
-	"github.com/tiglabs/baudengine/proto/pspb"
 	"github.com/tiglabs/log"
 	"io/ioutil"
 	"sync"
@@ -66,11 +66,10 @@ func New(cfg register.EngineConfig) (engine.Engine, error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	table, e := mapping2Table(cfg.PartitionID, indexMapping)
+	table, e := mapping2Table(cfg, indexMapping)
 	if e != nil {
 		return nil, e
 	}
-	table.nprobe = C.int(cfg.Space.Engine.Nprobe) // set nprobe for table
 
 	defer C.DestroyFieldInfos(table.fields, table.fields_num)
 	defer C.DestroyVectorInfos(table.vectors_info, table.vectors_num)

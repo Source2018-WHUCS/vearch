@@ -126,6 +126,36 @@ func (this *docService) mSearchDoc(ctx context.Context, dbName string, spaceName
 	return this.client.PS().Be(ctx).MultipleSpace(searchSpaces).MSearch(searchRequest), nameCache, nil
 }
 
+func (this *docService) deleteByQuery(ctx context.Context, dbName string, spaceName string, searchRequest *request.SearchRequest) (*response.Response, response.NameCache, error) {
+
+	var searchSpaces [][2]string
+
+	dbNames := strings.Split(dbName, ",")
+	spaceNames := strings.Split(spaceName, ",")
+
+	nameCache := make(response.NameCache)
+
+	for _, dbName = range dbNames {
+		for _, spaceName = range spaceNames {
+			if space, err := this.client.Master().Cache().SpaceByCache(ctx, dbName, spaceName); err == nil {
+				key := [2]int64{int64(space.DBId), int64(space.Id)}
+				if nameCache[key] == nil {
+					nameCache[key] = []string{dbName, spaceName}
+					searchSpaces = append(searchSpaces, [2]string{dbName, spaceName})
+				}
+			} else {
+				log.Error("can not find db:[%s] space:[%s] for search err:[%s] ", dbName, spaceName, err.Error())
+			}
+		}
+	}
+
+	if len(searchSpaces) == 0 {
+		return nil, nil, pkg.ErrMasterSpaceNotExists
+	}
+
+	return this.client.PS().Be(ctx).MultipleSpace(searchSpaces).DeleteByQuery(searchRequest), nameCache, nil
+}
+
 func (this *docService) searchDoc(ctx context.Context, dbName string, spaceName string, searchRequest *request.SearchRequest) (*response.SearchResponse, response.NameCache, error) {
 	if searchRequest.Aggs == nil {
 		searchRequest.Aggs = searchRequest.Aggregations

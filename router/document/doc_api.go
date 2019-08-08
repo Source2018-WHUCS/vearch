@@ -133,6 +133,9 @@ func (handler *DocumentHandler) ExportToServer() error {
 
 	// search doc: /$dbName/$spaceName/_search
 	handler.httpServer.HandlesMethods([]string{http.MethodGet, http.MethodPost}, fmt.Sprintf("/{%s}/{%s}/_search", UrlParamDbName, UrlParamSpaceName), []netutil.HandleContinued{handler.handleTimeout, handler.handleAuth, handler.handleSearchDoc}, nil)
+
+	handler.httpServer.HandlesMethods([]string{http.MethodDelete, http.MethodPost}, fmt.Sprintf("/{%s}/{%s}/_delete_by_query", UrlParamDbName, UrlParamSpaceName), []netutil.HandleContinued{handler.handleTimeout, handler.handleAuth, handler.handleDeleteByQuery}, nil)
+
 	handler.httpServer.HandlesMethods([]string{http.MethodGet, http.MethodPost}, fmt.Sprintf("/{%s}/{%s}/_stream_search", UrlParamDbName, UrlParamSpaceName), []netutil.HandleContinued{handler.handleTimeout, handler.handleAuth, handler.handleStreamSearchDoc}, nil)
 
 	// replace doc: /$dbName/$spaceName
@@ -227,7 +230,7 @@ func (handler *DocumentHandler) handleTimeout(ctx context.Context, w http.Respon
 		if timeout, err := cast.ToInt64E(timeoutStr); err != nil {
 			log.Error("parse:[timeoutStr] timeout err , it must int value:[%s]", timeoutStr, reqArgs[UrlQueryTimeout])
 		} else {
-			ctx, _ = context.WithTimeout(ctx,  time.Duration(timeout*int64(base)))
+			ctx, _ = context.WithTimeout(ctx, time.Duration(timeout*int64(base)))
 		}
 	}
 
@@ -442,7 +445,6 @@ func (handler *DocumentHandler) handleUpdateDoc(ctx context.Context, w http.Resp
 
 	docResult := handler.docService.mergeDoc(ctx, dbName, spaceName, docID, reqArgs, doc)
 
-
 	writeResponse := response.WriteResponse{docResult}
 	bs, err := writeResponse.ToContent(dbName, spaceName)
 	if err != nil {
@@ -594,6 +596,48 @@ func (handler *DocumentHandler) handleMSearchDoc(ctx context.Context, w http.Res
 	}
 
 	resp.SendJsonBytes(ctx, w, bs, handler.monitor)
+	return ctx, true
+}
+
+func (handler *DocumentHandler) handleDeleteByQuery(ctx context.Context, w http.ResponseWriter, r *http.Request, params netutil.UriParams) (context.Context, bool) {
+	dbName := params.ByName(UrlParamDbName)
+	spaceName := params.ByName(UrlParamSpaceName)
+
+	reqArgs := netutil.GetUrlQuery(r)
+	reqBody, err := netutil.GetReqBody(r)
+	if err != nil {
+		resp.SendError(ctx, w, http.StatusBadRequest, err.Error(), handler.monitor)
+		return ctx, true
+	}
+
+	searchRequest := request.NewSearchRequest(ctx, uuid.FlakeUUID())
+	if len(reqBody) != 0 {
+		err := cbjson.Unmarshal(reqBody, searchRequest.SearchDocumentRequest)
+		if err != nil {
+			resp.SendError(ctx, w, http.StatusBadRequest, err.Error(), handler.monitor)
+			return ctx, true
+		}
+	}
+
+	if reqArgs[UrlQueryFrom] != "" {
+		searchRequest.From = cast.ToInt(reqArgs[UrlQueryFrom])
+	}
+	if reqArgs[UrlQuerySize] != "" {
+		size := cast.ToInt(reqArgs[UrlQuerySize])
+		searchRequest.Size = &size
+	}
+
+	rep, _, err := handler.docService.deleteByQuery(ctx, dbName, spaceName, searchRequest)
+	if err != nil {
+		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error(), handler.monitor)
+		return ctx, true
+	}
+
+	if rep.Err == nil {
+		rep.Status = 200
+	}
+
+	resp.SendJson(ctx, w, rep, handler.monitor)
 	return ctx, true
 }
 

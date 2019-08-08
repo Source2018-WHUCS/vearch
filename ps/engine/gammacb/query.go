@@ -351,6 +351,7 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 		Sum              []json.RawMessage `json:"sum"`
 		Filter           []json.RawMessage `json:"filter"`
 		DirectSearchType int               `json:"direct_search_type"`
+		OnlineLogLevel   string            `json:"online_log_level"`
 	}{}
 
 	err := cbjson.Unmarshal(data, &temp)
@@ -430,6 +431,10 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 
 	if temp.DirectSearchType != 0 {
 		req.direct_search_threshold = C.int(temp.DirectSearchType)
+	}
+
+	if temp.OnlineLogLevel != "" {
+		req.OnlineLogLevel = byteArrayStr(temp.OnlineLogLevel)
 	}
 
 	return nil

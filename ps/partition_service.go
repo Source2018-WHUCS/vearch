@@ -22,9 +22,9 @@ import (
 	"github.com/tiglabs/baudengine/proto/response"
 
 	"github.com/tiglabs/baudengine/config"
-	"github.com/tiglabs/baudengine/ps/engine"
 	"github.com/tiglabs/baudengine/proto/entity"
 	"github.com/tiglabs/baudengine/proto/pspb"
+	"github.com/tiglabs/baudengine/ps/engine"
 	"github.com/tiglabs/baudengine/ps/psutil"
 	"github.com/tiglabs/baudengine/ps/storage/raftstore"
 	"github.com/tiglabs/log"
@@ -72,6 +72,8 @@ type PartitionStore interface {
 	GetDocument(ctx context.Context, readLeader bool, docID string) (doc *response.DocResult, err error)
 
 	GetDocuments(ctx context.Context, readLeader bool, docIds []string) (results response.DocResults, err error)
+
+	DeleteByQuery(ctx context.Context, readLeader bool, query *request.SearchRequest) (delCount int, err error)
 
 	Search(ctx context.Context, readLeader bool, query *request.SearchRequest) (result *response.SearchResponse, err error)
 

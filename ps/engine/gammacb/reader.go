@@ -82,7 +82,7 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 		nil, C.int(0),
 		nil, C.int(0),
 		nil, C.int(0),
-		C.int(1), C.int(0))
+		C.int(1), C.int(0), nil)
 
 	defer C.DestroyRequest(req)
 	if err := builder.parseQuery(request.Query, req); err != nil {

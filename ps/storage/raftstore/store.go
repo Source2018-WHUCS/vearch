@@ -24,8 +24,8 @@ import (
 
 	"github.com/tiglabs/baudengine/client"
 	"github.com/tiglabs/baudengine/config"
-	"github.com/tiglabs/baudengine/ps/engine/register"
 	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/tiglabs/baudengine/ps/engine/register"
 	"github.com/tiglabs/baudengine/ps/storage"
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
@@ -35,6 +35,7 @@ import (
 // Store is the default implementation of PartitionStore interface which
 // contiguous slot-space with writes managed via an instance of the Raft
 // consensus algorithm.
+
 type Store struct {
 	*storage.StoreBase
 	RaftPath      string

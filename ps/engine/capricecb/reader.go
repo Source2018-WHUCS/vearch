@@ -192,7 +192,7 @@ func (reader *readerImpl) Search(ctx context.Context, req *request.SearchRequest
 		return response.NewSearchResponseErr(err)
 	}
 
-	hits := make(response.Hits, 0, int(math.Min(1000, float64(*req.Size))))
+	hits := make(response.Hits, 0, int(math.Min(10000, float64(*req.Size))))
 
 	var highlighter *highlighterSimple.Highlighter
 	if req.Highlight != nil {

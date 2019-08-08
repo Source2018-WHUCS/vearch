@@ -26,10 +26,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/ps/engine/mapping"
-	"github.com/tiglabs/baudengine/proto/entity"
 	"github.com/tiglabs/baudengine/proto/pspb"
 	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/tiglabs/baudengine/ps/engine/mapping"
+	"github.com/tiglabs/baudengine/ps/engine/register"
 	"github.com/tiglabs/baudengine/util/bytes"
 	"github.com/tiglabs/caprice/search/sort"
 	"github.com/tiglabs/log"
@@ -67,7 +67,7 @@ func newFieldBySource(name string, value []byte, source string, typed C.enum_Dat
 	return result
 }
 
-func mapping2Table(id entity.PartitionID, m *mapping.IndexMapping) (*C.struct_Table, error) {
+func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*C.struct_Table, error) {
 	vfs := make([]*C.struct_VectorInfo, 0)
 	fs := make([]*C.struct_FieldInfo, 0)
 
@@ -85,9 +85,9 @@ func mapping2Table(id entity.PartitionID, m *mapping.IndexMapping) (*C.struct_Ta
 		case pspb.FieldType_FLOAT:
 			fs = append(fs, C.MakeFieldInfo(byteArrayStr(key), DOUBLE, C.char((value.Field.Options()&pspb.FieldOption_Index)/pspb.FieldOption_Index)))
 		case pspb.FieldType_INT, pspb.FieldType_DATE:
-			fs = append(fs, C.MakeFieldInfo(byteArrayStr(key), LONG, C.char((value.Field.Options()&pspb.FieldOption_Index) /pspb.FieldOption_Index)))
+			fs = append(fs, C.MakeFieldInfo(byteArrayStr(key), LONG, C.char((value.Field.Options()&pspb.FieldOption_Index)/pspb.FieldOption_Index)))
 		case pspb.FieldType_BOOL:
-			fs = append(fs, C.MakeFieldInfo(byteArrayStr(key), INT, C.char((value.Field.Options()&pspb.FieldOption_Index) /pspb.FieldOption_Index)))
+			fs = append(fs, C.MakeFieldInfo(byteArrayStr(key), INT, C.char((value.Field.Options()&pspb.FieldOption_Index)/pspb.FieldOption_Index)))
 		case pspb.FieldType_VECTOR:
 			fieldMapping := value.Field.FieldMappingI.(*mapping.VectortFieldMapping)
 			vf := C.MakeVectorInfo(byteArrayStr(key), VECTOR, C.int(fieldMapping.Dimension), byteArrayStr(fieldMapping.ModelId), byteArrayStr(fieldMapping.RetrievalType), byteArrayStr(fieldMapping.StoreType))
@@ -101,7 +101,7 @@ func mapping2Table(id entity.PartitionID, m *mapping.IndexMapping) (*C.struct_Ta
 		return nil, err
 	}
 
-	table := &C.struct_Table{name: byteArrayStr(cast.ToString(id))}
+	table := &C.struct_Table{name: byteArrayStr(cast.ToString(cfg.PartitionID))}
 
 	if len(vfs) > 0 {
 		arr := C.MakeVectorInfos(C.int(len(vfs)))
@@ -115,13 +115,17 @@ func mapping2Table(id entity.PartitionID, m *mapping.IndexMapping) (*C.struct_Ta
 	if len(fs) > 0 {
 		arr := C.MakeFieldInfos(C.int(len(fs)))
 		for i, f := range fs {
-			log.Info("add field:[%s] option:[%s]",CbArr2ByteArray(f.name) , C.int(f.is_index))
+			log.Info("add field:[%s] option:[%s]", CbArr2ByteArray(f.name), C.int(f.is_index))
 			C.SetFieldInfo(arr, C.int(i), f)
 		}
 
 		table.fields = arr
 		table.fields_num = C.int(len(fs))
 	}
+
+	engine := cfg.Space.Engine
+
+	table.ivfpq_param = C.MakeIVFPQParameters(C.int(*engine.MetricType), C.int(*engine.Nprobe), C.int(*engine.Ncentroids), C.int(*engine.Nsubvector), C.int(*engine.NbitsPerIdx))
 
 	return table, nil
 }

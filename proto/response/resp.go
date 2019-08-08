@@ -14,15 +14,16 @@
 
 package response
 
-type ApiResponse struct {
-    Status int
-    Body   []byte
-    Error  string
-}
+//type ApiResponse struct { TODO
+//    Status int
+//    Body   []byte
+//    Error  []string
+//}
+
+type Responses []*Response
 
 type Response struct {
-    Resp   interface{}
-    Status int
-    Err    error
+	Resp   interface{}
+	Status int
+	Err    error
 }
-

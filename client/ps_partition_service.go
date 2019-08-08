@@ -84,6 +84,16 @@ func (this *partitionSender) getDocs(ids []string) (response.DocResults, error) 
 
 }
 
+func (this *partitionSender) DeleteByQuery(req *request.SearchRequest) *response.Response {
+	partition, err := this.initPartition()
+	if err != nil { // must use it to get paition
+		return &response.Response{Resp: 0, Err: err}
+	}
+	result, _, err := this.getOrCreate(partition, this.spaceSender.clientType).Execute(DeleteByQueryHandler, req.Clone(partition.Id, this.spaceSender.db, this.spaceSender.space))
+
+	return &response.Response{Resp: result, Err: err}
+}
+
 func (this *partitionSender) search(req *request.SearchRequest) (*response.SearchResponse, error) {
 	partition, err := this.initPartition()
 	if err != nil { // must use it to get paition

@@ -964,7 +964,11 @@ func InitBulk() *testutil.CBClient {
 
 	client := testutil.NewCBClient(testutil.C().RouterAddr, testutil.C().MasterAddr, dbName, spaceName)
 
-	client.DbDrop(dbName)
+	if response, e := client.DbDrop(dbName); e != nil {
+		log.Error(e.Error())
+	} else {
+		log.Info(string(response.Resp))
+	}
 
 	//create user
 	obj, err := client.UserCreate(testutil.C().UserName, testutil.C().UserPassword,
