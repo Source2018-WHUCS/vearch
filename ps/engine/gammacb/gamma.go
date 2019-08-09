@@ -93,6 +93,11 @@ func New(cfg register.EngineConfig) (engine.Engine, error) {
 		if resp := C.CreateTable(ge.gamma, table); resp != 0 {
 			return nil, fmt.Errorf("create gamma table has err:[%d]", int(resp))
 		}
+	} else {
+		code := int(C.Load(ge.gamma))
+		if code != 0 {
+			return nil, fmt.Errorf("load gamma data err code:[%d]", code)
+		}
 	}
 
 	go ge.autoCreateIndex()
