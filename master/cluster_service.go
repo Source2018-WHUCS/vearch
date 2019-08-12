@@ -962,7 +962,15 @@ func (this *masterService) partitionInfo(ctx context.Context, dbName, spaceName 
 			spaceName := space.Name
 
 			if len(spaceNames) > 1 || spaceNames[0] != "" { //filter spaceName by user define
-				index := util.IndexOfStr(spaceNames, spaceName)
+				var index = -1
+
+				for i, name := range spaceNames {
+					if name == spaceName {
+						index = i
+						break
+					}
+				}
+
 				if index < 0 {
 					continue
 				}

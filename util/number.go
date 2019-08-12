@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"errors"
 	"math"
+	"unicode"
 )
 
 const ShiftStartFlag byte = 0x20
@@ -123,4 +124,18 @@ func Normalization(feature []float32) error {
 	}
 
 	return nil
+}
+
+
+func IsNum(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+
+	for _, v := range s {
+		if !unicode.IsNumber(v) {
+			return false
+		}
+	}
+	return true
 }
