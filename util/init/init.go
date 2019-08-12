@@ -17,39 +17,14 @@ package init
 import (
 	"github.com/tiglabs/baudengine/proto/request"
 	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/tiglabs/baudengine/ps/engine/sortorder"
 	"github.com/tiglabs/baudengine/util/metrics/mserver"
-	"github.com/tiglabs/caprice/search/aggregator"
-	"github.com/tiglabs/caprice/search/aggregator/buckets"
-	"github.com/tiglabs/caprice/search/aggregator/metrics"
-	"github.com/tiglabs/caprice/search/sort"
 	"github.com/vmihailenco/msgpack"
 )
 
 //in serizable by rpc you must set your entity in this init file
 func init() {
 	list := []interface{}{
-		//aggs bucket
-		(*aggregator.Bucket)(nil),
-		(*buckets.DateHistogram)(nil),
-		(*buckets.DateRange)(nil),
-		(*buckets.Terms)(nil),
-		(*buckets.Range)(nil),
-		(*buckets.Missing)(nil),
-		(*buckets.Histogram)(nil),
-		(*buckets.GeohashGrid)(nil),
-		(*buckets.IpRange)(nil),
-
-		//aggs metrics
-		(*metrics.Count)(nil),
-		(*metrics.Sum)(nil),
-		(*metrics.Stats)(nil),
-		(*metrics.Min)(nil),
-		(*metrics.Max)(nil),
-		(*metrics.GeoCentroid)(nil),
-		(*metrics.GeoBounds)(nil),
-		(*metrics.ExtendedStats)(nil),
-		(*metrics.Cardinality)(nil),
-		(*metrics.Avg)(nil),
 
 		//req resp serizable
 		(*request.SearchRequest)(nil),
@@ -62,12 +37,12 @@ func init() {
 		(*response.DocResult)(nil),
 
 		//sort
-		(*sort.FloatSortValue)(nil),
-		(*sort.StringSortValue)(nil),
-		(*sort.GeoDistanceSortValue)(nil),
-		(*sort.InfinitySortValue)(nil),
-		(*sort.IntSortValue)(nil),
-		(*sort.DateSortValue)(nil),
+		(*sortorder.FloatSortValue)(nil),
+		(*sortorder.StringSortValue)(nil),
+		(*sortorder.GeoDistanceSortValue)(nil),
+		(*sortorder.InfinitySortValue)(nil),
+		(*sortorder.IntSortValue)(nil),
+		(*sortorder.DateSortValue)(nil),
 	}
 
 	for i, v := range list {

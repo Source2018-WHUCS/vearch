@@ -17,7 +17,7 @@ package handler
 import (
 	"context"
 	"github.com/tiglabs/baudengine/util/monitoring"
-	"github.com/tiglabs/caprice/logger"
+	"github.com/tiglabs/log"
 	"time"
 )
 
@@ -45,7 +45,7 @@ func (this *Chain) Execute(ctx context.Context, request *RpcRequest, response *R
 			request.Cancel()
 		}
 		if err := this.panicChain.Execute(request, response); err != nil {
-			logger.Error("rpc panic err:[%s]", err.Error())
+			log.Error("rpc panic err:[%s]", err.Error())
 		}
 	}()
 

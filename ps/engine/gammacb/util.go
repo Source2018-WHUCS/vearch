@@ -30,8 +30,8 @@ import (
 	"github.com/tiglabs/baudengine/proto/response"
 	"github.com/tiglabs/baudengine/ps/engine/mapping"
 	"github.com/tiglabs/baudengine/ps/engine/register"
+	"github.com/tiglabs/baudengine/ps/engine/sortorder"
 	"github.com/tiglabs/baudengine/util/bytes"
-	"github.com/tiglabs/caprice/search/sort"
 	"github.com/tiglabs/log"
 	"reflect"
 	"time"
@@ -226,8 +226,8 @@ func (ge *gammaEngine) ResultItem2DocResult(item *C.struct_ResultItem) *response
 	result := ge.Doc2DocResult(item.doc)
 	result.Score = float64(item.score)
 	result.Extra = CbArr2ByteArray(item.extra)
-	result.SortValues = []sort.SortValue{
-		&sort.FloatSortValue{
+	result.SortValues = []sortorder.SortValue{
+		&sortorder.FloatSortValue{
 			Val: result.Score,
 		},
 	}

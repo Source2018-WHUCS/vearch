@@ -18,14 +18,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/cast"
 	"github.com/tiglabs/baudengine/client"
 	"github.com/tiglabs/baudengine/proto/request"
 	"github.com/tiglabs/baudengine/proto/response"
-	"github.com/tiglabs/baudengine/util"
-	"github.com/tiglabs/baudengine/util/cbjson"
 	"github.com/tiglabs/baudengine/util/metrics/mserver"
-	"github.com/tiglabs/caprice/search/aggregator/metrics"
 	"github.com/tiglabs/raft"
 	"time"
 
@@ -221,60 +217,63 @@ type MaxMinZoneFieldHandler int
 
 func (mm *MaxMinZoneFieldHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
 
-	store := req.Arg.(*request.ObjRequest).GetStore().(PartitionStore)
+	//panice guixu only support caprice TODO ANSJ
 
-	aggs := fmt.Sprintf(`{
-        	"max": {
-            	"max": {"field":"%s"}
-        	},
-        	"min": {
-            	"min": {"field":"%s"}
-        	}
-    	}`, store.GetSpace().Engine.ZoneField, store.GetSpace().Engine.ZoneField)
+	//store := req.Arg.(*request.ObjRequest).GetStore().(PartitionStore)
+	//
+	//aggs := fmt.Sprintf(`{
+    //    	"max": {
+    //        	"max": {"field":"%s"}
+    //    	},
+    //    	"min": {
+    //        	"min": {"field":"%s"}
+    //    	}
+    //	}`, store.GetSpace().Engine.ZoneField, store.GetSpace().Engine.ZoneField)
+	//
+	//searchReq := &request.SearchRequest{
+	//	SearchDocumentRequest: &request.SearchDocumentRequest{
+	//		Size: util.PInt(0),
+	//		Aggs: []byte(aggs),
+	//	},
+	//}
+	//
+	//result, err := store.Search(req.Ctx, true, searchReq)
+	//
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//log.Info("search maxMin Field:[%s] zone result :[%s]", store.GetSpace().Engine.ZoneField, cbjson.ToJsonString(result.Aggs))
+	//
+	//var Max, Min float64
 
-	searchReq := &request.SearchRequest{
-		SearchDocumentRequest: &request.SearchDocumentRequest{
-			Size: util.PInt(0),
-			Aggs: []byte(aggs),
-		},
-	}
+	//for _, agg := range result.Aggs {
+	//	if agg.Type() == "max" {
+	//		Max, err = cast.ToFloat64E(agg.GetResult().(*metrics.MaxResult).Max)
+	//	}
+	//	if agg.Type() == "min" {
+	//		Min, err = cast.ToFloat64E(agg.GetResult().(*metrics.MinResult).Value)
+	//	}
+	//}
 
-	result, err := store.Search(req.Ctx, true, searchReq)
 
-	if err != nil {
-		return err
-	}
-
-	log.Info("search maxMin Field:[%s] zone result :[%s]", store.GetSpace().Engine.ZoneField, cbjson.ToJsonString(result.Aggs))
-
-	var Max, Min float64
-
-	for _, agg := range result.Aggs {
-		if agg.Type() == "max" {
-			Max, err = cast.ToFloat64E(agg.GetResult().(*metrics.MaxResult).Max)
-		}
-		if agg.Type() == "min" {
-			Min, err = cast.ToFloat64E(agg.GetResult().(*metrics.MinResult).Value)
-		}
-	}
-
-	if err != nil {
-		log.Error(err.Error())
-	}
-
-	if Max <= 0 {
-		return fmt.Errorf("partitionID:[%d] max value can not to zero , please check data is right?", store.GetPartition().Id)
-	}
-
-	value := struct {
-		Max float64
-		Min float64
-	}{
-		Max: Max,
-		Min: Min,
-	}
-
-	resp.Result, err = response.NewObjResponse(value)
+	//if err != nil {
+	//	log.Error(err.Error())
+	//}
+	//
+	//if Max <= 0 {
+	//	return fmt.Errorf("partitionID:[%d] max value can not to zero , please check data is right?", store.GetPartition().Id)
+	//}
+	//
+	//value := struct {
+	//	Max float64
+	//	Min float64
+	//}{
+	//	Max: Max,
+	//	Min: Min,
+	//}
+	//
+	//resp.Result, err = response.NewObjResponse(value)
 
 	return nil
 }

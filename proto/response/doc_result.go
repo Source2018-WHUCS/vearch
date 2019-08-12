@@ -19,9 +19,8 @@ import (
 	"encoding/json"
 	"github.com/tiglabs/baudengine/proto/entity"
 	"github.com/tiglabs/baudengine/proto/pspb"
+	"github.com/tiglabs/baudengine/ps/engine/sortorder"
 	"github.com/tiglabs/baudengine/util/cbjson"
-	"github.com/tiglabs/caprice/search/match"
-	"github.com/tiglabs/caprice/search/sort"
 )
 
 func NewErrDocResult(id string, err error) *DocResult {
@@ -47,8 +46,7 @@ type DocResult struct {
 	Found      bool                `json:"found,omitempty"`
 	Replace    bool                `json:"replace,omitempty"`
 	Score      float64             `json:"score,omitempty"`
-	Expl       *match.Explanation  `json:"explain,omitempty"`
-	SortValues sort.SortValues     `json:"sort_value,omitempty"`
+	SortValues sortorder.SortValues     `json:"sort_value,omitempty"`
 	SlotID     uint32              `json:"slot_id"`
 	Source     json.RawMessage     `json:"source,omitempty"`
 	Extra      json.RawMessage     `json:"extra,omitempty"`

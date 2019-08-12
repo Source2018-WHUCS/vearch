@@ -17,7 +17,6 @@ package request
 import (
 	"encoding/json"
 	"github.com/tiglabs/baudengine/ps/engine/sortorder"
-	"github.com/tiglabs/caprice/search/sort"
 )
 
 type SearchDocumentRequest struct {
@@ -33,10 +32,10 @@ type SearchDocumentRequest struct {
 	Aggregations json.RawMessage   `json:"aggregations,omitempty"` //it not use only for json un serizable
 	ScriptFields json.RawMessage   `json:"script_fields,omitempty"`
 	SearchAfter  []interface{}     `json:"search_after,omitempty"`
-	sortOrder    sort.SortOrder
+	sortOrder    sortorder.SortOrder
 }
 
-func (this *SearchDocumentRequest) SortOrder() (sort.SortOrder, error) {
+func (this *SearchDocumentRequest) SortOrder() (sortorder.SortOrder, error) {
 	if this.sortOrder != nil {
 		return this.sortOrder, nil
 	}

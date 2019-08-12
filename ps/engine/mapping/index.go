@@ -21,7 +21,6 @@ import (
 	"github.com/blevesearch/bleve/analysis/datetime/optional"
 	"github.com/tiglabs/baudengine/proto/entity"
 	"github.com/tiglabs/baudengine/proto/pspb"
-	"github.com/tiglabs/caprice/document"
 	"github.com/tiglabs/log"
 	"github.com/valyala/fastjson"
 )
@@ -236,10 +235,10 @@ func (im *IndexMapping) GetFieldsAnalyzer() (map[string]*analysis.Analyzer, erro
 	return result, nil
 }
 
-func (im *IndexMapping) GetFieldsType() map[string]document.FieldType {
-	result := make(map[string]document.FieldType)
+func (im *IndexMapping) GetFieldsType() map[string]pspb.FieldType {
+	result := make(map[string]pspb.FieldType)
 	for f, fm := range im.fieldCacher {
-		result[f] = document.FieldType(fm.Field.FieldType())
+		result[f] = pspb.FieldType(fm.Field.FieldType())
 	}
 	return result
 }

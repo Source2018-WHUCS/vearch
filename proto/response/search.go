@@ -16,17 +16,15 @@ package response
 
 import (
 	"github.com/tiglabs/baudengine/proto"
+	sort "github.com/tiglabs/baudengine/ps/engine/sortorder"
 	"github.com/tiglabs/baudengine/util/cbjson"
-	"github.com/tiglabs/caprice"
-	"github.com/tiglabs/caprice/search/aggregator"
-	"github.com/tiglabs/caprice/search/sort"
 	"math"
 	"time"
 )
 
 func NewSearchResponseErr(err error) *SearchResponse {
 	return &SearchResponse{
-		Status: &caprice.SearchStatus{
+		Status: &SearchStatus{
 			Total:  1,
 			Failed: 1,
 			Errors: map[string]error{pkg.ErrGeneralInternalError.Error(): err},
@@ -37,15 +35,14 @@ func NewSearchResponseErr(err error) *SearchResponse {
 type SearchResponses []*SearchResponse
 
 type SearchResponse struct {
-	PID      uint32                  `json:"-"`
-	Timeout  bool                    `json:"time_out"`
-	Status   *caprice.SearchStatus   `json:"status"`
-	Hits     Hits                    `json:"hits"`
-	Total    uint64                  `json:"total_hits"`
-	MaxScore float64                 `json:"max_score"`
-	Aggs     []aggregator.Aggregator `json:"aggs"`
-	Took     int64                   `json:"took"`
-	Explain  map[uint32]string       `json:"explain,omitempty"`
+	PID      uint32            `json:"-"`
+	Timeout  bool              `json:"time_out"`
+	Status   *SearchStatus     `json:"status"`
+	Hits     Hits              `json:"hits"`
+	Total    uint64            `json:"total_hits"`
+	MaxScore float64           `json:"max_score"`
+	Took     int64             `json:"took"`
+	Explain  map[uint32]string `json:"explain,omitempty"`
 }
 
 // Merge will merge together multiple SearchResults during a MultiSearch, two args :[sortOrder, size]
@@ -62,12 +59,6 @@ func (sr *SearchResponse) Merge(other *SearchResponse, so sort.SortOrder, from, 
 
 	if len(sr.Hits) > 0 || len(other.Hits) > 0 {
 		sr.Hits = sr.Hits.Merge(sr.PID, other.PID, other.Hits, so, from, size)
-	}
-
-	if other.Aggs == nil || len(other.Aggs) == 0 {
-		sr.Aggs = other.Aggs
-	} else if err = aggregator.ReduceArr(sr.Aggs, other.Aggs); err != nil {
-		return
 	}
 
 	if other.Explain != nil {
@@ -155,21 +146,6 @@ func (sr *SearchResponse) ToContent(from, size int, nameCache NameCache, typedKe
 	}
 
 	builder.EndObject()
-
-	if sr.Aggs != nil {
-		builder.More()
-		builder.BeginObjectWithField("aggregations")
-
-		var builderAgg = aggregator.ContentBuilderFactory()
-		aggregator.ToContent(sr.Aggs, typedKeys, builderAgg)
-		content, err := builderAgg.Output()
-		if err != nil {
-			return nil, err
-		}
-		builder.ValueRaw(string(content))
-
-		builder.EndObject()
-	}
 
 	if sr.Explain != nil && len(sr.Explain) > 0 {
 		builder.More()
@@ -307,4 +283,29 @@ func (dh Hits) ToContent(nameCache NameCache, from, size int) ([]byte, error) {
 	}
 
 	return builder.Output()
+}
+
+// IndexErrMap tracks errors with the name of the index where it occurred
+type IndexErrMap map[string]error
+
+type SearchStatus struct {
+	Total      int         `json:"total"`
+	Failed     int         `json:"failed"`
+	Successful int         `json:"successful"`
+	Errors     IndexErrMap `json:"errors,omitempty"`
+}
+
+// Merge will merge together multiple SearchStatuses during a MultiSearch
+func (ss *SearchStatus) Merge(other *SearchStatus) {
+	ss.Total += other.Total
+	ss.Failed += other.Failed
+	ss.Successful += other.Successful
+	if len(other.Errors) > 0 {
+		if ss.Errors == nil {
+			ss.Errors = make(map[string]error)
+		}
+		for otherIndex, otherError := range other.Errors {
+			ss.Errors[otherIndex] = otherError
+		}
+	}
 }

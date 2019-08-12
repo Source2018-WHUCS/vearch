@@ -23,7 +23,6 @@ import (
 	"github.com/tiglabs/baudengine/util/cbjson"
 	server "github.com/tiglabs/baudengine/util/server/rpc"
 	"github.com/tiglabs/baudengine/util/uuid"
-	"github.com/tiglabs/caprice"
 	"sync"
 	"time"
 
@@ -298,9 +297,9 @@ func newSearchResponseWithError(dbName, spaceName string, pid uint32, err error)
 	bb.WriteString(err.Error())
 
 	return &response.SearchResponse{
-		Status: &caprice.SearchStatus{
+		Status: &response.SearchStatus{
 			Failed: 1,
-			Errors: caprice.IndexErrMap{err.Error(): fmt.Errorf(bb.String())},
+			Errors: response.IndexErrMap{err.Error(): fmt.Errorf(bb.String())},
 		},
 	}
 }

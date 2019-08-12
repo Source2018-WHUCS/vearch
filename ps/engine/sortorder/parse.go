@@ -17,8 +17,6 @@ package sortorder
 import (
 	"encoding/json"
 	"errors"
-	"github.com/mmcloughlin/geohash"
-	. "github.com/tiglabs/caprice/search/sort"
 	"reflect"
 )
 
@@ -65,54 +63,49 @@ func parseSort(s interface{}) (Sort, error) {
 						return nil, errors.New("invalid sort")
 					}
 				case reflect.Map:
-					if fieldName == "_geo_distance" {
-						return parseGeoSortOrder(sortVal)
-					} else {
-						var sort SortField
-						sort.Field = fieldName
-						for _, subKey := range sVal.MapKeys() {
-							switch subKey.String() {
-							case "order":
-								order, ok := sVal.MapIndex(subKey).Interface().(string)
-								if !ok {
-									return nil, errors.New("invalid sort")
-								}
-								if order == "desc" {
-									sort.Desc = true
-								} else if order == "asc" {
-									sort.Desc = false
-								}
-							case "mode":
-								mode, ok := sVal.MapIndex(subKey).Interface().(string)
-								if !ok {
-									return nil, errors.New("invalid sort")
-								}
-								if mode == "min" {
-									sort.Mode = SortFieldMin
-								} else if mode == "max" {
-									sort.Mode = SortFieldMax
-								} else {
-									// fixme not support avg/sum
-								}
-							case "missing":
-								missing, ok := sVal.MapIndex(subKey).Interface().(string)
-								if !ok {
-									return nil, errors.New("invalid sort")
-								}
-								if missing == "_last" {
-									sort.Missing = SortFieldMissingLast
-								} else if missing == "_first" {
-									sort.Missing = SortFieldMissingFirst
-								} else {
-									return nil, errors.New("invalid sort")
-								}
-							case "unmapped_type":
-								// todo
+					var sort SortField
+					sort.Field = fieldName
+					for _, subKey := range sVal.MapKeys() {
+						switch subKey.String() {
+						case "order":
+							order, ok := sVal.MapIndex(subKey).Interface().(string)
+							if !ok {
+								return nil, errors.New("invalid sort")
 							}
+							if order == "desc" {
+								sort.Desc = true
+							} else if order == "asc" {
+								sort.Desc = false
+							}
+						case "mode":
+							mode, ok := sVal.MapIndex(subKey).Interface().(string)
+							if !ok {
+								return nil, errors.New("invalid sort")
+							}
+							if mode == "min" {
+								sort.Mode = SortFieldMin
+							} else if mode == "max" {
+								sort.Mode = SortFieldMax
+							} else {
+								// fixme not support avg/sum
+							}
+						case "missing":
+							missing, ok := sVal.MapIndex(subKey).Interface().(string)
+							if !ok {
+								return nil, errors.New("invalid sort")
+							}
+							if missing == "_last" {
+								sort.Missing = SortFieldMissingLast
+							} else if missing == "_first" {
+								sort.Missing = SortFieldMissingFirst
+							} else {
+								return nil, errors.New("invalid sort")
+							}
+						case "unmapped_type":
+							// todo
 						}
-						return &sort, nil
 					}
-
+					return &sort, nil
 				}
 			}
 		}
@@ -127,103 +120,6 @@ func parseSort(s interface{}) (Sort, error) {
 	return nil, errors.New("invalid sort")
 }
 
-// ParseGeoSortOrder
-// Raw example:
-//
-//  { "post_date" : {"order" : "asc"}},
-//  	"user",
-//      { "name" : "desc" },
-//      { "age" : "desc" },
-//      "_score"
-//  }
-func parseGeoSortOrder(s interface{}) (*SortGeoDistance, error) {
-	data, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-	tmp := make(map[string]json.RawMessage)
-	err = json.Unmarshal(data, &tmp)
-	if err != nil {
-		return nil, err
-	}
-	sort := &SortGeoDistance{Desc: true}
-	for key, val := range tmp {
-		switch key {
-		case "order":
-			var order string
-			err = json.Unmarshal(val, &order)
-			if err != nil {
-				return nil, err
-			}
-			if order == "desc" {
-				sort.Desc = true
-			} else if order == "asc" {
-				sort.Desc = false
-			} else {
-				return nil, errors.New("invalid geo sort")
-			}
-		case "mode":
-			var mode string
-			err = json.Unmarshal(val, &mode)
-			if err != nil {
-				return nil, err
-			}
-			switch mode {
-			case "avg", "sum", "min", "max":
-			default:
-				return nil, errors.New("invalid geo sort")
-			}
-			// fixme do nothing now
-		case "unit":
-			var unit string
-			err = json.Unmarshal(val, &unit)
-			if err != nil {
-				return nil, err
-			}
-			sort.Unit = unit
-		case "distance_type":
-			// fixme do nothing
-		default:
-			if sort.Field != "" {
-				return nil, errors.New("invalid geo sort")
-			}
-			sort.Field = key
-			var geoHash string
-			err = json.Unmarshal(val, &geoHash)
-			if err == nil {
-				sort.Lat, sort.Lon = geohash.Decode(geoHash)
-			} else {
-				var geo []float64
-				geo = make([]float64, 0)
-				err = json.Unmarshal(val, &geo)
-				if err == nil {
-					if len(geo) != 2 {
-						return nil, errors.New("invalid geo sort")
-					}
-					sort.Lat = geo[0]
-					sort.Lon = geo[1]
-				} else {
-					geoLatLon := struct {
-						Lat float64 `json:"lat"`
-						Lon float64 `json:"lon"`
-					}{}
-					err = json.Unmarshal(val, &geoLatLon)
-					if err == nil {
-						sort.Lat = geoLatLon.Lat
-						sort.Lon = geoLatLon.Lon
-					} else {
-						return nil, err
-					}
-				}
-			}
-
-		}
-	}
-	if sort.Field == "" {
-		return nil, errors.New("invalid geo sort")
-	}
-	return sort, err
-}
 func parseSortInterface(s interface{}) (SortOrder, error) {
 	if s == nil {
 		return nil, nil

@@ -29,7 +29,6 @@ import (
 	"github.com/tiglabs/baudengine/ps/engine"
 	"github.com/tiglabs/baudengine/util/baudlog"
 	"github.com/tiglabs/baudengine/util/ioutil2"
-	"github.com/tiglabs/caprice"
 	"github.com/tiglabs/log"
 	"sync"
 	"time"
@@ -184,7 +183,7 @@ func (ri *readerImpl) singleSearchResult(reps *C.struct_Response, index int) *re
 		Total:    uint64(rep.total),
 		MaxScore: maxScore,
 		Hits:     hits,
-		Status:   &caprice.SearchStatus{Total: 1, Successful: 1},
+		Status:   &response.SearchStatus{Total: 1, Successful: 1},
 	}
 
 	if reps.online_log_message != nil {

@@ -38,11 +38,9 @@ import (
 
 	"runtime/debug"
 
-	capriceLogger "github.com/tiglabs/caprice/logger"
 	"github.com/tiglabs/raft"
 
 	_ "github.com/blevesearch/bleve"
-	_ "github.com/tiglabs/baudengine/ps/engine/capricecb"
 	_ "github.com/tiglabs/baudengine/util/init"
 )
 
@@ -70,9 +68,6 @@ func NewServer(ctx context.Context) *Server {
 	// set up logging
 	var psLogger = baudlog.NewBaudLog(config.Conf().GetLogDir(config.PS), "PS", config.Conf().GetLevel(config.PS), true)
 	log.Regist(psLogger)
-
-	var kernelLogger = baudlog.NewBaudLog(config.Conf().GetLogDir(config.PS), "PSKernel", config.Conf().GetLevel(config.PS), false)
-	capriceLogger.SetLogger(kernelLogger)
 
 	cli, err := client.NewClient(config.Conf())
 	if err != nil {
