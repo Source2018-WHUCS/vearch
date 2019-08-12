@@ -33,9 +33,7 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
           "image_vec": {
               "type": "vector",
               "model_id": "img",
-              "dimension": 5000,
-              "retrieval_type":"PACINS", 
-              "store_type":"MemoryOnly"
+              "dimension": 5000
           }
       }
   }
