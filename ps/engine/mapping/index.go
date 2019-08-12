@@ -26,8 +26,8 @@ import (
 )
 
 const DefaultField = "_all"
-const DefaultAnalyzer = "cb_standard"
-const DefaultTokenizer = "cb_standard"
+const DefaultAnalyzer = "keyword"
+const DefaultTokenizer = "keyword"
 const DefaultDateTimeParser = optional.Name
 
 // An IndexMapping controls how objects are placed
