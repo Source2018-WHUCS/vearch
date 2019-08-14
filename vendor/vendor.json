@@ -803,13 +803,6 @@
 			"revisionTime": "2019-02-27T22:24:58Z"
 		},
 		{
-			"checksumSHA1": "hR6pE8XWX5E3A1ubNgFGuBxRgO8=",
-			"origin": "github.com/tiglabs/baudengine/third_party/bleve/cmd/bleve/vendor/github.com/inconshreveable/mousetrap",
-			"path": "github.com/inconshreveable/mousetrap",
-			"revision": "d9e81db841b65075fbf714a07fa6e5710edc460f",
-			"revisionTime": "2019-02-20T15:33:26Z"
-		},
-		{
 			"checksumSHA1": "ulZucQph4BRNPkcpn01l+lc9/24=",
 			"path": "github.com/influxdata/influxdb1-client",
 			"revision": "8ff2fc3824fcb533795f9a2f233275f0bb18d6c5",
