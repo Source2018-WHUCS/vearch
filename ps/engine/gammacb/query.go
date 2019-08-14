@@ -346,6 +346,10 @@ func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 
 func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 
+	if len(data) == 0 {
+		return nil
+	}
+
 	temp := struct {
 		And              []json.RawMessage `json:"and"`
 		Sum              []json.RawMessage `json:"sum"`
