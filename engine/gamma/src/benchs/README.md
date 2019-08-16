@@ -1,7 +1,7 @@
 
 # Benchmarks
 
-This README.md shows the experiments we do and the results we get. Here we do experiments with the modified IVFPQ model which is based on faiss.
+This README.md shows the experiments we do and the results we get. Here we do two series of experiments. First, we experiment on a single node to show the recalls of the modified IVFPQ model which is based on faiss. Second, we do experiments with vectorbase cluster.
 
 We evaluate methods with the recall at k performance measure, which is the proportion of results that contain the ground truth nearest neighbor when returning the top k candidates (for k ∈{1,10,100}). And we use Euclidean neighbors as ground truth.
 
@@ -9,7 +9,7 @@ Note that the numbers (especially QPS) change slightly due to changes in the imp
 
 ## Getting data
 
-We do experiments on SIFT1M, VGG1M and VGG10M.
+We do experiments on two kind of features. One is 128-dimensional SIFT feature, the other is 512-dimensional VGG feature.
 
 ### Getting SIFT1M
 
@@ -23,6 +23,10 @@ and unzip it to the subdirectory sift1M.
 
 We get 1 million and other 10 million data  and then use deep-learning model vgg to get  their features. 
 
+### Getting VGG100M , VGG500M and VGG1B
+
+We collect billions of data and use deep-learning model vgg to get their features for cluster experiments.
+
 ## Nprobe experiments
 
 We do experiments on SIFT1M, VGG1M and VGG10M. In this experiment, nprobe  ∈{1,5,10,20,30,40,50,80,100,200}. At the same time, we set  the ncentroids as 256 and the nbytes as 32.
@@ -33,7 +37,7 @@ We use recall at 1 to show the result.
 
 ![nprobe](/doc/img/gamma/benchs/nprobe.png)
 
-As we can see, when nprobe exceeds 25, there is no obvious change of recalls. Also,when nprobe get larger,only QPS of vgg10M get smaller, QPS of vgg1M and QPS of sift1M  basically have no changes.
+As we can see, when nprobe exceeds 25, there is no obvious change of recalls. Also, when nprobe get larger,only QPS of vgg10M get smaller, QPS of vgg1M and QPS of sift1M  basically have no changes.
 
 ## Ncentroids experiments
 
@@ -100,3 +104,12 @@ recalls of VGG10M :
 |  imihnsw   |  0.8877  |  0.9076   |   0.9081   |
 | vectorbase |  0.9272  |  0.9464   |   0.9468   |
 
+## Cluster experiments
+
+First, we do experiments by searching on cluster only with vgg features. Then, we experiment with the vgg features and filter the search using an integer field to compare the time consumed and QPS with the vgg features only. In the following section, we use searching with filter or without filter to specify the experiment method mentioned earlier. For different size of experiment data, we use different vectorbase cluster. We use 3 masters, 3 routers and 5 partition services for VGG100M. For VGG500M, we use the same size of master and router with VGG100M but 24 partition services. We use 3 masters, 6 routers and 48 partition services to deal with the VGG1B.
+
+### Result
+
+![cluster](/doc/img/gamma/benchs/cluster.png)
+
+As we can see, when occurrence grows, the spend time of search almost has a linear growth and the growth rate of searching without filter is steeper. Different with the linear growth of spend time, the growth of QPS is more like S-shaped curve growth which means the growth of QPS basically have no obvious change when occurrence exceed one certain number.  Be consistent with the spend time of searching, the QPS of searching with filter is basically double to the QPS of searching without filter.
