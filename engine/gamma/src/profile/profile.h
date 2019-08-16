@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef PROFILE_H_
 #define PROFILE_H_
 
@@ -52,14 +59,14 @@ public:
   long GetMemoryBytes();
 
   Doc *Get(const std::string &id);
-  Doc *Get(const int &docid);
+  Doc *Get(const int docid);
 
   template <typename T>
   bool GetField(const int docid, const int field_id, T &value) const {
     if ((docid < 0) or (field_id < 0 || field_id >= field_num_))
       return false;
 
-    size_t offset = docid * item_length_ + idx_attr_offset_[field_id];
+    size_t offset = (uint64_t)docid * item_length_ + idx_attr_offset_[field_id];
     memcpy(&value, mem_ + offset, sizeof(T));
     return true;
   }

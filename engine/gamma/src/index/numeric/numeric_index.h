@@ -1,8 +1,10 @@
 /**
- * Copyright(C) JD.COM, all rights reserved.
- * Author: Chen Jianyu (chenjianyu@jd.com)
- * Description: numeric index
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
  */
+
 #ifndef SRC_SEARCHER_INDEX_NUMERIC_NUMERIC_INDEX_H_
 #define SRC_SEARCHER_INDEX_NUMERIC_NUMERIC_INDEX_H_
 
@@ -78,7 +80,7 @@ template <typename T> struct BlockSkipListIndex {
 
 template <typename T> class NumericIndex : public Index {
 public:
-  NumericIndex(const std::string &field, int n_docs);
+  explicit NumericIndex(const std::string &field);
 
   int Search(const std::string &lowerValue, const std::string &upperValue,
              RangeQueryResultV1 &result) const override {
@@ -101,7 +103,7 @@ public:
     rt_idx_.Insert(value, docID);
   }
 
-  int Build() override;
+  int Build(const int num_docs) override;
   void Output(const std::string &tag) override;
 
   int Dump(const IndexIO &out) override;
@@ -149,8 +151,7 @@ private:
 };
 
 template <typename T>
-NumericIndex<T>::NumericIndex(const std::string &field, int n_docs)
-    : size_(n_docs) {
+NumericIndex<T>::NumericIndex(const std::string &field) : size_(0) {
   field_.name = field;
   const char *type = TypeName<T>();
 
@@ -176,10 +177,11 @@ NumericIndex<T>::NumericIndex(const std::string &field, int n_docs)
   rt_idx_.SetAllowDup(true);
 }
 
-template <typename T> int NumericIndex<T>::Build() {
-  if (size_ < 1) {
+template <typename T> int NumericIndex<T>::Build(const int num_docs) {
+  if (num_docs < 1) {
     return -1;
   }
+  size_ = num_docs;
 
   bsl_idx_.size = size_;
 
@@ -411,12 +413,21 @@ int NumericIndex<T>::Search(const T lowerValue, const T upperValue,
     return 0; // no result
   }
 
-  T min_value = bsl_idx_.min_value;
-  T max_value = bsl_idx_.max_value;
+  T min_value;
+  T max_value;
 
-  if (rt_idx_.Size() > 0) {
-    min_value = std::min(min_value, rt_idx_.First()->key);
-    max_value = std::max(max_value, rt_idx_.Last()->key);
+  int rt_size = rt_idx_.Size();
+  assert(bsl_idx_.size > 0 || rt_size > 0);
+
+  if (bsl_idx_.size > 0 && rt_size > 0) {
+    min_value = std::min(bsl_idx_.min_value, rt_idx_.First()->key);
+    max_value = std::max(bsl_idx_.max_value, rt_idx_.Last()->key);
+  } else if (bsl_idx_.size > 0) {
+    min_value = bsl_idx_.min_value;
+    max_value = bsl_idx_.max_value;
+  } else if (rt_size > 0) {
+    min_value = rt_idx_.First()->key;
+    max_value = rt_idx_.Last()->key;
   }
 
   if (lowerValue > max_value || upperValue < min_value) {
@@ -686,10 +697,10 @@ public:
   int Indexing(const std::string &field, int n_docs,
                std::function<T(const int)> cb) {
     if (!GetIndex(field)) {
-      auto idx = new (std::nothrow) NumericIndex<T>(field, n_docs);
+      auto idx = new (std::nothrow) NumericIndex<T>(field);
       if (idx) {
         idx->Set(cb); // set callback before build
-        if (idx->Build() < 0) {
+        if (idx->Build(n_docs) < 0) {
           delete idx;
         } else {
           indexes_.insert({field, idx});
@@ -697,8 +708,31 @@ public:
         }
       }
     }
-
     return -1;
+  }
+
+  // two-phases indexing: 1, Add field one by one 2, Indexing all fields
+  template <typename T>
+  int Add(const std::string &field, std::function<T(const int)> cb) {
+    if (!GetIndex(field)) {
+      auto idx = new (std::nothrow) NumericIndex<T>(field);
+      if (idx) {
+        idx->Set(cb); // set callback before build
+        indexes_.insert({field, idx});
+        return 0;
+      }
+    }
+    return -1;
+  }
+
+  int Indexing(const int n_docs) {
+    assert(n_docs > 0);
+    for (auto &one : indexes_) {
+      if (one.second->Build(n_docs) < 0) {
+        return -1;
+      }
+    }
+    return 0;
   }
 
   void Add(int docID, const std::string &field, const char *value) {

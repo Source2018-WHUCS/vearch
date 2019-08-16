@@ -1,8 +1,14 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "vector_manager.h"
 #include "gamma_index_factory.h"
 #include "raw_vector_factory.h"
 #include "utils.h"
-#include "ivfpq_param_helper.h"
 
 namespace tig_gamma {
 
@@ -149,7 +155,7 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
 
   query.condition->sort_by_docid = query.vec_num > 1 ? true : false;
   query.condition->metric_type =
-    static_cast<DistanceMetricType>(ivfpq_param_->metric_type);
+      static_cast<DistanceMetricType>(ivfpq_param_->metric_type);
   std::string vec_names[query.vec_num];
   for (int i = 0; i < query.vec_num; i++) {
     std::string name = std::string(query.vec_query[i]->name->value,
@@ -205,10 +211,9 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
             if (common_docid_count == query.vec_num) {
               results[i].docs[common_idx].docid = start_docid;
               results[i].docs[common_idx++].score = score;
-              int total = results[i].total;
-              if (total > all_vector_results[j].total[i]) {
-                results[i].total = all_vector_results[j].total[i];
-              }
+              results[i].total = all_vector_results[j].total[i] > 0
+                                     ? all_vector_results[j].total[i]
+                                     : results[i].total;
 
               start_docid++;
               common_docid_count = 0;
@@ -233,13 +238,14 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
       }
     }
   } else {
-
     for (int i = 0; i < n; i++) {
       // double score = 0;
       if (!results[i].init(query.condition->topn, vec_names, query.vec_num)) {
         continue;
       }
-      results[i].total = all_vector_results[0].total[i];
+      results[i].total = all_vector_results[0].total[i] > 0
+                             ? all_vector_results[0].total[i]
+                             : results[i].total;
       int pos = 0, topn = all_vector_results[0].topn;
       for (int j = 0; j < topn; j++) {
         int real_pos = i * topn + j;
@@ -276,16 +282,16 @@ int VectorManager::Dump(const string &path) {
     LOG(ERROR) << "open error, file=" << pq_param_file.c_str();
     return -1;
   }
-  assert(1 == fwrite((void *)&ivfpq_param_->metric_type,
-                     sizeof(ivfpq_param_->metric_type), 1, param_fp));
-  assert(1 == fwrite((void *)&ivfpq_param_->nprobe,
-                     sizeof(ivfpq_param_->nprobe), 1, param_fp));
-  assert(1 == fwrite((void *)&ivfpq_param_->ncentroids,
-                     sizeof(ivfpq_param_->ncentroids), 1, param_fp));
-  assert(1 == fwrite((void *)&ivfpq_param_->nsubvector,
-                     sizeof(ivfpq_param_->nsubvector), 1, param_fp));
-  assert(1 == fwrite((void *)&ivfpq_param_->nbits_per_idx,
-                     sizeof(ivfpq_param_->nbits_per_idx), 1, param_fp));
+  fwrite((void *)&ivfpq_param_->metric_type, sizeof(ivfpq_param_->metric_type),
+         1, param_fp);
+  fwrite((void *)&ivfpq_param_->nprobe, sizeof(ivfpq_param_->nprobe), 1,
+         param_fp);
+  fwrite((void *)&ivfpq_param_->ncentroids, sizeof(ivfpq_param_->ncentroids), 1,
+         param_fp);
+  fwrite((void *)&ivfpq_param_->nsubvector, sizeof(ivfpq_param_->nsubvector), 1,
+         param_fp);
+  fwrite((void *)&ivfpq_param_->nbits_per_idx,
+         sizeof(ivfpq_param_->nbits_per_idx), 1, param_fp);
   fclose(param_fp);
 
   std::map<std::string, RawVector *>::iterator iter = raw_vectors_.begin();
@@ -300,30 +306,31 @@ int VectorManager::Dump(const string &path) {
 
 int VectorManager::Load(const string &path) {
   Close();
-  ivfpq_param_ = static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
+  ivfpq_param_ =
+      static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
   string pq_param_file = path + "/ivfpq.param";
   FILE *param_fp = fopen(pq_param_file.c_str(), "rb");
   if (param_fp == nullptr) {
     LOG(ERROR) << "open error, file=" << pq_param_file.c_str();
     return -1;
   }
-  assert(1 == fread((void *)&ivfpq_param_->metric_type,
-                    sizeof(ivfpq_param_->metric_type), 1, param_fp));
-  assert(1 == fread((void *)&ivfpq_param_->nprobe, sizeof(ivfpq_param_->nprobe),
-                    1, param_fp));
-  assert(1 == fread((void *)&ivfpq_param_->ncentroids,
-                    sizeof(ivfpq_param_->ncentroids), 1, param_fp));
-  assert(1 == fread((void *)&ivfpq_param_->nsubvector,
-                    sizeof(ivfpq_param_->nsubvector), 1, param_fp));
-  assert(1 == fread((void *)&ivfpq_param_->nbits_per_idx,
-                    sizeof(ivfpq_param_->nbits_per_idx), 1, param_fp));
+  fread((void *)&ivfpq_param_->metric_type, sizeof(ivfpq_param_->metric_type),
+        1, param_fp);
+  fread((void *)&ivfpq_param_->nprobe, sizeof(ivfpq_param_->nprobe), 1,
+        param_fp);
+  fread((void *)&ivfpq_param_->ncentroids, sizeof(ivfpq_param_->ncentroids), 1,
+        param_fp);
+  fread((void *)&ivfpq_param_->nsubvector, sizeof(ivfpq_param_->nsubvector), 1,
+        param_fp);
+  fread((void *)&ivfpq_param_->nbits_per_idx,
+        sizeof(ivfpq_param_->nbits_per_idx), 1, param_fp);
   fclose(param_fp);
   IVFPQParamHelper ivfpq_param_helper(ivfpq_param_);
   if (!ivfpq_param_helper.Validate()) {
     LOG(INFO) << "load: validate ivf pq parameters error";
     return -1;
   }
-  LOG(INFO) <<"load: " << ivfpq_param_helper.ToString();
+  LOG(INFO) << "load: " << ivfpq_param_helper.ToString();
 
   const std::vector<string> files = utils::ls(path);
   for (const auto file : files) {
@@ -339,8 +346,8 @@ int VectorManager::Load(const string &path) {
       }
       int dimension = 0;
       int type;
-      assert(1 == fread((void *)&type, sizeof(type), 1, fet_fp));
-      assert(1 == fread((void *)&dimension, sizeof(dimension), 1, fet_fp));
+      fread((void *)&type, sizeof(type), 1, fet_fp);
+      fread((void *)&dimension, sizeof(dimension), 1, fet_fp);
       fclose(fet_fp);
 
       RawVectorType vec_type = static_cast<RawVectorType>(type);

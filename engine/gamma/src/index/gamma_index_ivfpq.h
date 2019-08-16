@@ -1,9 +1,19 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * Modified by The Gamma Authors.
+ *
+ */
+
 #ifndef GAMMA_INDEX_IVFPQ_H_
 #define GAMMA_INDEX_IVFPQ_H_
 
-#include "log.h"
 #include "gamma_common_data.h"
 #include "gamma_index.h"
+#include "log.h"
 #include "numeric_index.h"
 #include "raw_vector.h"
 #include "realtime_invert_index.h"
@@ -851,6 +861,10 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
 
   int indexed_vec_count_;
   realtime::RTInvertIndex *rt_invert_index_ptr_;
+
+#ifdef PERFORMANCE_TESTING
+  std::atomic<uint64_t> search_count_;
+#endif
 };
 
 } // namespace tig_gamma

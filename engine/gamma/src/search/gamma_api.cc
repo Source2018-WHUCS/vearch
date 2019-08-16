@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "gamma_api.h"
 
 #include "log.h"
@@ -265,17 +272,12 @@ enum ResponseCode SetLogDictionary(ByteArray *log_dir) {
   // google::InstallFailureSignalHandler();
 
   el::Configurations defaultConf;
-  defaultConf.setToDefault();
-  // Values are always std::string
-  // defaultConf.set(el::Level::Info, el::ConfigurationType::Format,
-  //                 "%level %datetime %msg");
-  // default logger uses default configurations
-  el::Loggers::reconfigureLogger("default", defaultConf);
-  LOG(INFO) << "Log using default file";
+  // defaultConf.setToDefault();
   // To set GLOBAL configurations you may use
   defaultConf.setGlobally(el::ConfigurationType::Format,
                           "%level %datetime %fbase:%line %msg");
   defaultConf.setGlobally(el::ConfigurationType::ToFile, "true");
+  defaultConf.setGlobally(el::ConfigurationType::MaxLogFileSize, "209715200"); // 200MB
   defaultConf.setGlobally(el::ConfigurationType::Filename,
                           dir + "/gamma.log.%datetime{%Y%M%d-%h%m%s}");
   el::Loggers::reconfigureLogger("default", defaultConf);

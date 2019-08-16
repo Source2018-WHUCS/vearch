@@ -1,7 +1,13 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#include "gamma_api.h"
 #include <cassert>
 #include <functional>
 #include <string>
@@ -48,12 +54,6 @@ std::vector<std::string> ls_folder(const std::string &dir_name,
                                    bool sub = false);
 
 ssize_t write_n(int fd, const char *buf, ssize_t nbyte, int retry);
-
-ByteArray *string_to_bytearray(const std::string &str);
-
-std::string float_array_to_string(float *data, int len);
-std::string VectorQueryToString(VectorQuery *vector_query);
-std::string RequestToString(const Request *request);
 
 template <class T> inline T *NewArray(int len, const char *msg) {
   assert(len > 0);

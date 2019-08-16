@@ -1,6 +1,13 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "memory_raw_vector.h"
-#include "log.h"
 #include "gamma_common_data.h"
+#include "log.h"
 #include <string.h>
 
 using namespace std;
@@ -145,21 +152,23 @@ int MemoryRawVector::Dump(const string &path) {
     return -1;
   }
   int vec_type = static_cast<int>(MemoryOnly);
-  assert(1 == fwrite((void *)&vec_type, sizeof(int), 1, fet_fp));
-  assert(1 == fwrite((void *)&dimension_, sizeof(int), 1, fet_fp));
-  assert(1 == fwrite((void *)&ntotal_, sizeof(int), 1, fet_fp));
-  assert((size_t)ntotal_ ==
-         fwrite((void *)vid2docid_.data(), sizeof(int), ntotal_, fet_fp));
-  assert((size_t)ntotal_ == fwrite((void *)vector_mem_,
-                                   sizeof(float) * dimension_, ntotal_,
-                                   fet_fp));
+  size_t nwrite = 0;
+  fwrite((void *)&vec_type, sizeof(int), 1, fet_fp);
+  fwrite((void *)&dimension_, sizeof(int), 1, fet_fp);
+  fwrite((void *)&ntotal_, sizeof(int), 1, fet_fp);
+  nwrite = fwrite((void *)vid2docid_.data(), sizeof(int), ntotal_, fet_fp);
+  assert((size_t)ntotal_ == nwrite);
+  nwrite =
+      fwrite((void *)vector_mem_, sizeof(float) * dimension_, ntotal_, fet_fp);
+  assert((size_t)ntotal_ == nwrite);
 
-  assert(1 == fwrite((void *)&ntotal_, sizeof(int), 1, src_fp));
-  assert((size_t)ntotal_ + 1 == fwrite((void *)source_mem_pos_.data(),
-                                       sizeof(long), ntotal_ + 1, src_fp));
-  assert((size_t)source_mem_pos_[ntotal_] ==
-         fwrite((void *)str_mem_ptr_, sizeof(char), source_mem_pos_[ntotal_],
-                src_fp));
+  fwrite((void *)&ntotal_, sizeof(int), 1, src_fp);
+  nwrite =
+      fwrite((void *)source_mem_pos_.data(), sizeof(long), ntotal_ + 1, src_fp);
+  assert((size_t)ntotal_ + 1 == nwrite);
+  nwrite = fwrite((void *)str_mem_ptr_, sizeof(char), source_mem_pos_[ntotal_],
+                  src_fp);
+  assert((size_t)source_mem_pos_[ntotal_] == nwrite);
 
   fclose(fet_fp);
   fclose(src_fp);
@@ -195,25 +204,28 @@ int MemoryRawVector::Load(const string &path) {
   long fet_file_size = utils::get_file_size(fet_file_path.c_str());
   long head_len = 0;
   int vec_type = -1, dimension = 0;
-  assert(1 == fread((void *)&vec_type, sizeof(int), 1, fet_fp));
+  size_t write_n = 0;
+  fread((void *)&vec_type, sizeof(int), 1, fet_fp);
   head_len += sizeof(int);
-  assert(1 == fread((void *)&dimension, sizeof(int), 1, fet_fp));
+  fread((void *)&dimension, sizeof(int), 1, fet_fp);
   head_len += sizeof(int);
   assert(vec_type == static_cast<int>(MemoryOnly));
   assert(dimension == dimension_);
-  assert(1 == fread((void *)&ntotal_, sizeof(int), 1, fet_fp));
+
+  fread((void *)&ntotal_, sizeof(int), 1, fet_fp);
   head_len += sizeof(int);
-  assert((size_t)ntotal_ ==
-         fread((void *)vid2docid_.data(), sizeof(int), ntotal_, fet_fp));
+  write_n = fread((void *)vid2docid_.data(), sizeof(int), ntotal_, fet_fp);
   head_len += sizeof(int) * ntotal_;
+  assert((size_t)ntotal_ == write_n);
   if ((fet_file_size - head_len) !=
       ((long)sizeof(float)) * dimension_ * ntotal_) {
     LOG(ERROR) << "invalid feature file size=" << fet_file_size
                << ", ntotal=" << ntotal_;
     return -1;
   }
-  assert((size_t)ntotal_ == fread((void *)vector_mem_,
-                                  sizeof(float) * dimension_, ntotal_, fet_fp));
+  write_n =
+      fread((void *)vector_mem_, sizeof(float) * dimension_, ntotal_, fet_fp);
+  assert((size_t)ntotal_ == write_n);
 
   // create docid2vid_ from vid2docid_
   for (int vid = 0; vid < ntotal_; vid++) {
@@ -239,24 +251,25 @@ int MemoryRawVector::Load(const string &path) {
   long src_file_size = utils::get_file_size(src_file_path.c_str());
   head_len = 0;
   int ntotal = 0;
-  assert(1 == fread((void *)&ntotal, sizeof(int), 1, src_fp));
+  fread((void *)&ntotal, sizeof(int), 1, src_fp);
   if (ntotal != ntotal_) {
     LOG(ERROR) << "source ntotal=" << ntotal
                << " is not equal to feature ntotal=" << ntotal_;
     return -1;
   }
   head_len += sizeof(int);
-  assert((size_t)ntotal_ + 1 == fread((void *)source_mem_pos_.data(),
-                                      sizeof(long), ntotal_ + 1, src_fp));
+  write_n =
+      fread((void *)source_mem_pos_.data(), sizeof(long), ntotal_ + 1, src_fp);
+  assert((size_t)ntotal_ + 1 == write_n);
   head_len += sizeof(long) * (ntotal_ + 1);
   if (src_file_size - head_len != source_mem_pos_[ntotal_]) {
     LOG(ERROR) << "invalid source file size=" << src_file_size
                << ", source data size=" << source_mem_pos_[ntotal_];
     return -1;
   }
-  assert((size_t)source_mem_pos_[ntotal_] ==
-         fread((void *)str_mem_ptr_, sizeof(char), source_mem_pos_[ntotal_],
-               src_fp));
+  write_n = fread((void *)str_mem_ptr_, sizeof(char), source_mem_pos_[ntotal_],
+                  src_fp);
+  assert((size_t)source_mem_pos_[ntotal_] == write_n);
 
   fclose(fet_fp);
   fclose(src_fp);

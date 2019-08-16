@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "profile.h"
 
 #include <fcntl.h>
@@ -191,7 +198,7 @@ void Profile::SetFieldValue(int docid, const std::string &field,
     return;
   }
   int idx = iter->second;
-  size_t offset = docid * item_length_ + idx_attr_offset_[idx];
+  size_t offset = (uint64_t)docid * item_length_ + idx_attr_offset_[idx];
   enum DataType attr = attrs_[idx];
   if (attr == DataType::INT) {
     memcpy(mem_ + offset, value, sizeof(int32_t));
@@ -340,7 +347,7 @@ long Profile::GetMemoryBytes() {
   return max_profile_size_ * item_length_ + max_str_size_;
 }
 
-Doc *Profile::Get(const int &docid) {
+Doc *Profile::Get(const int docid) {
   Doc *doc = static_cast<Doc *>(malloc(sizeof(Doc)));
 
   doc->fields_num = attr_type_map_.size();
@@ -410,7 +417,7 @@ int Profile::GetField(int docid, const std::string &field, char **value) const {
     return -1;
   }
   int idx = iter->second;
-  size_t offset = docid * item_length_ + idx_attr_offset_[idx];
+  size_t offset = (uint64_t)docid * item_length_ + idx_attr_offset_[idx];
   size_t str_offset = 0;
   memcpy(&str_offset, mem_ + offset, sizeof(size_t));
   unsigned short len;

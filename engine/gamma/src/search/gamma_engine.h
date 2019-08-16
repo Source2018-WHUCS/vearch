@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef GAMMA_ENGINE_H_
 #define GAMMA_ENGINE_H_
 
@@ -71,8 +78,8 @@ private:
   VectorManager *vec_manager_;
   NI::Indexes *numeric_index_;
 
-  int IndexingNumericFields();
-  template <typename T> int _indexingField(const std::string &field);
+  int AddNumIndexFields();
+  template <typename T> int AddNumIndexField(const std::string &field);
 
   int max_docid_;
   int max_doc_size_;
@@ -86,6 +93,9 @@ private:
                    Response *response_results);
 
   enum IndexStatus index_status_;
+#ifdef PERFORMANCE_TESTING
+  std::atomic<uint64_t> search_num_;
+#endif
 };
 
 } // namespace tig_gamma

@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef REALTIME_INVERT_INDEX_H_
 #define REALTIME_INVERT_INDEX_H_
 

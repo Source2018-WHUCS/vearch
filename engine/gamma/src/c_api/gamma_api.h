@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef GAMMA_API_H_
 #define GAMMA_API_H_
 
@@ -226,8 +233,8 @@ enum ResponseCode DestroyFields(Field **fields, int num);
 
 typedef struct IVFPQParameters {
   int metric_type;
-  int nprobe;        // scan nprobe
-  int ncentroids;    // coarse cluster center number
+  int nprobe;     // scan nprobe
+  int ncentroids; // coarse cluster center number
   int nsubvector;
   int nbits_per_idx; // bit number of sub cluster center
 } IVFPQParameters;
@@ -236,15 +243,18 @@ typedef struct IVFPQParameters {
  *
  * @param metric_type   metric type, 0 inner product, 1 L2, default(-1) inner
  * product
- * @param nprobe        scan nprobe, default(-1) 10, it should be less than ncentroids
+ * @param nprobe        scan nprobe, default(-1) 10, it should be less than
+ * ncentroids
  * @param ncentroids    coarse cluster center number, default(-1) 256
- * @param nsubvector    the number of sub vector, default(-1) 32, only the value which is multiple of 4 is supported now
- * @param nbits_per_idx bit number of sub cluster center, default(-1) 8, and 8 is the only value now
+ * @param nsubvector    the number of sub vector, default(-1) 32, only the value
+ * which is multiple of 4 is supported now
+ * @param nbits_per_idx bit number of sub cluster center, default(-1) 8, and 8
+ * is the only value now
  * @return IVFPQParameters pointer
  */
-IVFPQParameters *
-MakeIVFPQParameters(int metric_type, int nprobe, int ncentroids, int nsubvector,
-                    int nbits_per_idx);
+IVFPQParameters *MakeIVFPQParameters(int metric_type, int nprobe,
+                                     int ncentroids, int nsubvector,
+                                     int nbits_per_idx);
 
 /** destroy IVFPQParameters pointer
  *

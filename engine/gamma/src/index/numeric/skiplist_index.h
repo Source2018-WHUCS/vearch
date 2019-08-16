@@ -1,9 +1,10 @@
-
 /**
- * Copyright(C) JD.COM, all rights reserved.
- * Author: Chen Jianyu (chenjianyu@jd.com)
- * Descriptor: skiplist index
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
  */
+
 #ifndef SRC_SEARCHER_INDEX_NUMERIC_SKIPLIST_INDEX_H_
 #define SRC_SEARCHER_INDEX_NUMERIC_SKIPLIST_INDEX_H_
 

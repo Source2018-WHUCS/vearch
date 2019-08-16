@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "gamma_engine.h"
 
 #include "log.h"
@@ -18,6 +25,49 @@ using std::string;
 
 namespace tig_gamma {
 
+#ifdef DEBUG
+static string float_array_to_string(float *data, int len) {
+  if (data == nullptr)
+    return "";
+  std::stringstream ss;
+  ss << "[";
+  for (int i = 0; i < len; i++) {
+    ss << data[i];
+    if (i != len - 1) {
+      ss << ",";
+    }
+  }
+  ss << "]";
+  return ss.str();
+}
+
+static string VectorQueryToString(VectorQuery *vector_query) {
+  std::stringstream ss;
+  ss << "name:"
+     << std::string(vector_query->name->value, vector_query->name->len)
+     << " min score:" << vector_query->min_score
+     << " max score:" << vector_query->max_score
+     << " boost:" << vector_query->boost
+     << " has boost:" << vector_query->has_boost << " value:"
+     << float_array_to_string((float *)vector_query->value->value,
+                              vector_query->value->len / sizeof(float));
+  return ss.str();
+}
+
+static string RequestToString(const Request *request) {
+  std::stringstream ss;
+  ss << "{req_num:" << request->req_num << " topn:" << request->topn
+     << " has_rank:" << request->has_rank
+     << " vec_num:" << request->vec_fields_num;
+  for (int i = 0; i < request->vec_fields_num; i++) {
+    ss << " vec_id:" << i << " [" << VectorQueryToString(request->vec_fields[i])
+       << "]";
+  }
+  ss << "}";
+  return ss.str();
+}
+#endif // DEBUG
+
 GammaEngine::GammaEngine(const string &index_root_path)
     : index_root_path_(index_root_path) {
   char ch = index_root_path_.back();
@@ -31,14 +81,19 @@ GammaEngine::GammaEngine(const string &index_root_path)
   numeric_index_ = nullptr;
   index_status_ = IndexStatus::UNINDEXED;
   delete_num = 0;
-  b_running_ = true;
+  b_running_ = false;
+#ifdef PERFORMANCE_TESTING
+  search_num_ = 0;
+#endif
 }
 
 GammaEngine::~GammaEngine() {
-  b_running_ = false;
-  std::mutex running_mutex;
-  std::unique_lock<std::mutex> lk(running_mutex);
-  running_cv_.wait(lk);
+  if (b_running_) {
+    b_running_ = false;
+    std::mutex running_mutex;
+    std::unique_lock<std::mutex> lk(running_mutex);
+    running_cv_.wait(lk);
+  }
 
   if (vec_manager_) {
     delete vec_manager_;
@@ -75,30 +130,9 @@ int GammaEngine::Setup(int max_doc_size) {
   }
   max_doc_size_ = max_doc_size;
 
-  /*
-  std::vector<string> folders = utils::ls_folder(index_root_path_);
-  for (const auto &table_name : folders) {
-    std::vector<string> files = utils::ls(index_root_path_ + table_name);
-    if (files.size() < 4) {
-      LOG(ERROR) << "Path [" << index_root_path_ + table_name
-                 << "] files num less than 4!";
-      continue;
-    }
-    if (index_ != nullptr) {
-      delete index_;
-    }
-    index_ = new Index(table_name, index_root_path_);
-    ResultCode result = index_->Load();
-    if (result != ResultCode::Success) {
-      return -1;
-    }
-    break;
-  }*/
-
   if (!docids_bitmap_) {
     int bitmap_bytes_size = 0;
-    docids_bitmap_ = bitmap::create(max_doc_size, bitmap_bytes_size);
-    if (!docids_bitmap_) {
+    if (bitmap::create(docids_bitmap_, bitmap_bytes_size, max_doc_size) != 0) {
       LOG(ERROR) << "Cannot create bitmap!";
       return -1;
     }
@@ -126,10 +160,6 @@ int GammaEngine::Setup(int max_doc_size) {
   return 0;
 } // namespace tig_gamma
 
-#ifdef PERFORMANCE_TESTING
-std::atomic<uint64_t> a(0);
-#endif
-
 Response *GammaEngine::Search(const Request *request) {
 #ifdef PERFORMANCE_TESTING
   double start = utils::getmillisecs();
@@ -137,7 +167,7 @@ Response *GammaEngine::Search(const Request *request) {
 #endif
 
 #ifdef DEBUG
-  LOG(INFO) << "search request:" << utils::RequestToString(request);
+  LOG(INFO) << "search request:" << RequestToString(request);
 #endif
 
   int ret = 0;
@@ -236,7 +266,6 @@ Response *GammaEngine::Search(const Request *request) {
         response_results->online_log_message =
             MakeByteArray(log_message, logger.Length());
       }
-
       return response_results;
     }
 
@@ -271,6 +300,9 @@ Response *GammaEngine::Search(const Request *request) {
   gamma_query.condition = &condition;
   if (request->vec_fields_num > 0) {
     GammaResult gamma_results[request->req_num];
+    for (int i = 0; i < request->req_num; ++i) {
+      gamma_results[i].total = this->GetDocsNum();
+    }
     ret = vec_manager_->Search(gamma_query, gamma_results);
     if (ret != 0) {
       string msg = "search error [" + std::to_string(ret) + "]";
@@ -310,7 +342,7 @@ Response *GammaEngine::Search(const Request *request) {
 
 #ifdef PERFORMANCE_TESTING
   double search_time = utils::getmillisecs();
-  if (++a % 1000 == 0) {
+  if (++search_num_ % 1000 == 0) {
     ss << "search cost [" << search_time - numeric_filter_time
        << "]ms, total cost [" << search_time - start << "]ms";
     LOG(INFO) << ss.str();
@@ -339,11 +371,15 @@ int GammaEngine::CreateTable(const Table *table) {
     LOG(ERROR) << "Cannot create table!";
     return -2;
   }
-  numeric_index_ = new NI::Indexes();
+
+  numeric_index_ = new (std::nothrow) NI::Indexes();
+  if ((nullptr == numeric_index_) || (AddNumIndexFields() < 0)) {
+    LOG(ERROR) << "add numeric index fields error!";
+    return -3;
+  }
 
   LOG(INFO) << "create table="
-            << std::string(table->name->value, table->name->len)
-            << "success!";
+            << std::string(table->name->value, table->name->len) << "success!";
 
   return 0;
 }
@@ -413,6 +449,8 @@ int GammaEngine::AddOrUpdate(const Doc *doc) {
   } else {
     Del(key);
     int ret = profile_->Add(fields_profile, max_docid_, true);
+    if (ret != 0)
+      return -1;
   }
 
   for (int i = 0; i < doc->fields_num; ++i) {
@@ -490,12 +528,10 @@ int GammaEngine::Del(const std::string &key) {
 }
 
 int GammaEngine::DelDocByQuery(Request *request) {
-
 #ifdef DEBUG
-  LOG(INFO) << "delete by query request:" << utils::RequestToString(request);
+  LOG(INFO) << "delete by query request:" << RequestToString(request);
 #endif
 
-  int ret = 0;
   if (request->range_filters_num <= 0) {
     LOG(ERROR) << "no range filter";
     return 1;
@@ -517,7 +553,7 @@ int GammaEngine::DelDocByQuery(Request *request) {
   }
 
   std::vector<int> doc_ids = numeric_filter_result.ToDocs();
-  for (int i = 0; i < doc_ids.size(); i++) {
+  for (size_t i = 0; i < doc_ids.size(); ++i) {
     int docid = doc_ids[i];
     if (bitmap::test(docids_bitmap_, docid)) {
       continue;
@@ -549,11 +585,13 @@ int GammaEngine::BuildIndex() {
     return -1;
   }
 
-  if (IndexingNumericFields() < 0) {
+  // WARNING: use max_docid_ instead of GetDocsNum()
+  if (numeric_index_->Indexing(max_docid_) < 0) {
     LOG(ERROR) << "Indexing Numeric Fields Error!";
     return -2;
   }
 
+  b_running_ = true;
   int ret = 0;
   while (b_running_) {
     if (vec_manager_->AddRTVecsToIndex() != 0) {
@@ -610,11 +648,17 @@ int GammaEngine::Load() {
     LOG(ERROR) << "load vector error, ret=" << ret;
     return -1;
   }
-  numeric_index_ = new NI::Indexes();
+
+  numeric_index_ = new (std::nothrow) NI::Indexes();
+  if ((nullptr == numeric_index_) || (AddNumIndexFields() < 0)) {
+    LOG(ERROR) << "add numeric index fields error!";
+    return -1;
+  }
+
   return ret;
 }
 
-int GammaEngine::IndexingNumericFields() {
+int GammaEngine::AddNumIndexFields() {
   int retvals = 0;
   std::map<std::string, enum DataType> attr_type;
   retvals = profile_->GetAttrType(attr_type);
@@ -635,16 +679,16 @@ int GammaEngine::IndexingNumericFields() {
     int retval = 0;
     switch (it.second) {
     case DataType::INT:
-      retval = _indexingField<int>(it.first);
+      retval = AddNumIndexField<int>(it.first);
       break;
     case DataType::LONG:
-      retval = _indexingField<long>(it.first);
+      retval = AddNumIndexField<long>(it.first);
       break;
     case DataType::FLOAT:
-      retval = _indexingField<float>(it.first);
+      retval = AddNumIndexField<float>(it.first);
       break;
     case DataType::DOUBLE:
-      retval = _indexingField<double>(it.first);
+      retval = AddNumIndexField<double>(it.first);
       break;
     default:
       break;
@@ -655,7 +699,7 @@ int GammaEngine::IndexingNumericFields() {
 }
 
 template <typename T>
-int GammaEngine::_indexingField(const std::string &field) {
+int GammaEngine::AddNumIndexField(const std::string &field) {
   assert(numeric_index_ != nullptr);
 
   int field_id = profile_->GetAttrIdx(field);
@@ -671,7 +715,7 @@ int GammaEngine::_indexingField(const std::string &field) {
     return value;
   };
 
-  return numeric_index_->Indexing<T>(field, max_docid_, getField);
+  return numeric_index_->Add<T>(field, getField);
 }
 
 // TODO: handle malloc error and NULL pointer errors
@@ -688,11 +732,11 @@ void GammaEngine::PackResults(const GammaResult *gamma_results,
       VectorDoc *vec_doc = gamma_results[i].docs + j;
       result->result_items[j]->score = vec_doc->score;
 
-      int &docid = vec_doc->docid;
+      int docid = vec_doc->docid;
       result->result_items[j]->doc = profile_->Get(docid);
 
-      Doc *&doc_ptr = result->result_items[j]->doc;
       /*
+      Doc *doc_ptr = result->result_items[j]->doc;
       doc_ptr->fields[doc_ptr->fields_num - 1]->value =
           static_cast<ByteArray *>(malloc(sizeof(ByteArray)));
       doc_ptr->fields[doc_ptr->fields_num - 1]->value->value =

@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef VECTOR_MANAGER_H_
 #define VECTOR_MANAGER_H_
 
@@ -49,7 +56,7 @@ public:
   int Load(const std::string &path);
 
 private:
-  void Close();  // release all resource
+  void Close(); // release all resource
 
 private:
   RetrievalModel default_model_;
