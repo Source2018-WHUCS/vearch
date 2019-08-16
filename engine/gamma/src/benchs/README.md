@@ -31,7 +31,7 @@ We use recall at 1 to show the result.
 
 ### Result
 
-![nprobe](/doc/img/benchs/nprobe.png)
+![nprobe](/doc/img/gamma/benchs/nprobe.png)
 
 As we can see, when nprobe exceeds 25, there is no obvious change of recalls. Also,when nprobe get larger,only QPS of vgg10M get smaller, QPS of vgg1M and QPS of sift1M  basically have no changes.
 
@@ -41,7 +41,7 @@ We do experiment on VGG10M. The number of centroid ∈{64,128,256,512,1024,2048,
 
 ### Result
 
-![ncentroids](/doc/img/benchs/ncentroids.png)
+![ncentroids](/doc/img/gamma/benchs/ncentroids.png)
 
 As we can see, there is no obvious change of recalls when the number of centroid get larger. But the QPS become higher and higher as the number of centroid grows.
 
@@ -51,7 +51,7 @@ We do experiment on VGG10M. The number of byte ∈{4,8,16,32,64}. We set ncentro
 
 ### Result
 
-![nbytes](/doc/img/benchs/nbytes.png)
+![nbytes](/doc/img/gamma/benchs/nbytes.png)
 
 As we can see, when the number of byte grows, the recall get higher and higher, but the QPS drops obviously.
 
