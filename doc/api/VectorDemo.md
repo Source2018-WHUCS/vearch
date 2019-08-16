@@ -30,6 +30,10 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
           "image_name": {
               "type": "keyword"
           },
+          "tags": {
+              "type": "keyword",
+              "array":true
+          },
           "image_vec": {
               "type": "vector",
               "model_id": "img",
