@@ -15,6 +15,7 @@
 package mapping
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/blevesearch/bleve/registry"
@@ -84,7 +85,7 @@ func (im *IndexMapping) walkDocument(context *walkContext, data []byte) {
 		return
 	}
 	if v.Type() != fastjson.TypeObject {
-		context.Err = fmt.Errorf("content type err:[%s] type is [%s] ",err.Error(), v.Type())
+		context.Err = fmt.Errorf("content type err:[%s] type is [%s] ", err.Error(), v.Type())
 		return
 	}
 	if err != nil {
@@ -356,6 +357,10 @@ func (dm *DocumentMapping) processProperty(context *walkContext, fieldName strin
 						return
 					}
 					field, err := processGeoPoint(context, fm, pathString, lon, lat)
+					if err != nil {
+						context.Err = err
+						return
+					}
 					context.AddField(field)
 					for _, fieldName := range dm.Field.Base().CopyTo {
 						context.CopyTo(fieldName, v)
@@ -363,7 +368,31 @@ func (dm *DocumentMapping) processProperty(context *walkContext, fieldName strin
 				}
 				return
 			}
+
+			if fm.FieldType() == pspb.FieldType_KEYWORD && fm.FieldMappingI.(*KeywordFieldMapping).Array { //for gamma TODO :ANSJ
+				buffer := bytes.Buffer{}
+				for i, vv := range vs {
+					if stringBytes, err := vv.StringBytes(); err != nil {
+						context.Err = err
+						return
+					} else {
+						buffer.Write(stringBytes)
+						if i < len(vs)-1 {
+							buffer.WriteRune('\001')
+						}
+					}
+					dm.processProperty(context, fieldName, path, vv)
+				}
+				field, err := processString(context, fm, pathString, buffer.String())
+				if err != nil {
+					context.Err = err
+					return
+				}
+				context.AddField(field)
+				return
+			}
 		}
+
 		for _, vv := range vs {
 			dm.processProperty(context, fieldName, path, vv)
 		}

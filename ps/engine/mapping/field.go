@@ -93,6 +93,7 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 		ModelId        string          `json:"model_id,omitempty"`
 		RetrievalType  *string         `json:"retrieval_type,omitempty"`
 		StoreType      *string         `json:"store_type,omitempty"`
+		Array          bool            `json:"array,omitempty"`
 	}{}
 	err := json.Unmarshal(data, &tmp)
 	if err != nil {
@@ -106,6 +107,9 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 		fieldMapping.(*TextFieldMapping).Analyzer = DefaultAnalyzer
 	case "keyword":
 		fieldMapping = NewKeywordFieldMapping("")
+		if tmp.Array { //for gamma
+			fieldMapping.(*KeywordFieldMapping).Array = true
+		}
 	case "date":
 		fieldMapping = NewDateFieldMapping("")
 	case "long", "integer", "short", "byte":
@@ -319,6 +323,7 @@ type KeywordFieldMapping struct {
 	*BaseFieldMapping
 	IgnoreAbove int    `json:"ignore_above,omitempty"`
 	NullValue   string `json:"null_value,omitempty"`
+	Array       bool   `json:"array,omitempty"`
 }
 
 func NewKeywordFieldMapping(name string) *KeywordFieldMapping {

@@ -34,6 +34,7 @@ import (
 	"github.com/tiglabs/baudengine/util/bytes"
 	"github.com/tiglabs/log"
 	"reflect"
+	"strings"
 	"time"
 	"unsafe"
 )
@@ -269,8 +270,13 @@ func (ge *gammaEngine) Doc2DocResult(doc *C.struct_Doc) *response.DocResult {
 			}
 
 			switch field.FieldType() {
-			case pspb.FieldType_TEXT, pspb.FieldType_KEYWORD:
+			case pspb.FieldType_TEXT:
 				source[name] = string(CbArr2ByteArray(fv.value))
+			case pspb.FieldType_KEYWORD:
+				tempValue := string(CbArr2ByteArray(fv.value))
+				if field.FieldMappingI.(*mapping.KeywordFieldMapping).Array{
+					source[name] = strings.Split(tempValue,string([]byte{'\001'}))
+				}
 			case pspb.FieldType_INT:
 				source[name] = bytes.Bytes2Int(CbArr2ByteArray(fv.value))
 			case pspb.FieldType_FLOAT:
