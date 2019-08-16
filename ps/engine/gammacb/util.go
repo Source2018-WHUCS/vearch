@@ -82,7 +82,7 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*C.struc
 		switch value.Field.FieldType() {
 		case pspb.FieldType_KEYWORD:
 			value.Field.Options()
-			fs = append(fs, C.MakeFieldInfo(byteArrayStr(key), STRING, C.char(0)))
+			fs = append(fs, C.MakeFieldInfo(byteArrayStr(key), STRING, C.char((value.Field.Options()&pspb.FieldOption_Index)/pspb.FieldOption_Index)))
 		case pspb.FieldType_FLOAT:
 			fs = append(fs, C.MakeFieldInfo(byteArrayStr(key), DOUBLE, C.char((value.Field.Options()&pspb.FieldOption_Index)/pspb.FieldOption_Index)))
 		case pspb.FieldType_INT, pspb.FieldType_DATE:

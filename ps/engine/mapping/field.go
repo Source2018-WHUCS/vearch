@@ -396,9 +396,9 @@ type VectortFieldMapping struct {
 	*BaseFieldMapping
 	Dimension     int     `json:"dimension"`
 	ModelId       string  `json:"model_id"`
-	Format        *string `json:"format,omitempty"`
-	RetrievalType string  `json:"retrieval_type,omitempty"`
-	StoreType     string  `json:"store_type,omitempty"`
+	Format        *string `json:"format,omitempty"` //"normalization", "normal"
+	RetrievalType string  `json:"retrieval_type,omitempty"` // "IVFPQ", "PACINS", ...
+	StoreType     string  `json:"store_type,omitempty"` // "MemoryOnly", "MemoryWithDisk"
 }
 
 func NewVectorFieldMapping(name string) *VectortFieldMapping {

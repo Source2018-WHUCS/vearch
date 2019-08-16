@@ -32,7 +32,8 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
           },
           "tags": {
               "type": "keyword",
-              "array":true
+              "array":true,
+              "index":"true"
           },
           "image_vec": {
               "type": "vector",
