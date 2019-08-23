@@ -104,11 +104,11 @@ func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
 		//if err != nil {
 		//	return nil, err
 		//}
-		toByte, err := bytes.ValueToByte(rv["value"])
-		if err != nil {
-			return nil, err
-		}
-		return C.MakeTermFilter(byteArrayStr(field), byteArray(toByte)), nil
+		//toByte, err := bytes.ValueToByte(rv["value"])
+		//if err != nil {
+		//	return nil, err
+		//}
+		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(cast.ToString(rv["value"]))), nil
 	}
 
 	return nil, nil
