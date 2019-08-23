@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/proto"
 	"github.com/tiglabs/baudengine/proto/pspb"
 	"github.com/tiglabs/baudengine/ps/engine/mapping"
 	"github.com/tiglabs/baudengine/util"
@@ -101,11 +100,11 @@ func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
 	}
 
 	for field, rv := range tmp {
-		obj, err := qb.getFieldByMapping(field, rv["value"])
-		if err != nil {
-			return nil, err
-		}
-		toByte, err := bytes.ValueToByte(obj)
+		//obj, err := qb.getFieldByMapping(field, rv["value"])
+		//if err != nil {
+		//	return nil, err
+		//}
+		toByte, err := bytes.ValueToByte(rv["value"])
 		if err != nil {
 			return nil, err
 		}
@@ -116,44 +115,44 @@ func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
 
 }
 
-func (qb *queryBuilder) getFieldByMapping(fieldPath string, obj interface{}) (interface{}, error) {
-	fm := qb.mapping.GetField(fieldPath)
-	if fm == nil {
-		return nil, fmt.Errorf(pkg.ErrPartitionFieldNotFound.Error()+" field:[%s]", fieldPath)
-	}
-	switch fm.FieldType() {
-	case pspb.FieldType_TEXT, pspb.FieldType_KEYWORD:
-		return obj, nil
-	case pspb.FieldType_INT:
-		if v, err := cast.ToInt64E(obj); err != nil {
-			return nil, err
-		} else {
-			return v, nil
-		}
-	case pspb.FieldType_FLOAT:
-		if v, err := cast.ToFloat64E(obj); err != nil {
-			return nil, err
-		} else {
-			return v, nil
-		}
-	case pspb.FieldType_BOOL:
-		if v, err := cast.ToBoolE(obj); err != nil {
-			return nil, err
-		} else {
-			return v, nil
-		}
-	//case pspb.FieldType_GEOPOINT: TODO not support
-	case pspb.FieldType_DATE:
-		if v, err := cast.ToTimeE(obj); err != nil { //TODO it need use time parse
-			return nil, err
-		} else {
-			return v, nil
-		}
-
-	default:
-		return nil, fmt.Errorf("invalid term query by filed:[%s]", fieldPath)
-	}
-}
+//func (qb *queryBuilder) getFieldByMapping(fieldPath string, obj interface{}) (interface{}, error) {
+//	fm := qb.mapping.GetField(fieldPath)
+//	if fm == nil {
+//		return nil, fmt.Errorf(pkg.ErrPartitionFieldNotFound.Error()+" field:[%s]", fieldPath)
+//	}
+//	switch fm.FieldType() {
+//	case pspb.FieldType_TEXT, pspb.FieldType_KEYWORD:
+//		return obj, nil
+//	case pspb.FieldType_INT:
+//		if v, err := cast.ToInt64E(obj); err != nil {
+//			return nil, err
+//		} else {
+//			return v, nil
+//		}
+//	case pspb.FieldType_FLOAT:
+//		if v, err := cast.ToFloat64E(obj); err != nil {
+//			return nil, err
+//		} else {
+//			return v, nil
+//		}
+//	case pspb.FieldType_BOOL:
+//		if v, err := cast.ToBoolE(obj); err != nil {
+//			return nil, err
+//		} else {
+//			return v, nil
+//		}
+//	//case pspb.FieldType_GEOPOINT: TODO not support
+//	case pspb.FieldType_DATE:
+//		if v, err := cast.ToTimeE(obj); err != nil { //TODO it need use time parse
+//			return nil, err
+//		} else {
+//			return v, nil
+//		}
+//
+//	default:
+//		return nil, fmt.Errorf("invalid term query by filed:[%s]", fieldPath)
+//	}
+//}
 
 func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 
