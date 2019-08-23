@@ -59,7 +59,7 @@ func (im *IndexMapping) MapDocument(source []byte) ([]*pspb.Field, map[string]ps
 			if dm == nil {
 				return nil, nil, fmt.Errorf("unrecognizable field path:%s because copy to must set field in mapping", pathStr)
 			}
-			if dm != nil && dm.Field == nil {
+			if dm.Field == nil {
 				return nil, nil, fmt.Errorf("unrecognizable field path:%s because it is a properties", pathStr)
 			}
 			name, path := decodePathWithName(pathStr)
@@ -85,11 +85,7 @@ func (im *IndexMapping) walkDocument(context *walkContext, data []byte) {
 		return
 	}
 	if v.Type() != fastjson.TypeObject {
-		context.Err = fmt.Errorf("content type err:[%s] type is [%s] ", err.Error(), v.Type())
-		return
-	}
-	if err != nil {
-		context.Err = err
+		context.Err = fmt.Errorf("content type err:[type:object] type is [%s] ", v.Type())
 		return
 	}
 	var path []string
