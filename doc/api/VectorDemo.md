@@ -68,6 +68,7 @@ curl -H "content-type: application/json" -XPOST -d'
     "product_code":"tpy",
     "image_type":"tpy",
     "image_name":"tpy",
+    "tags":["t1","t2","t3"],
     "image_vec": {
         "source":"http://www.xxxx.com/abc.jpg",
         "model":"vgg16"
@@ -105,6 +106,11 @@ curl -H "content-type: application/json" -XPOST -d'
                       "gte":1,
                       "lte":3
                   }
+              }
+          },
+          {
+              "term":{
+                "tags":["t1","t2"]
               }
           }
        ]
