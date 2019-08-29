@@ -30,6 +30,10 @@ import (
 	"github.com/tiglabs/baudengine/util/baudlog"
 	"github.com/tiglabs/baudengine/util/ioutil2"
 	"github.com/tiglabs/log"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -200,24 +204,22 @@ func (ri *readerImpl) StreamSearch(ctx context.Context, req *request.SearchReque
 }
 
 func (ri *readerImpl) ReadSN(ctx context.Context) (int64, error) {
-	return raftSn, nil
-	//TODO store it to engine
-	//ri.lock.RLock()
-	//defer ri.lock.RUnlock()
-	//fileName := filepath.Join(ri.path, indexSn)
-	//b, err := ioutil.ReadFile(fileName)
-	//if err != nil {
-	//	if os.IsNotExist(err) {
-	//		return 0, nil
-	//	} else {
-	//		return 0, err
-	//	}
-	//}
-	//sn, err := strconv.ParseInt(string(b), 10, 64)
-	//if err != nil {
-	//	return 0, err
-	//}
-	//return sn, nil
+	ri.lock.RLock()
+	defer ri.lock.RUnlock()
+	fileName := filepath.Join(ri.path, indexSn)
+	b, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		} else {
+			return 0, err
+		}
+	}
+	sn, err := strconv.ParseInt(string(b), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return sn, nil
 }
 
 func (ri *readerImpl) DocCount(ctx context.Context) (uint64, error) {
