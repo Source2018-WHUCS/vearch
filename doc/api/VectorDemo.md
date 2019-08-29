@@ -50,7 +50,6 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
 
 * engine
 
-{"name":"gamma", "max_size":1000000,"nprobe":10,"metric_type":-1,"ncentroids":-1,"nsubvector":-1,"nbits_per_idx":-1}
 
 | name   |      default      |  description |
 |----------|:-------------:|------:|
