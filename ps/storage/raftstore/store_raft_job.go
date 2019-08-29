@@ -31,7 +31,6 @@ const (
 
 	FlushTicket  = 1 * time.Second
 	FrozenTicket = 5 * time.Minute
-	//FrozenTicket = 5 * time.Second //TODO for guixu test
 )
 
 // truncate is raft log truncate.

@@ -142,17 +142,6 @@ func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 
 	fields = append(fields, newField(mapping.IdField, []byte(docCmd.DocId), STRING))
 
-	if docCmd.Source != nil {
-		//fields = append(fields, newField(mapping.SourceField, docCmd.Source, STRING))
-	}
-
-	//slot
-	//if toByte, e := bytes.ValueToByte(docCmd.Slot); e != nil {
-	//	return nil, e
-	//} else {
-	//	fields = append(fields, newField(mapping.SlotField, toByte, INT))
-	//}
-
 	//version
 	if toByte, e := bytes.ValueToByte(docCmd.Version); e != nil {
 		return nil, e
