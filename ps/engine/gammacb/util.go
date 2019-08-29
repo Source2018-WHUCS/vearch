@@ -175,8 +175,6 @@ func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 			log.Error("gamma engine not support text field:[%s]", f.Name)
 		case pspb.FieldType_KEYWORD:
 			fields = append(fields, newField(f.Name, []byte(f.Value.Text), STRING))
-
-			fmt.Println("=======", f.Name, f.Value.Text)
 		case pspb.FieldType_FLOAT:
 			if toByte, err := bytes.ValueToByte(f.Value.Float); err != nil {
 				return nil, err
@@ -217,8 +215,6 @@ func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 		}
 	}
 
-	fmt.Println("mmmmmm", fields)
-
 	arr := C.MakeFields(C.int(len(fields)))
 	for i, f := range fields {
 		C.SetField(arr, C.int(i), f)
@@ -257,6 +253,7 @@ func (ge *gammaEngine) Doc2DocResult(doc *C.struct_Doc) *response.DocResult {
 	for i := 0; i < fieldNum; i++ {
 		fv := C.GetField(doc, C.int(i))
 		name := string(CbArr2ByteArray(fv.name))
+
 		switch name {
 		case mapping.VersionField:
 			result.Version = int64(bytes.ByteArray2UInt64(CbArr2ByteArray(fv.value)))
@@ -272,7 +269,6 @@ func (ge *gammaEngine) Doc2DocResult(doc *C.struct_Doc) *response.DocResult {
 				log.Error("can not found mappping by field:[%s]", name)
 				continue
 			}
-
 			switch field.FieldType() {
 			case pspb.FieldType_TEXT:
 				source[name] = string(CbArr2ByteArray(fv.value))
@@ -280,6 +276,8 @@ func (ge *gammaEngine) Doc2DocResult(doc *C.struct_Doc) *response.DocResult {
 				tempValue := string(CbArr2ByteArray(fv.value))
 				if field.FieldMappingI.(*mapping.KeywordFieldMapping).Array {
 					source[name] = strings.Split(tempValue, string([]byte{'\001'}))
+				} else {
+					source[name] = tempValue
 				}
 			case pspb.FieldType_INT:
 				source[name] = bytes.Bytes2Int(CbArr2ByteArray(fv.value))
