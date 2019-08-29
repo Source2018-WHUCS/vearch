@@ -25,10 +25,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/ps/engine"
 	pkg "github.com/tiglabs/baudengine/proto"
 	"github.com/tiglabs/baudengine/proto/pspb"
 	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/tiglabs/baudengine/ps/engine"
 	"github.com/tiglabs/baudengine/util/baudlog"
 	"github.com/tiglabs/baudengine/util/ioutil2"
 	"github.com/tiglabs/log"
@@ -136,10 +136,11 @@ func (wi *writerImpl) Delete(ctx context.Context, docCmd *pspb.DocCmd) *response
 	return wi.engine.reader.GetDoc(ctx, docCmd.DocId)
 }
 
-var raftSn int64
 func (wi *writerImpl) Flush(ctx context.Context, sn int64) error {
-	//TODO dump gamma
-	raftSn = sn
+	wi.lastSn.Store(sn)
+	if code := C.Dump(wi.engine.gamma); code != 0 {
+		return fmt.Errorf("dump index err response code :[%d]", code)
+	}
 	return nil
 }
 

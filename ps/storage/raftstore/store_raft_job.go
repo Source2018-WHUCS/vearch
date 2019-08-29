@@ -105,7 +105,7 @@ func (s *Store) startFlushJob() {
 				log.Error("store is empty so stop flush job, dbID:[%d] space:[%d,%s] partitionID:[%d]", s.Space.DBId, s.Space.Id, s.Space.Name, s.Partition.Id)
 				return
 			}
-			if tempSn == s.LastFlushSn {
+			if tempSn-s.LastFlushSn < 20000 {
 				return
 			}
 

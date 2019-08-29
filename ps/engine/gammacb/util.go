@@ -134,6 +134,10 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*C.struc
 //create doc
 func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 
+	for _, d := range docCmd.Fields {
+		fmt.Println("=======", d.Name, d.Value.Text)
+	}
+
 	if docCmd.Version <= 0 {
 		docCmd.Version = 1
 	}
@@ -274,8 +278,8 @@ func (ge *gammaEngine) Doc2DocResult(doc *C.struct_Doc) *response.DocResult {
 				source[name] = string(CbArr2ByteArray(fv.value))
 			case pspb.FieldType_KEYWORD:
 				tempValue := string(CbArr2ByteArray(fv.value))
-				if field.FieldMappingI.(*mapping.KeywordFieldMapping).Array{
-					source[name] = strings.Split(tempValue,string([]byte{'\001'}))
+				if field.FieldMappingI.(*mapping.KeywordFieldMapping).Array {
+					source[name] = strings.Split(tempValue, string([]byte{'\001'}))
 				}
 			case pspb.FieldType_INT:
 				source[name] = bytes.Bytes2Int(CbArr2ByteArray(fv.value))
