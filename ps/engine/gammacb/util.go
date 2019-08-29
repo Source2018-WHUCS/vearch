@@ -134,10 +134,6 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*C.struc
 //create doc
 func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 
-	for _, d := range docCmd.Fields {
-		fmt.Println("=======", d.Name, d.Value.Text)
-	}
-
 	if docCmd.Version <= 0 {
 		docCmd.Version = 1
 	}
@@ -179,6 +175,8 @@ func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 			log.Error("gamma engine not support text field:[%s]", f.Name)
 		case pspb.FieldType_KEYWORD:
 			fields = append(fields, newField(f.Name, []byte(f.Value.Text), STRING))
+
+			fmt.Println("=======", f.Name, f.Value.Text)
 		case pspb.FieldType_FLOAT:
 			if toByte, err := bytes.ValueToByte(f.Value.Float); err != nil {
 				return nil, err
@@ -218,6 +216,8 @@ func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 			log.Debug("gamma invalid field type:[%v]", f.Type)
 		}
 	}
+
+	fmt.Println("mmmmmm", fields)
 
 	arr := C.MakeFields(C.int(len(fields)))
 	for i, f := range fields {

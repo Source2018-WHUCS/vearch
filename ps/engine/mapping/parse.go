@@ -169,7 +169,6 @@ func (dm *DocumentMapping) processProperty(context *walkContext, fieldName strin
 		}
 
 		propertyValueString := string(propertyValueByte)
-fmt.Println("aaaaaa",propertyValueString)
 		if dm.Field != nil {
 			field, err := processString(context, dm.Field, pathString, propertyValueString)
 			if err != nil {
