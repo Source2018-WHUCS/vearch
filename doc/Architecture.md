@@ -1,6 +1,6 @@
 # Vearch
 
-Distributed deep learning vector search service
+Distributed deep learning vector search system
 
 ## Architecture
 
