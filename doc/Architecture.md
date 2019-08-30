@@ -8,7 +8,7 @@ Distributed deep learning vector search system
 
 * Components
 
-  > `Master`, `Router` and `Partition Service` 
+  > `Master`, `Router` and `PartitionServer` 
 
 * Master 
 
@@ -21,7 +21,7 @@ Distributed deep learning vector search system
 
   > Supports restful api.`create`  , `delete`  `search` and `update` ， also when write document it routing function to related machine , to save it , you can define your routing args default is `_id` , and merge multiple searching results to one result.
 
-* PartitionService (PS)
+* PartitionServer (PS)
 
   > Hosts document partitions, raft-based replication.
 
