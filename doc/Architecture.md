@@ -8,7 +8,7 @@ Distributed deep learning vector search system
 
 * Components
 
-  > `master`, `router` and `partition service` 
+  > `Master`, `Router` and `Partition Service` 
 
 * Master 
 
@@ -23,7 +23,7 @@ Distributed deep learning vector search system
 
 * PartitionService (PS)
 
-  > hosts document partitions, raft-based replication.
+  > Hosts document partitions, raft-based replication.
 
   > Gamma`is the core vector search engine. It provides the ability of storing, indexing and retrieving the vectors and scalars.
 
