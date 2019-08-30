@@ -1,6 +1,6 @@
 # VisualSearch API
 
-Vearch is dedicated to building a simple and fast image retrieval system. Through this system, you can easily build your own image retrieval system, including object detection, feature extraction and similarity search.This API demonstrates how to use it.
+VisualSearch API is dedicated to building a simple and fast image retrieval system. Through this system, you can easily build your own image retrieval system, including object detection, feature extraction and similarity search.This API demonstrates how to use it.
 
 
 
