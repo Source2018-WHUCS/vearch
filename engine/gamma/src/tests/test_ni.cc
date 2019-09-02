@@ -23,9 +23,9 @@
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
 using namespace std;
-using tig_gamma::NI::RangeFilter;
-using tig_gamma::NI::Timer;
+using tig_gamma::NI::FilterInfo;
 using tig_gamma::NI::lexical_cast;
+using utils::Timer;
 
 #define NI_TEST
 
@@ -40,6 +40,11 @@ public:
   Profile() : random_(0x12345678) {}
 
   void Init(const int nDocs) {
+    if (nDocs <= 0) {
+      Init();
+      return;
+    }
+
     doc_num_ = nDocs > 0 ? nDocs : 0;
     field_num_ = 0;
 
@@ -60,6 +65,29 @@ public:
             // 100 * i + j % 43 + static_cast<int>(random_.Uniform(34));
             100000 * i + j % 50000 + static_cast<int>(random_.Uniform(2019));
       }
+    }
+  }
+
+  void Init() {
+    doc_num_ = 0;
+    field_num_ = 0;
+
+    attr_idx_map_["cid3_field"] = field_num_++;
+    attr_type_map_["cid3_field"] = FType::INT;
+
+    ifstream ifs("./cid3s.txt");
+    if (!ifs) {
+      cerr << "can not open cid3s.txt\n";
+      return;
+    }
+
+    values_.resize(field_num_);
+
+    string line;
+    while (std::getline(ifs, line)) {
+      int cid3 = std::stoi(line);
+      values_[0].push_back(cid3);
+      doc_num_++;
     }
   }
 
@@ -93,7 +121,7 @@ private:
   unsigned long doc_num_;
   uint8_t field_num_;
 
-  tig_gamma::NI::Random random_;
+  utils::Random random_;
   std::vector<vector<int>> values_;
 };
 
@@ -188,21 +216,21 @@ public:
 
   vector<int> TestFilter(const char *field, const char *lower_value,
                          const char *upper_value, int flags = 0) {
-    RangeFilter filter;
+    FilterInfo filter;
 
     filter.field = (char *)field;
     filter.lower_value = (char *)lower_value;
     filter.upper_value = (char *)upper_value;
 
     vector<int> docs;
-    int retval = Work(std::vector<RangeFilter>{filter}, docs, flags);
+    int retval = Work(std::vector<FilterInfo>{filter}, docs, flags);
     if (retval > 0) {
       RunCheck(docs, field, lower_value, upper_value);
     }
     return docs;
   }
 
-  vector<int> TestFilters(const std::vector<RangeFilter> &filters,
+  vector<int> TestFilters(const std::vector<FilterInfo> &filters,
                           int flags = 0) {
     vector<int> docs;
     int retval = Work(filters, docs, flags);
@@ -212,7 +240,7 @@ public:
     return docs;
   }
 
-  int Work(const vector<RangeFilter> &filters, vector<int> &fDocs,
+  int Work(const vector<FilterInfo> &filters, vector<int> &fDocs,
            int flags = 0) {
     fDocs.clear();
     if (filters.empty()) {
@@ -242,6 +270,7 @@ public:
            << "\n";
     }
 
+    std::cout << "$$$ retval -> " << retval << "\n";
     return fDocs.size();
   }
 
@@ -309,8 +338,7 @@ private:
     for (int docid = 0; docid < doc_num; docid++) {
       T value;
       if (profile_->GetField<T>(docid, field_id, value)) {
-        numeric_indexes_->Add(docid, field,
-                              reinterpret_cast<const char *>(&value));
+        numeric_indexes_->Add(docid, field, string((char *)&value, sizeof(T)));
       }
     }
     t.Stop();
@@ -379,6 +407,11 @@ int main(int argc, char *argv[]) {
 
   index.Output();
 
+  index.TestFilter("cid3_field", "12139", "12139", 0x1);
+  std::cerr
+      << "-----------------------------------------------------------------\n";
+  index.TestFilter("cid3_field", "12139", "12139", 0x2);
+
   std::cerr
       << "-----------------------------------------------------------------\n";
 
@@ -394,8 +427,8 @@ int main(int argc, char *argv[]) {
   std::cerr
       << "-----------------------------------------------------------------\n";
 
-  std::vector<RangeFilter> filters;
-  RangeFilter filter;
+  std::vector<FilterInfo> filters;
+  FilterInfo filter;
 
   filter.field = "price_field";
   filter.lower_value = "14";

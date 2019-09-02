@@ -22,6 +22,8 @@ enum class IndexFieldType : uint8_t {
   LONG,
   FLOAT,
   DOUBLE,
+
+  STRING,
 };
 
 struct IndexField {
@@ -43,7 +45,7 @@ struct Index {
                      RangeQueryResultV1 &) const {
     return -1;
   }
-  virtual void Add(const char *, int) {}
+  virtual void Add(const std::string &, int) {}
   virtual int Build(const int /*num_docs*/) { return -1; }
   virtual size_t MemoryUsage() const { return 0; }
   virtual void Output(const std::string &) {}

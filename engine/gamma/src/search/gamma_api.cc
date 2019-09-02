@@ -7,10 +7,13 @@
 
 #include "gamma_api.h"
 
-#include "log.h"
 #include "gamma_engine.h"
+#include "log.h"
 #include "utils.h"
+#include <chrono>
 #include <fcntl.h>
+#include <iostream>
+#include <sstream>
 #include <sys/stat.h>
 
 INITIALIZE_EASYLOGGINGPP
@@ -196,10 +199,11 @@ enum ResponseCode DestroyFields(Field **field, int num) {
   return ResponseCode::SUCCESSED;
 }
 
-IVFPQParameters *
-MakeIVFPQParameters(int metric_type, int nprobe, int ncentroids, int nsubvector,
-                    int nbits_per_idx) {
-  IVFPQParameters * param = static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
+IVFPQParameters *MakeIVFPQParameters(int metric_type, int nprobe,
+                                     int ncentroids, int nsubvector,
+                                     int nbits_per_idx) {
+  IVFPQParameters *param =
+      static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
   memset(param, 0, sizeof(IVFPQParameters));
   param->metric_type = metric_type;
   param->nprobe = nprobe;
@@ -217,7 +221,8 @@ enum ResponseCode DestroyIVFPQParameters(IVFPQParameters *param) {
 }
 
 Table *MakeTable(ByteArray *name, FieldInfo **fields, int fields_num,
-                 VectorInfo **vectors_info, int vectors_num, IVFPQParameters *ivfpq_param) {
+                 VectorInfo **vectors_info, int vectors_num,
+                 IVFPQParameters *ivfpq_param) {
   Table *table = static_cast<Table *>(malloc(sizeof(Table)));
   memset(table, 0, sizeof(Table));
   table->name = name;
@@ -274,13 +279,28 @@ enum ResponseCode SetLogDictionary(ByteArray *log_dir) {
   el::Configurations defaultConf;
   // defaultConf.setToDefault();
   // To set GLOBAL configurations you may use
+  el::Loggers::addFlag(el::LoggingFlag::StrictLogFileSizeCheck);
   defaultConf.setGlobally(el::ConfigurationType::Format,
                           "%level %datetime %fbase:%line %msg");
   defaultConf.setGlobally(el::ConfigurationType::ToFile, "true");
-  defaultConf.setGlobally(el::ConfigurationType::MaxLogFileSize, "209715200"); // 200MB
-  defaultConf.setGlobally(el::ConfigurationType::Filename,
-                          dir + "/gamma.log.%datetime{%Y%M%d-%h%m%s}");
+  defaultConf.setGlobally(el::ConfigurationType::MaxLogFileSize,
+                          "209715200"); // 200MB
+  defaultConf.setGlobally(el::ConfigurationType::Filename, dir + "/gamma.log");
   el::Loggers::reconfigureLogger("default", defaultConf);
+  el::Helpers::installPreRollOutCallback(
+      [](const char *filename, std::size_t size) {
+        // SHOULD NOT LOG ANYTHING HERE BECAUSE LOG FILE IS CLOSED!
+        std::cout << "************** Rolling out [" << filename
+                  << "] because it reached [" << size << " bytes]" << std::endl;
+        std::time_t t = std::time(nullptr);
+        char mbstr[100];
+        if (std::strftime(mbstr, sizeof(mbstr), "%F-%T", std::localtime(&t))) {
+          std::cout << mbstr << '\n';
+        }
+        std::stringstream ss;
+        ss << "mv " << filename << " " << filename << "-" << mbstr;
+        system(ss.str().c_str());
+      });
   return ResponseCode::SUCCESSED;
 }
 
@@ -433,12 +453,13 @@ TermFilter **MakeTermFilters(int num) {
   return term_filters;
 }
 
-TermFilter *MakeTermFilter(ByteArray *field, ByteArray *value) {
+TermFilter *MakeTermFilter(ByteArray *field, ByteArray *value, BOOL is_union) {
   TermFilter *term_filter =
       static_cast<TermFilter *>(malloc(sizeof(TermFilter)));
   memset(term_filter, 0, sizeof(TermFilter));
   term_filter->field = field;
   term_filter->value = value;
+  term_filter->is_union = is_union;
   return term_filter;
 }
 

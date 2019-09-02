@@ -89,9 +89,7 @@ public:
     bitmap_.resize(n, init_value);
   }
 
-  void Set(int pos) {
-    bitmap_[pos] = true;
-  }
+  void Set(int pos) { bitmap_[pos] = true; }
 
   int Min() const { return min_; }
   int Max() const { return max_; }

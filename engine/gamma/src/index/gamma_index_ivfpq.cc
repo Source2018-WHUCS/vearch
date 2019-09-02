@@ -44,7 +44,7 @@ GammaIVFPQIndex::GammaIVFPQIndex(faiss::Index *quantizer, size_t d,
     this->invlists = nullptr;
   }
 
-  bool ret = rt_invert_index_ptr_->init();
+  bool ret = rt_invert_index_ptr_->Init();
 
   if (ret) {
     this->invlists =
@@ -209,7 +209,7 @@ bool GammaIVFPQIndex::Add(int n, const float *vec) {
   }
 
   /* stage 2 : add invert info to invert index */
-  rt_invert_index_ptr_->addKeys(new_keys, new_codes);
+  rt_invert_index_ptr_->AddKeys(new_keys, new_codes);
 #ifdef PERFORMANCE_TESTING
   double t1 = faiss::getmillisecs();
   if (indexed_vec_count_ % 10000 == 0) {
@@ -1033,10 +1033,10 @@ RTInvertedLists::RTInvertedLists(realtime::RTInvertIndex *rt_invert_index_ptr,
 size_t RTInvertedLists::list_size(size_t list_no) const {
   if (!rt_invert_index_ptr_)
     return 0;
-  long *ivt_list = NULL;
+  long *ivt_list = nullptr;
   size_t list_size = 0;
-  uint8_t *ivt_codes_list = NULL;
-  bool ret = rt_invert_index_ptr_->getIvtList(list_no, ivt_list, list_size,
+  uint8_t *ivt_codes_list = nullptr;
+  bool ret = rt_invert_index_ptr_->GetIvtList(list_no, ivt_list, list_size,
                                               ivt_codes_list);
   if (!ret)
     return 0;
@@ -1045,27 +1045,27 @@ size_t RTInvertedLists::list_size(size_t list_no) const {
 
 const uint8_t *RTInvertedLists::get_codes(size_t list_no) const {
   if (!rt_invert_index_ptr_)
-    return NULL;
-  long *ivt_list = NULL;
+    return nullptr;
+  long *ivt_list = nullptr;
   size_t list_size = 0;
-  uint8_t *ivt_codes_list = NULL;
-  bool ret = rt_invert_index_ptr_->getIvtList(list_no, ivt_list, list_size,
+  uint8_t *ivt_codes_list = nullptr;
+  bool ret = rt_invert_index_ptr_->GetIvtList(list_no, ivt_list, list_size,
                                               ivt_codes_list);
   if (!ret)
-    return NULL;
+    return nullptr;
   return ivt_codes_list;
 }
 
 const long *RTInvertedLists::get_ids(size_t list_no) const {
   if (!rt_invert_index_ptr_)
-    return NULL;
-  long *ivt_list = NULL;
+    return nullptr;
+  long *ivt_list = nullptr;
   size_t list_size = 0;
-  uint8_t *ivt_codes_list = NULL;
-  bool ret = rt_invert_index_ptr_->getIvtList(list_no, ivt_list, list_size,
+  uint8_t *ivt_codes_list = nullptr;
+  bool ret = rt_invert_index_ptr_->GetIvtList(list_no, ivt_list, list_size,
                                               ivt_codes_list);
   if (!ret)
-    return NULL;
+    return nullptr;
   return ivt_list;
 }
 

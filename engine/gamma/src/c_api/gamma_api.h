@@ -489,6 +489,7 @@ enum ResponseCode DestroyRangeFilters(RangeFilter **range_filters, int num);
 typedef struct TermFilter {
   ByteArray *field; // field to filter
   ByteArray *value; // filter value
+  BOOL is_union;    // 0: intersect, 1: union
 } TermFilter;
 
 /** make TermFilter array
@@ -504,7 +505,7 @@ TermFilter **MakeTermFilters(int num);
  * @param lower_value    lower value
  * @return a TermFilter pointer
  */
-TermFilter *MakeTermFilter(ByteArray *field, ByteArray *value);
+TermFilter *MakeTermFilter(ByteArray *field, ByteArray *value, BOOL is_union);
 
 /** set TermFilter content
  *

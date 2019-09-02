@@ -28,8 +28,8 @@ enum class ResultCode : std::uint16_t {
   Undefined
 };
 
-enum RawVectorType { MemoryOnly, MemoryWithDisk };
-enum RetrievalModel { IVFPQ, GPU_IVFPQ, SPTAG, PACINS };
+enum RawVectorType { MemoryOnly };
+enum RetrievalModel { IVFPQ };
 
 struct VectorDocField {
   std::string name;
@@ -130,7 +130,7 @@ struct GammaQuery {
   VectorQuery **vec_query;
   int vec_num;
   GammaSearchCondition *condition;
-  OnlineLogger *logger;
+  utils::OnlineLogger *logger;
 };
 
 struct GammaResult {

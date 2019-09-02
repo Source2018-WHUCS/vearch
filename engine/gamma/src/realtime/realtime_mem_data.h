@@ -20,28 +20,33 @@ namespace realtime {
 struct RTInvertBucketData {
 
   RTInvertBucketData(long **idx_array, int *retrieve_idx_pos,
-                     int *cur_bucket_keys, uint8_t **codes_array);
+                     int *cur_bucket_keys, uint8_t **codes_array,
+                     int *dump_latest_pos);
 
   RTInvertBucketData();
 
-  bool init(const size_t &buckets_num, const size_t &bucket_keys,
+  bool Init(const size_t &buckets_num, const size_t &bucket_keys,
             const size_t &code_bytes_per_vec, long &total_mem_bytes);
   ~RTInvertBucketData();
 
-  bool extendBucketMem(const size_t &bucket_no,
+  bool ExtendBucketMem(const size_t &bucket_no,
                        const size_t &code_bytes_per_vec, long &total_mem_bytes);
 
-  bool releaseBucketMem(const size_t &bucket_no,
+  bool ReleaseBucketMem(const size_t &bucket_no,
                         const size_t &code_bytes_per_vec,
                         long &total_mem_bytes);
-  bool destroyMem();
+  bool DestroyMem();
 
-  bool getBucketMemInfo(const size_t &bucket_no, std::string &mem_info);
+  bool GetBucketMemInfo(const size_t &bucket_no, std::string &mem_info);
+
+  int GetCurDumpPos(const size_t &bucket_no, int max_vid, int &dump_start_pos,
+                    int &size);
 
   long **_idx_array;
   int *_retrieve_idx_pos; // total nb of realtime added indexed vectors
   int *_cur_bucket_keys;
   uint8_t **_codes_array;
+  int *_dump_latest_pos;
 };
 
 struct RealTimeMemData {
@@ -51,16 +56,16 @@ public:
                   size_t code_bytes_per_vec = 512 * sizeof(float));
   ~RealTimeMemData();
 
-  bool init();
+  bool Init();
 
-  bool addKeys(size_t list_no, size_t n, std::vector<long> &keys,
+  bool AddKeys(size_t list_no, size_t n, std::vector<long> &keys,
                std::vector<uint8_t> &keys_codes);
 
-  bool extendBucketMem(const size_t &bucket_no);
-  bool getIvtList(const size_t &bucket_no, long *&ivt_list,
+  bool ExtendBucketMem(const size_t &bucket_no);
+  bool GetIvtList(const size_t &bucket_no, long *&ivt_list,
                   uint8_t *&ivt_codes_list);
 
-  long getTotalMemBytes() { return _total_mem_bytes; }
+  long GetTotalMemBytes() { return _total_mem_bytes; }
 
   int RetrieveCodes(int *vids, size_t vid_size,
                     std::vector<std::vector<const uint8_t *>> &bucket_codes,
@@ -69,6 +74,9 @@ public:
   int RetrieveCodes(int **vids_list, size_t vids_list_size,
                     std::vector<std::vector<const uint8_t *>> &bucket_codes,
                     std::vector<std::vector<long>> &bucket_vids);
+
+  int Dump(const std::string &dir, int max_vid);
+  int Load(const std::vector<std::string> &index_dirs);
 
   RTInvertBucketData *_cur_invert_ptr;
   RTInvertBucketData *_extend_invert_ptr;

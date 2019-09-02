@@ -234,6 +234,19 @@ ssize_t write_n(int fd, const char *buf, ssize_t n_bytes, int retry) {
   return write_bytes;
 }
 
+std::string join(const std::vector<std::string> &strs, char separator) {
+  std::stringstream ss;
+  ss << "[";
+  for (size_t i = 0; i < strs.size(); i++) {
+    if (i != 0) {
+      ss << separator;
+    }
+    ss << strs[i];
+  }
+  ss << "]";
+  return ss.str();
+}
+
 MEM_PACK *get_memoccupy() {
   FILE *fd;
   double mem_total, mem_used_rate;

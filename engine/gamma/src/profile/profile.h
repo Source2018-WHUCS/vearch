@@ -39,7 +39,7 @@ public:
    * @return 0 if successed
    */
   int Add(const std::vector<Field *> &fields, int doc_id,
-             bool is_existed = false);
+          bool is_existed = false);
 
   /** get docid by key
    *
@@ -54,7 +54,7 @@ public:
    * @return ResultCode
    */
   // ResultCode Dump();
-  int Dump(const std::string &path, int doc_num);
+  int Dump(const std::string &path, int max_docid, int dump_docid);
 
   long GetMemoryBytes();
 
@@ -88,7 +88,7 @@ public:
 
   int GetAttrIdx(const std::string &field) const;
 
-  int Load(const std::string &path, int &doc_num);
+  int Load(const std::vector<std::string> &folders, int &doc_num);
 
 private:
   int FTypeSize(enum DataType fType);
@@ -99,9 +99,7 @@ private:
   int AddField(const std::string &name, enum DataType ftype, int is_index);
 
   std::string name_;  // table name
-  std::string path_;  // datas files path
   int item_length_;   // every doc item length
-  int head_length_;   // profile file head length
   uint8_t field_num_; // field number
   int key_idx_;       // key postion
 

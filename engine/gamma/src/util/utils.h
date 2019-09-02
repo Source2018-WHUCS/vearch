@@ -8,8 +8,10 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#include "gamma_api.h"
 #include <cassert>
 #include <functional>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -64,6 +66,8 @@ template <class T> inline T *NewArray(int len, const char *msg) {
   return data;
 }
 
+std::string join(const std::vector<std::string> &strs, char separator);
+
 typedef struct MEM_PACKED {
   char name[20];
   unsigned long total;
@@ -75,6 +79,21 @@ typedef struct MEM_PACK {
 } MEM_PACK;
 
 MEM_PACK *get_memoccupy();
+
+// Based on http://stackoverflow.com/questions/236129/split-a-string-in-c Split
+// a string by a delim
+inline std::vector<std::string> Split(const std::string &s, char delim) {
+  std::vector<std::string> elems;
+  if (not s.empty()) {
+    std::stringstream ss;
+    ss.str(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+      elems.push_back(item);
+    }
+  }
+  return elems;
+}
 
 } // namespace utils
 

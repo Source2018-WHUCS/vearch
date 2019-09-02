@@ -23,7 +23,6 @@ namespace tig_gamma {
 
 Profile::Profile(const int max_doc_size) {
   item_length_ = 0;
-  head_length_ = 0;
   field_num_ = 0;
   key_idx_ = -1;
   mem_ = nullptr;
@@ -33,7 +32,8 @@ Profile::Profile(const int max_doc_size) {
   str_offset_ = 0;
 
   if (!item_to_docid_.reserve(max_doc_size)) {
-    LOG(ERROR) << "item_to_docid reserve failed!";
+    LOG(ERROR) << "item_to_docid reserve failed, max_doc_size [" << max_doc_size
+               << "]";
   }
 
   table_created_ = false;
@@ -51,88 +51,142 @@ Profile::~Profile() {
   }
 }
 
-int Profile::Load(const string &path, int &doc_num) {
-  const std::vector<string> files = utils::ls(path);
-  for (const auto file : files) {
-    auto strs = utils::split(file, ".");
-    if (strs.size() == 2 && strs[1] == "prf") {
-      name_ = strs[0];
-      strs = utils::split(name_, "/");
-      name_ = strs[strs.size() - 1];
+int Profile::Load(const std::vector<string> &folders, int &doc_num) {
+  uint64_t total_num = 0;
+  uint64_t total_str_size = 0;
+  char *cur_mem = nullptr;
+  char *cur_str_mem = nullptr;
+  int head_length = 0;
+
+  for (const string &path : folders) {
+    if (not table_created_) {
+      const std::vector<string> files = utils::ls(path);
+      for (const auto file : files) {
+        auto strs = utils::split(file, ".");
+        if (strs.size() == 2 && strs[1] == "prf") {
+          name_ = strs[0];
+          strs = utils::split(name_, "/");
+          name_ = strs[strs.size() - 1];
+          LOG(INFO) << "profile name [" << name_ << "]";
+          break;
+        }
+      }
+    }
+
+    const string prf_name = path + "/" + name_ + ".prf";
+    const string prf_str_name = path + "/" + name_ + ".str.prf";
+
+    if (not table_created_) {
+      FILE *fp_prf = fopen(prf_name.c_str(), "rb");
+      if (fp_prf == nullptr) {
+        LOG(ERROR) << "Cannot open file " << prf_name;
+        return -1;
+      }
+      fread((void *)(&field_num_), sizeof(uint8_t), 1, fp_prf);
+      LOG(INFO) << "field_num [" << static_cast<int>(field_num_) << "]";
+      head_length += 1;
+      for (int i = 0; i < field_num_; ++i) {
+        idx_attr_offset_.push_back(item_length_);
+
+        int8_t is_index = -1;
+        fread((void *)(&is_index), sizeof(int8_t), 1, fp_prf);
+
+        uint8_t a = 0;
+        fread((void *)(&a), sizeof(uint8_t), 1, fp_prf);
+
+        uint8_t type = a & 0x07;
+        enum DataType ftype = static_cast<enum DataType>(type);
+        attrs_.push_back(ftype);
+
+        uint8_t len = ((a >> 3) & 0x1F) + 1;
+        char name_c[len];
+        fread((void *)(name_c), sizeof(char), len, fp_prf);
+
+        string name = string(name_c, len);
+        item_length_ += FTypeSize(ftype);
+        idx_attr_map_.insert(std::pair<int, string>(i, name));
+        attr_idx_map_.insert(std::pair<string, int>(name, i));
+        attr_type_map_.insert(std::pair<string, enum DataType>(name, ftype));
+        attr_is_index_map_.insert(std::pair<string, int>(name, is_index));
+
+        head_length += 2 + len;
+        LOG(INFO) << "attr name [" << name << "], type ["
+                  << static_cast<int>(type) << "]";
+      }
+
+      long profile_size = utils::get_file_size(prf_name.c_str()) - head_length;
+      if (profile_size % item_length_ != 0) {
+        LOG(ERROR) << "File [" << prf_name << "] error!";
+        return -1;
+      }
+      if (mem_ != nullptr) {
+        delete mem_;
+      }
+      mem_ = new char[(uint64_t)max_profile_size_ * item_length_];
+      fclose(fp_prf);
+
+      cur_mem = mem_;
+      if (str_mem_ != nullptr) {
+        delete str_mem_;
+      }
+
+      str_mem_ = new char[max_str_size_];
+      memset(str_mem_, 0, max_str_size_);
+      cur_str_mem = str_mem_;
+      table_created_ = true;
+      LOG(INFO) << "Read table [" << name_ << "] success, item_length ["
+                << item_length_ << "]";
+    }
+
+    FILE *fp_prf = fopen(prf_name.c_str(), "rb");
+    if (fp_prf == nullptr) {
+      LOG(INFO) << "Cannot open file " << prf_name;
       break;
     }
+
+    long profile_size = utils::get_file_size(prf_name.c_str()) - head_length;
+    total_num += profile_size / item_length_;
+    if (total_num > max_profile_size_) {
+      LOG(ERROR) << "total_num [" << total_num
+                 << "] larger than max_profile_size [" << max_profile_size_
+                 << "]";
+      fclose(fp_prf);
+      return -1;
+    }
+
+    fseek(fp_prf, head_length, SEEK_SET);
+    fread((void *)cur_mem, sizeof(char), profile_size, fp_prf);
+    fclose(fp_prf);
+    cur_mem += profile_size;
+
+    FILE *fp_str = fopen(prf_str_name.c_str(), "rb");
+    if (fp_str == nullptr) {
+      LOG(INFO) << "Cannot open file " << prf_str_name;
+      break;
+    }
+    long profile_str_size = utils::get_file_size(prf_str_name.c_str());
+    total_str_size += profile_str_size;
+    if (total_str_size > max_str_size_) {
+      LOG(ERROR) << "total_str_size [" << total_str_size
+                 << "] larger than max_str_size [" << max_str_size_ << "]";
+      fclose(fp_str);
+      return -1;
+    }
+    fread((void *)cur_str_mem, sizeof(char), profile_str_size, fp_str);
+    fclose(fp_str);
+    cur_str_mem += profile_str_size;
+
+    doc_num += profile_size / item_length_;
+
+    LOG(INFO) << "Load profile doc_num [" << doc_num << "]";
   }
-  LOG(INFO) << "name_ " << name_;
-  const string prf_name = path + name_ + ".prf";
-
-  FILE *fp_prf = fopen(prf_name.c_str(), "rb");
-  if (fp_prf == nullptr) {
-    LOG(ERROR) << "Cannot open file " << prf_name;
-    return -1;
+  const string str_id = "_id";
+  for (int i = 0; i < doc_num; ++i) {
+    char *value = nullptr;
+    int len = GetField(i, str_id, &value);
+    string key = string(value, len);
+    item_to_docid_.insert(key, i);
   }
-
-  fread((void *)(&field_num_), sizeof(uint8_t), 1, fp_prf);
-  LOG(INFO) << "field_num = " << static_cast<int>(field_num_);
-  head_length_ += 1;
-  for (int i = 0; i < field_num_; ++i) {
-    idx_attr_offset_.push_back(item_length_);
-    uint8_t a = 0;
-    fread((void *)(&a), sizeof(uint8_t), 1, fp_prf);
-
-    uint8_t type = a & 0x07;
-    enum DataType ftype = static_cast<enum DataType>(type);
-    attrs_.push_back(ftype);
-
-    int8_t is_index = -1;
-    fread((void *)(&is_index), sizeof(int8_t), 1, fp_prf);
-
-    uint8_t len = ((a >> 3) & 0x1F) + 1;
-    char name_c[len];
-    fread((void *)(name_c), sizeof(char), len, fp_prf);
-
-    string name = string(name_c, len);
-    item_length_ += FTypeSize(ftype);
-    idx_attr_map_.insert(std::pair<int, string>(i, name));
-    attr_idx_map_.insert(std::pair<string, int>(name, i));
-    attr_type_map_.insert(std::pair<string, enum DataType>(name, ftype));
-    attr_is_index_map_.insert(std::pair<string, int>(name, is_index));
-
-    head_length_ += 2 + len;
-    LOG(INFO) << "attr name : " << name
-              << ", type : " << static_cast<int>(type);
-  }
-
-  int file_size = utils::get_file_size(prf_name.c_str());
-  if (mem_ != nullptr) {
-    delete mem_;
-  }
-  mem_ = new char[max_profile_size_ * item_length_];
-  fread((void *)mem_, sizeof(char), file_size - head_length_, fp_prf);
-  fclose(fp_prf);
-
-  doc_num = (file_size - head_length_) / item_length_;
-
-  const string prf_str_name = path + name_ + ".str.prf";
-  FILE *fp_str_output = fopen(prf_str_name.c_str(), "rb");
-  if (fp_str_output == nullptr) {
-    LOG(ERROR) << "Cannot open file " << prf_str_name;
-    return -2;
-  }
-
-  file_size = utils::get_file_size(prf_str_name.c_str());
-  if (str_mem_ != nullptr) {
-    delete str_mem_;
-  }
-
-  str_mem_ = new char[max_str_size_];
-  fread((void *)str_mem_, sizeof(char), file_size, fp_str_output);
-
-  fclose(fp_str_output);
-
-  table_created_ = true;
-  LOG(INFO) << "Read table " << path_ << " " << name_
-            << " success, doc_num : " << doc_num
-            << ", item_length_ : " << item_length_;
   return 0;
 }
 
@@ -250,7 +304,7 @@ int Profile::GetDocIDByKey(const std::string &key, int &doc_id) {
 }
 
 int Profile::Add(const std::vector<Field *> &fields, int doc_id,
-                    bool is_existed) {
+                 bool is_existed) {
   if (doc_id >= static_cast<int>(max_profile_size_)) {
     LOG(ERROR) << "Doc num reached upper limit [" << max_profile_size_ << "]";
     return -1;
@@ -286,7 +340,7 @@ int Profile::Add(const std::vector<Field *> &fields, int doc_id,
 
     auto it = attr_idx_map_.find(name);
     if (it == attr_idx_map_.end()) {
-      LOG(ERROR) << "Cannot find field name : " << name;
+      LOG(ERROR) << "Cannot find field name [" << name << "]";
       continue;
     }
     SetFieldValue(doc_id, name.c_str(), field_value->value->value,
@@ -294,51 +348,91 @@ int Profile::Add(const std::vector<Field *> &fields, int doc_id,
   }
 
   if (doc_id % 10000 == 0) {
-    LOG(INFO) << "Add item _id = " << key << ", num " << doc_id;
+    LOG(INFO) << "Add item _id [" << key << "], num [" << doc_id << "]";
   }
   return 0;
 }
 
-int Profile::Dump(const string &path, int doc_num) {
-  const string prf_name = path + name_ + ".prf";
-  const string prf_str_name = path + name_ + ".str.prf";
+int Profile::Dump(const string &path, int max_docid, int dump_docid) {
+  int head_length = 0;
+  const string prf_name = path + "/" + name_ + ".prf";
   FILE *fp_output = fopen(prf_name.c_str(), "wb");
   if (fp_output == nullptr) {
-    LOG(ERROR) << "Cannot write file " << prf_name;
-    return -1;
-  }
-
-  FILE *fp_str_output = fopen(prf_str_name.c_str(), "wb");
-  if (fp_str_output == nullptr) {
-    LOG(ERROR) << "Cannot write file " << prf_str_name;
+    LOG(ERROR) << "Cannot write file [" << prf_name << "]";
     return -1;
   }
 
   fwrite((void *)(&field_num_), sizeof(uint8_t), 1, fp_output);
-  head_length_ += 1;
+  head_length += 1;
   for (const auto &it : idx_attr_map_) {
     int idx = it.first;
     string name = it.second;
     uint8_t type = static_cast<uint8_t>(attrs_[idx]);
+    int8_t is_index = attr_is_index_map_[name];
+    fwrite((void *)(&is_index), sizeof(uint8_t), 1, fp_output);
     const char *n = name.data();
     uint8_t len = name.length() - 1;
     uint8_t a = (len << 3) | type;
     fwrite((void *)(&a), sizeof(uint8_t), 1, fp_output);
 
-    int8_t is_index = attr_is_index_map_[name];
-    fwrite((void *)(&is_index), sizeof(uint8_t), 1, fp_output);
     fwrite((void *)(n), sizeof(char), name.length(), fp_output);
-    head_length_ += 1 + name.length();
+    head_length += 2 + name.length();
   }
 
-  LOG(INFO) << "head_length = " << head_length_
-            << " item_length = " << item_length_;
+  LOG(INFO) << "head_length = " << head_length
+            << " item_length = " << item_length_
+            << " start [" << dump_docid
+            << "] num [" << max_docid - dump_docid + 1
+            << "]";
 
-  fwrite((void *)(mem_), sizeof(char), doc_num * item_length_, fp_output);
-  fwrite((void *)(str_mem_), sizeof(char), str_offset_, fp_str_output);
+  fwrite((void *)(mem_ + (uint64_t)dump_docid * item_length_), sizeof(char),
+         (uint64_t)(max_docid - dump_docid + 1) * item_length_, fp_output);
 
   fclose(fp_output);
-  fclose(fp_str_output);
+
+  int first_str_idx = -1;
+  int last_str_idx = -1;
+  string first_str_field, last_str_field;
+  for (size_t i = 0; i < attrs_.size(); ++i) {
+    if (attrs_[i] == DataType::STRING) {
+      if (first_str_idx < 0) {
+        first_str_idx = i;
+      }
+      last_str_idx = i;
+    }
+  }
+
+  if (first_str_idx < 0) {
+    LOG(INFO) << "Cannot find string field!";
+    return 0;
+  }
+
+  const string prf_str_name = path + "/" + name_ + ".str.prf";
+  FILE *fp_str = fopen(prf_str_name.c_str(), "wb");
+  if (fp_str == nullptr) {
+    LOG(ERROR) << "Cannot write file " << prf_str_name;
+    fclose(fp_output);
+    return -1;
+  }
+
+  // get str start location
+  size_t offset =
+      (uint64_t)dump_docid * item_length_ + idx_attr_offset_[first_str_idx];
+  size_t str_dumped_offset = 0;
+  memcpy(&str_dumped_offset, mem_ + offset, sizeof(size_t));
+
+  // get str end location
+  offset = (uint64_t)max_docid * item_length_ + idx_attr_offset_[last_str_idx];
+  size_t end_offset = 0;
+  memcpy(&end_offset, mem_ + offset, sizeof(size_t));
+  unsigned short len;
+  memcpy(&len, mem_ + offset + sizeof(size_t), sizeof(unsigned short));
+  uint64_t str_offset = end_offset + len;
+
+  fwrite((void *)(str_mem_ + str_dumped_offset), sizeof(char),
+         str_offset - str_dumped_offset, fp_str);
+
+  fclose(fp_str);
 
   return 0;
 }

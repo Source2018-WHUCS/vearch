@@ -14,7 +14,7 @@ source\_mem: stores all sources in sequential memory space too, but source's len
 
 source\_pos: stores the begining address of each source in source_mem. Combine source\_pos and source\_mem, it can find any source of vector, just need the id of vector.
  
-![memory_struct](/doc/img/gamma/vector/memory_structure.png)
+![memory_struct](doc/img/gamma/vector/memory_structure.png)
 
 ### File Structure
 
@@ -33,7 +33,7 @@ name| usage
 * ntotal: vector total number
 * vector\_mem: all raw vectors
 
-![file_struct](/doc/img/gamma/vector/fet_file_structure.png)
+![file_struct](doc/img/gamma/vector/fet_file_structure.png)
 
 #### src file structure
 
@@ -41,4 +41,4 @@ name| usage
 * source\_pos: the begining addresses of each source
 * source\_mem: all sources
 
-![file_struct](/doc/img/gamma/vector/src_file_structure.png)
+![file_struct](doc/img/gamma/vector/src_file_structure.png)

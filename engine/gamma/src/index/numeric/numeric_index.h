@@ -92,9 +92,9 @@ public:
     return -1;
   }
 
-  void Add(const char *bytes, int docID) override {
+  void Add(const std::string &bytes, int docID) override {
     T value;
-    memcpy(&value, bytes, sizeof(T));
+    memcpy(&value, bytes.data(), sizeof(T));
     Add(value, docID);
   }
 
@@ -417,7 +417,9 @@ int NumericIndex<T>::Search(const T lowerValue, const T upperValue,
   T max_value;
 
   int rt_size = rt_idx_.Size();
-  assert(bsl_idx_.size > 0 || rt_size > 0);
+  if (bsl_idx_.size < 1 && rt_size < 1) {
+    return -1; // all result
+  }
 
   if (bsl_idx_.size > 0 && rt_size > 0) {
     min_value = std::min(bsl_idx_.min_value, rt_idx_.First()->key);
@@ -655,10 +657,11 @@ int NumericIndex<T>::Search(const BlockSkipListIndex<T> *bsl_idx,
 //---------------------------------------------------------------
 // Index API: externally visible
 //---------------------------------------------------------------
-struct RangeFilter {
+struct FilterInfo {
   std::string field;
   std::string lower_value;
   std::string upper_value;
+  int is_union;
 };
 
 class Indexes {
@@ -672,11 +675,11 @@ public:
   }
 
   // search & do intersection *** immediately ***
-  int Search(const std::vector<RangeFilter> &filters,
+  int Search(const std::vector<FilterInfo> &filters,
              RangeQueryResultV1 &result) const;
 
   // search & do intersection *** lazily ***
-  int Search(const std::vector<RangeFilter> &filters,
+  int Search(const std::vector<FilterInfo> &filters,
              RangeQueryResult &out) const;
 
   int Search(const std::string &field, const std::string &lowerValue,
@@ -693,6 +696,7 @@ public:
     return Search(field, value, value, result);
   }
 
+  // Indexing all *numeric* fields
   template <typename T>
   int Indexing(const std::string &field, int n_docs,
                std::function<T(const int)> cb) {
@@ -711,7 +715,7 @@ public:
     return -1;
   }
 
-  // two-phases indexing: 1, Add field one by one 2, Indexing all fields
+  // Two-phases indexing: 1, Add field one by one 2, Indexing all fields
   template <typename T>
   int Add(const std::string &field, std::function<T(const int)> cb) {
     if (!GetIndex(field)) {
@@ -735,7 +739,7 @@ public:
     return 0;
   }
 
-  void Add(int docID, const std::string &field, const char *value) {
+  void Add(int docID, const std::string &field, const std::string &value) {
     Index *index = GetIndex(field);
     if (index) {
       index->Add(value, docID);
@@ -777,6 +781,11 @@ private:
 
   std::map<std::string, Index *> indexes_;
 };
+
+// specialization for string
+template <>
+int Indexes::Add<std::string>(const std::string &field,
+                              std::function<std::string(const int)> cb);
 
 } // namespace NI
 } // namespace tig_gamma

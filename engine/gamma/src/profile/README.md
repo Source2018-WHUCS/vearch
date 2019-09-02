@@ -20,5 +20,5 @@ name| usage
 .str.prf|storage of string and variable-length fields
 
 * file struct
-![file_struct](/doc/img/file_struct.png)
+![file_struct](doc/img/gamma/file_struct.png)
 

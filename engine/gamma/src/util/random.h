@@ -9,8 +9,7 @@
 
 #include <cstdint>
 
-namespace tig_gamma {
-namespace NI {
+namespace utils {
 
 class Random {
 public:
@@ -60,5 +59,4 @@ private:
   uint32_t seed;
 };
 
-} // namespace NI
-} // namespace tig_gamma
+} // namespace utils

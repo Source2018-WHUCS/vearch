@@ -447,7 +447,7 @@ void test_perf(int max_doc_size, int direct_search_type) {
   pt.StartAddThread();
   pt.BuildIndex();
 
-  tig_gamma::NI::Timer t0;
+  utils::Timer t0;
   t0.Start("Search");
   auto avg_cost_ms = pt.Search(1000, direct_search_type);
   t0.Stop();
@@ -481,7 +481,7 @@ void test_bugfix() {
   pt.StartAddThread2();
   // pt.BuildIndex();
 
-  tig_gamma::NI::Timer t0;
+  utils::Timer t0;
   t0.Start("Search");
   auto avg_cost_ms = pt.Search(1, 0);
   t0.Stop();

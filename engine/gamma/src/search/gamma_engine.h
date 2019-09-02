@@ -84,7 +84,7 @@ private:
   int max_docid_;
   int max_doc_size_;
 
-  std::atomic<int> delete_num;
+  std::atomic<int> delete_num_;
 
   bool b_running_;
   std::condition_variable running_cv_;
@@ -93,10 +93,20 @@ private:
                    Response *response_results);
 
   enum IndexStatus index_status_;
+
+  int dump_docid_;  // next dump docid
+  int bitmap_bytes_size_;
+  const std::string date_time_format_;
+
+  bool loaded_;
 #ifdef PERFORMANCE_TESTING
   std::atomic<uint64_t> search_num_;
 #endif
 };
+
+// specialization for string
+template <>
+int GammaEngine::AddNumIndexField<std::string>(const std::string &field);
 
 } // namespace tig_gamma
 #endif

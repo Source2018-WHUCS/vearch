@@ -12,7 +12,7 @@
 
 using framework::LogStream;
 
-namespace tig_gamma {
+namespace utils {
 
 // level: DEBUG, INFO, WARN, ERROR
 #define OLOG(plog, level, msg)                                                 \
@@ -68,6 +68,6 @@ private:
   framework::LogStream *log_stream_;
 };
 
-} // namespace tig_gamma
+} // namespace utils
 
 #endif // SRC_SEARCHER_UTIL_ONLINE_LOGGER_H_

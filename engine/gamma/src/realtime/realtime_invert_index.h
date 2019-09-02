@@ -28,21 +28,21 @@ public:
 
   ~RTInvertIndex();
 
-  bool init();
+  bool Init();
 
   /*  @param n : count of added keys
    *  @param keys : added key arrays
    *  @param keys_codes : added key code arrays*/
-  bool addKeys(std::map<int, std::vector<long>> &new_keys,
+  bool AddKeys(std::map<int, std::vector<long>> &new_keys,
                std::map<int, std::vector<uint8_t>> &new_codes);
 
-  inline faiss::IndexIVF *getIndexIVF() { return _index_ivf; }
+  inline faiss::IndexIVF *GetIndexIVF() { return _index_ivf; }
 
-  bool getIvtList(const size_t &bucket_no, long *&ivt_list, size_t &ivt_size,
+  bool GetIvtList(const size_t &bucket_no, long *&ivt_list, size_t &ivt_size,
                   uint8_t *&ivt_codes_list);
 
-  long getTotalMemBytes() {
-    return _cur_ptr ? _cur_ptr->getTotalMemBytes() : 0;
+  long GetTotalMemBytes() {
+    return _cur_ptr ? _cur_ptr->GetTotalMemBytes() : 0;
   }
 
   int RetrieveCodes(int *vids, size_t vid_size,
@@ -52,6 +52,9 @@ public:
   int RetrieveCodes(int **vids_list, size_t vids_list_size,
                     std::vector<std::vector<const uint8_t *>> &bucket_codes,
                     std::vector<std::vector<long>> &bucket_vids);
+
+  int Dump(const std::string &dir, int max_vid);
+  int Load(const std::vector<std::string> &index_dirs);
 
 private:
   size_t _bucket_keys;

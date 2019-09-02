@@ -22,9 +22,9 @@ int create(char *&bitmap, int &bytes_count, int size) {
 }
 
 bool test(const char *bitmap, int id) {
-  return (bitmap[id >> 3] & (0x1 << bitmap[id & 0x7]));
+  return (bitmap[id >> 3] & (0x1 << (id & 0x7)));
 }
 
-void set(char *bitmap, int id) { bitmap[id >> 3] |= (0x1 << bitmap[id & 0x7]); }
+void set(char *bitmap, int id) { bitmap[id >> 3] |= (0x1 << (id & 0x7)); }
 
 } // namespace bitmap

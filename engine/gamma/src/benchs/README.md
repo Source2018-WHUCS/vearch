@@ -35,7 +35,7 @@ We use recall at 1 to show the result.
 
 ### Result
 
-![nprobe](/doc/img/gamma/benchs/nprobe.png)
+![nprobe](doc/img/gamma/benchs/nprobe.png)
 
 As we can see, when nprobe exceeds 25, there is no obvious change of recalls. Also, when nprobe get larger,only QPS of vgg10M get smaller, QPS of vgg1M and QPS of sift1M  basically have no changes.
 
@@ -45,7 +45,7 @@ We do experiment on VGG10M. The number of centroid ∈{64,128,256,512,1024,2048,
 
 ### Result
 
-![ncentroids](/doc/img/gamma/benchs/ncentroids.png)
+![ncentroids](doc/img/gamma/benchs/ncentroids.png)
 
 As we can see, there is no obvious change of recalls when the number of centroid get larger. But the QPS become higher and higher as the number of centroid grows.
 
@@ -55,7 +55,7 @@ We do experiment on VGG10M. The number of byte ∈{4,8,16,32,64}. We set ncentro
 
 ### Result
 
-![nbytes](/doc/img/gamma/benchs/nbytes.png)
+![nbytes](doc/img/gamma/benchs/nbytes.png)
 
 As we can see, when the number of byte grows, the recall get higher and higher, but the QPS drops obviously.
 
@@ -106,10 +106,10 @@ recalls of VGG10M :
 
 ## Cluster experiments
 
-First, we do experiments by searching on cluster only with vgg features. Then, we experiment with the vgg features and filter the search using an integer field to compare the time consumed and QPS with the vgg features only. In the following section, we use searching with filter or without filter to specify the experiment method mentioned earlier. For different size of experiment data, we use different vectorbase clusters. We use 3 masters, 3 routers and 5 partition services for VGG100M. For VGG500M, we use the same size of master and router with VGG100M but 24 partition services. We use 3 masters, 6 routers and 48 partition services to deal with the VGG1B.
+First, we do experiments by searching on cluster only with vgg features. Then, we experiment with the vgg features and filter the search using an integer field to compare the time consumed and QPS with the vgg features only. In the following section, we use searching with filter or without filter to specify the experiment method mentioned earlier. For different size of experiment data, we use different vectorbase cluster. We use 3 masters, 3 routers and 5 partition services for VGG100M. For VGG500M, we use the same size of master and router with VGG100M but 24 partition services. We use 3 masters, 6 routers and 48 partition services to deal with the VGG1B.
 
 ### Result
 
-![cluster](/doc/img/gamma/benchs/cluster.png)
+![cluster](doc/img/gamma/benchs/cluster.png)
 
-As we can see, when occurrence grows, the spend time of search almost has a linear growth and the growth rate of searching without filter is steeper. Different with the linear growth of spend time, the growth of QPS is more like S-shaped curve growth which means the growth of QPS basically have no obvious change when occurrence exceed one certain number.  Be consistent with the spend time of searching, the QPS of searching with filter is basically double to the QPS of searching without filter.
+The growth shape of QPS is more like inverted J-shaped curve which means the growth of QPS basically have no obvious change when average latency exceed one certain number. 

@@ -25,8 +25,8 @@ public:
   int Gets(int k, long *ids_list, std::vector<const float *> &results) const override;
   int GetSource(int vid, char *&str, int &len) override;
 
-  int Dump(const std::string &path) override;
-  int Load(const std::string &path) override;
+  int Dump(const std::string &path, int dump_docid, int max_docid) override;
+  int Load(const std::vector<std::string> &path) override;
 
 private:
   float *vector_mem_; // vector memory

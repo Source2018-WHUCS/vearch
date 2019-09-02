@@ -52,8 +52,8 @@ public:
     return index_total_mem_bytes + vector_total_mem_bytes;
   }
 
-  int Dump(const std::string &path);
-  int Load(const std::string &path);
+  int Dump(const std::string &path, int dump_docid, int max_docid);
+  int Load(const std::vector<std::string> &path);
 
 private:
   void Close(); // release all resource
@@ -65,6 +65,8 @@ private:
   int max_doc_size_;
   bool table_created_;
   IVFPQParameters *ivfpq_param_;
+  VectorInfo **vectors_info_;
+  int vectors_num_;
 
   std::map<std::string, RawVector *> raw_vectors_;
   std::map<std::string, GammaIndex *> vector_indexes_;
