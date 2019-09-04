@@ -111,7 +111,7 @@ curl -H "content-type: application/json" -XPOST -d'
 * filter->term-> operator [`and`, `or`] default `or` 
 
 ### delete Document
-
+ 
 ````$xslt
 curl -XDELETE http://11.3.149.73/tpy/tpy/1
 ````
