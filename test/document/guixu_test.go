@@ -15,10 +15,10 @@
 package document
 
 import (
-	. "github.com/tiglabs/baudengine/test"
+	. "github.com/vearch/vearch/test"
 	"fmt"
-	"github.com/tiglabs/baudengine/util/assert"
-	"github.com/tiglabs/baudengine/util/cbjson"
+	"github.com/vearch/vearch/util/assert"
+	"github.com/vearch/vearch/util/cbjson"
 	"github.com/tiglabs/log"
 	"net/http"
 	"testing"

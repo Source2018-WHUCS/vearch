@@ -18,8 +18,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/util/cbjson"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/util/cbjson"
 	"github.com/tiglabs/log"
 )
 

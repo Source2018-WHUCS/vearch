@@ -16,7 +16,7 @@ package sysstat
 
 import (
 	"context"
-	"github.com/tiglabs/baudengine/config"
+	"github.com/vearch/vearch/config"
 	"os"
 	"runtime"
 	"time"
@@ -27,9 +27,9 @@ import (
 	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/process"
 
-	"github.com/tiglabs/baudengine/util/metrics"
-	"github.com/tiglabs/baudengine/util/metrics/metric"
-	"github.com/tiglabs/baudengine/util/routine"
+	"github.com/vearch/vearch/util/metrics"
+	"github.com/vearch/vearch/util/metrics/metric"
+	"github.com/vearch/vearch/util/routine"
 	"github.com/tiglabs/log"
 )
 

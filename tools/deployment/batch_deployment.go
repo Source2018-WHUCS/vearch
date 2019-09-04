@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/pkg/sftp"
-	"github.com/tiglabs/baudengine/config"
+	"github.com/vearch/vearch/config"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"log"

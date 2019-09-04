@@ -4,7 +4,7 @@ package config
 
 import (
 	//if not need support vector go build --tags=vector
-	"github.com/tiglabs/baudengine/util/monitoring"
+	"github.com/vearch/vearch/util/monitoring"
 )
 
 func newMonitor(conf *Config , key string) monitoring.Monitor {

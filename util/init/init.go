@@ -15,10 +15,10 @@
 package init
 
 import (
-	"github.com/tiglabs/baudengine/proto/request"
-	"github.com/tiglabs/baudengine/proto/response"
-	"github.com/tiglabs/baudengine/ps/engine/sortorder"
-	"github.com/tiglabs/baudengine/util/metrics/mserver"
+	"github.com/vearch/vearch/proto/request"
+	"github.com/vearch/vearch/proto/response"
+	"github.com/vearch/vearch/ps/engine/sortorder"
+	"github.com/vearch/vearch/util/metrics/mserver"
 	"github.com/vmihailenco/msgpack"
 )
 

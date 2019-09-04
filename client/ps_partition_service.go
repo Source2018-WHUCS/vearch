@@ -18,12 +18,12 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/smallnest/rpcx/protocol"
-	"github.com/tiglabs/baudengine/proto/request"
-	"github.com/tiglabs/baudengine/util/server/rpc"
+	"github.com/vearch/vearch/proto/request"
+	"github.com/vearch/vearch/util/server/rpc"
 	"math/rand"
 	"time"
 
-	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/vearch/vearch/proto/response"
 
 	"fmt"
 	"runtime/debug"
@@ -31,9 +31,9 @@ import (
 
 	"github.com/smallnest/rpcx/share"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/proto/entity"
-	"github.com/tiglabs/baudengine/proto/pspb"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/proto/pspb"
 	"github.com/tiglabs/log"
 )
 

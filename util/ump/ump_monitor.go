@@ -15,7 +15,7 @@
 package ump
 
 import (
-	"github.com/tiglabs/baudengine/util/monitoring"
+	"github.com/vearch/vearch/util/monitoring"
 	"time"
 )
 

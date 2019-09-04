@@ -17,8 +17,8 @@ package mapping
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/baudengine/proto/pspb"
-	"github.com/tiglabs/baudengine/util/assert"
+	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/util/assert"
 	"testing"
 	"time"
 )

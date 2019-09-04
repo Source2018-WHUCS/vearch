@@ -15,11 +15,11 @@
 package document
 
 import (
-	"github.com/tiglabs/baudengine/ps/engine/mapping"
-	"github.com/tiglabs/baudengine/proto/pspb"
-	"github.com/tiglabs/baudengine/proto/response"
-	. "github.com/tiglabs/baudengine/test"
-	"github.com/tiglabs/baudengine/util/assert"
+	"github.com/vearch/vearch/ps/engine/mapping"
+	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/proto/response"
+	. "github.com/vearch/vearch/test"
+	"github.com/vearch/vearch/util/assert"
 	"github.com/tiglabs/caprice/logger"
 	"testing"
 )

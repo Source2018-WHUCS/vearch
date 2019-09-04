@@ -18,14 +18,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/util/baudlog"
-	"github.com/tiglabs/baudengine/util/monitoring"
+	"github.com/vearch/vearch/util/baudlog"
+	"github.com/vearch/vearch/util/monitoring"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tiglabs/baudengine/client"
-	"github.com/tiglabs/baudengine/config"
+	"github.com/vearch/vearch/client"
+	"github.com/vearch/vearch/config"
 	"github.com/tiglabs/log"
 	"go.etcd.io/etcd/embed"
 )

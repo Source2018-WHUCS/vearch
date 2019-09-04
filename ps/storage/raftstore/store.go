@@ -17,16 +17,16 @@ package raftstore
 import (
 	"context"
 	"fmt"
-	"github.com/tiglabs/baudengine/ps/psutil"
+	"github.com/vearch/vearch/ps/psutil"
 	"os"
 
 	"github.com/tiglabs/log"
 
-	"github.com/tiglabs/baudengine/client"
-	"github.com/tiglabs/baudengine/config"
-	"github.com/tiglabs/baudengine/proto/entity"
-	"github.com/tiglabs/baudengine/ps/engine/register"
-	"github.com/tiglabs/baudengine/ps/storage"
+	"github.com/vearch/vearch/client"
+	"github.com/vearch/vearch/config"
+	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/ps/engine/register"
+	"github.com/vearch/vearch/ps/storage"
 	"github.com/tiglabs/raft"
 	"github.com/tiglabs/raft/proto"
 	"github.com/tiglabs/raft/storage/wal"

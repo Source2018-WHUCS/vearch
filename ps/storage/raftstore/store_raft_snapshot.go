@@ -17,9 +17,9 @@ package raftstore
 //import (
 //	"io"
 //
-//	"github.com/tiglabs/baudengine/ps/engine"
-//	"github.com/tiglabs/baudengine/proto/metapb"
-//	"github.com/tiglabs/baudengine/proto/pspb/raftpb"
+//	"github.com/vearch/vearch/ps/engine"
+//	"github.com/vearch/vearch/proto/metapb"
+//	"github.com/vearch/vearch/proto/pspb/raftpb"
 //	raftproto "github.com/tiglabs/raft/proto"
 //)
 //

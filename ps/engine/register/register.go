@@ -16,10 +16,10 @@ package register
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/proto/entity"
 
-	"github.com/tiglabs/baudengine/ps/engine"
+	"github.com/vearch/vearch/ps/engine"
 )
 
 var (

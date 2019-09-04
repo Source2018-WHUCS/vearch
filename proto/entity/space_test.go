@@ -16,8 +16,8 @@ package entity_test
 
 import (
 	"encoding/json"
-	"github.com/tiglabs/baudengine/proto/entity"
-	"github.com/tiglabs/baudengine/util/assert"
+	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/util/assert"
 	"testing"
 )
 

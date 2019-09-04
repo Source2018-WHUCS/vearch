@@ -14,7 +14,7 @@
 package mapping
 
 import (
-	"github.com/tiglabs/baudengine/proto/pspb"
+	"github.com/vearch/vearch/proto/pspb"
 	"reflect"
 	"testing"
 	"time"

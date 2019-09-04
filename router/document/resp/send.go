@@ -17,9 +17,9 @@ package resp
 import (
 	"context"
 	"fmt"
-	"github.com/tiglabs/baudengine/util/monitoring"
-	"github.com/tiglabs/baudengine/util/netutil"
-	"github.com/tiglabs/baudengine/util/reflect"
+	"github.com/vearch/vearch/util/monitoring"
+	"github.com/vearch/vearch/util/netutil"
+	"github.com/vearch/vearch/util/reflect"
 	"github.com/tiglabs/log"
 	"net/http"
 	"runtime/debug"

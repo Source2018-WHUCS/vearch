@@ -16,7 +16,7 @@ package request
 
 import (
 	"context"
-	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/vearch/vearch/proto/entity"
 )
 
 type SearchRequest struct {

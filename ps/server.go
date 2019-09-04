@@ -16,24 +16,24 @@ package ps
 
 import (
 	"context"
-	"github.com/tiglabs/baudengine/util/monitoring"
+	"github.com/vearch/vearch/util/monitoring"
 	"math"
 	"sync"
 	"time"
 
-	"github.com/tiglabs/baudengine/util/baudlog"
-	"github.com/tiglabs/baudengine/util/metrics/mserver"
+	"github.com/vearch/vearch/util/baudlog"
+	"github.com/vearch/vearch/util/metrics/mserver"
 
-	"github.com/tiglabs/baudengine/ps/storage/raftstore"
+	"github.com/vearch/vearch/ps/storage/raftstore"
 
-	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/vearch/vearch/proto/entity"
 
-	"github.com/tiglabs/baudengine/client"
-	"github.com/tiglabs/baudengine/config"
-	"github.com/tiglabs/baudengine/ps/psutil"
-	"github.com/tiglabs/baudengine/util/atomic"
-	"github.com/tiglabs/baudengine/util/routine"
-	rpc "github.com/tiglabs/baudengine/util/server/rpc"
+	"github.com/vearch/vearch/client"
+	"github.com/vearch/vearch/config"
+	"github.com/vearch/vearch/ps/psutil"
+	"github.com/vearch/vearch/util/atomic"
+	"github.com/vearch/vearch/util/routine"
+	rpc "github.com/vearch/vearch/util/server/rpc"
 	"github.com/tiglabs/log"
 
 	"runtime/debug"
@@ -41,7 +41,7 @@ import (
 	"github.com/tiglabs/raft"
 
 	_ "github.com/blevesearch/bleve"
-	_ "github.com/tiglabs/baudengine/util/init"
+	_ "github.com/vearch/vearch/util/init"
 )
 
 // Server partition server

@@ -7,7 +7,7 @@ import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
 import _ "github.com/gogo/protobuf/gogoproto"
-import pspb "github.com/tiglabs/baudengine/proto/pspb"
+import pspb "github.com/vearch/vearch/proto/pspb"
 
 import bytes "bytes"
 

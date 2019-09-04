@@ -15,7 +15,7 @@
 package os
 
 import (
-	"github.com/tiglabs/baudengine/util/runtime/stack"
+	"github.com/vearch/vearch/util/runtime/stack"
 	"os/exec"
 	"os"
 	"path/filepath"

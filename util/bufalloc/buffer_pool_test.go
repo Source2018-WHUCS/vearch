@@ -17,7 +17,7 @@ package bufalloc
 import (
 	"testing"
 
-	"github.com/tiglabs/baudengine/util/bytes"
+	"github.com/vearch/vearch/util/bytes"
 )
 
 func TestGetPoolNum(t *testing.T) {

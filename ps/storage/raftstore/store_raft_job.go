@@ -16,7 +16,7 @@ package raftstore
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudengine/config"
+	"github.com/vearch/vearch/config"
 	"math/rand"
 	"runtime/debug"
 	"time"

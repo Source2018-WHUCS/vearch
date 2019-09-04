@@ -16,13 +16,13 @@ package engine
 
 import (
 	"context"
-	"github.com/tiglabs/baudengine/ps/engine/mapping"
-	"github.com/tiglabs/baudengine/proto/entity"
-	"github.com/tiglabs/baudengine/proto/request"
-	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/vearch/vearch/ps/engine/mapping"
+	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/proto/request"
+	"github.com/vearch/vearch/proto/response"
 	"io"
 
-	"github.com/tiglabs/baudengine/proto/pspb"
+	"github.com/vearch/vearch/proto/pspb"
 )
 
 // Snapshot is an interface for read-only snapshot in an engine.

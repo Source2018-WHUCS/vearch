@@ -20,9 +20,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tiglabs/baudengine/util/bufalloc"
-	"github.com/tiglabs/baudengine/util/metrics"
-	"github.com/tiglabs/baudengine/util/metrics/export"
+	"github.com/vearch/vearch/util/bufalloc"
+	"github.com/vearch/vearch/util/metrics"
+	"github.com/vearch/vearch/util/metrics/export"
 )
 
 func TestRuntimeStatSampler(t *testing.T) {

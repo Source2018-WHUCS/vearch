@@ -15,8 +15,8 @@
 package response
 
 import (
-    "github.com/tiglabs/baudengine/proto"
-    "github.com/tiglabs/baudengine/proto/pspb"
+    "github.com/vearch/vearch/proto"
+    "github.com/vearch/vearch/proto/pspb"
 )
 
 func NewEngineErr(err error) *pspb.EngineFailure {

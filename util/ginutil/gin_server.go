@@ -17,7 +17,7 @@ package ginutil
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/tiglabs/baudengine/util"
+	"github.com/vearch/vearch/util"
 	"net/http"
 	"time"
 )

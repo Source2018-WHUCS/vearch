@@ -17,9 +17,9 @@ package client
 import (
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/proto/request"
-	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/proto/request"
+	"github.com/vearch/vearch/proto/response"
 	"sync"
 )
 

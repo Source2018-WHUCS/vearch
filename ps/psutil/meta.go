@@ -17,8 +17,8 @@ package psutil
 import (
 	"context"
 	"fmt"
-	"github.com/tiglabs/baudengine/client"
-	"github.com/tiglabs/baudengine/util/cbjson"
+	"github.com/vearch/vearch/client"
+	"github.com/vearch/vearch/util/cbjson"
 	"io/ioutil"
 	"os"
 	"path"
@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/vearch/vearch/proto/entity"
 	"github.com/tiglabs/log"
 )
 

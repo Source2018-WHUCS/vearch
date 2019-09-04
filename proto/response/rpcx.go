@@ -15,7 +15,7 @@
 package response
 
 import (
-    "github.com/tiglabs/baudengine/util/cbjson"
+    "github.com/vearch/vearch/util/cbjson"
 )
 
 func NewObjResponse(value interface{}) (*ObjResponse, error) {

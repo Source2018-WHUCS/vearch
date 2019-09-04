@@ -9,7 +9,7 @@ import (
 	"errors"
 	"io"
 
-	byteutil "github.com/tiglabs/baudengine/util/bytes"
+	byteutil "github.com/vearch/vearch/util/bytes"
 )
 
 const minRead = 128

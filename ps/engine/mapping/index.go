@@ -19,8 +19,8 @@ import (
 	"github.com/blevesearch/bleve/analysis"
 	"github.com/blevesearch/bleve/analysis/analyzer/keyword"
 	"github.com/blevesearch/bleve/analysis/datetime/optional"
-	"github.com/tiglabs/baudengine/proto/entity"
-	"github.com/tiglabs/baudengine/proto/pspb"
+	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/proto/pspb"
 	"github.com/tiglabs/log"
 	"github.com/valyala/fastjson"
 )

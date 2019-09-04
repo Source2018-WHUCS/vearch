@@ -15,7 +15,7 @@
 package netutil
 
 import (
-	"github.com/tiglabs/baudengine/util/cbjson"
+	"github.com/vearch/vearch/util/cbjson"
 	"net/http"
 
 	"github.com/tiglabs/log"

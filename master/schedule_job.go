@@ -19,12 +19,12 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/baudengine/util/baudlog"
+	"github.com/vearch/vearch/util/baudlog"
 	"time"
 
 	"github.com/jasonlvhit/gocron"
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/proto/entity"
 	"github.com/tiglabs/log"
 	"go.etcd.io/etcd/clientv3/concurrency"
 )

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/vearch/vearch/proto/entity"
 )
 
 func NewUser(name, password, allowedHost string, userDB map[string]struct{}, privi entity.UserPrivi) *entity.User {

@@ -18,11 +18,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/tiglabs/baudengine/util/metrics/export"
+	"github.com/vearch/vearch/util/metrics/export"
 	"github.com/tiglabs/log"
 
-	"github.com/tiglabs/baudengine/util/metrics"
-	"github.com/tiglabs/baudengine/util/metrics/sysstat"
+	"github.com/vearch/vearch/util/metrics"
+	"github.com/vearch/vearch/util/metrics/sysstat"
 )
 
 var ms = &metricServer{}

@@ -14,7 +14,7 @@
 
 package response
 
-import "github.com/tiglabs/baudengine/util/cbjson"
+import "github.com/vearch/vearch/util/cbjson"
 
 func NewErrDocResults(ids []string, err error) []*DocResult {
     result := make(DocResults, len(ids))

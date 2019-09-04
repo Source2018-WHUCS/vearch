@@ -15,8 +15,8 @@
 package response
 
 import (
-	"github.com/tiglabs/baudengine/proto/pspb"
-	"github.com/tiglabs/baudengine/util/cbjson"
+	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/util/cbjson"
 )
 
 type BulkResponse struct {

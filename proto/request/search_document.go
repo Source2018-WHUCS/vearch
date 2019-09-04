@@ -16,7 +16,7 @@ package request
 
 import (
 	"encoding/json"
-	"github.com/tiglabs/baudengine/ps/engine/sortorder"
+	"github.com/vearch/vearch/ps/engine/sortorder"
 )
 
 type SearchDocumentRequest struct {

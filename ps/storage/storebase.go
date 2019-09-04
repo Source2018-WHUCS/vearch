@@ -21,9 +21,9 @@ import (
 
 	"github.com/tiglabs/log"
 
-	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/vearch/vearch/proto/entity"
 
-	"github.com/tiglabs/baudengine/ps/engine"
+	"github.com/vearch/vearch/ps/engine"
 )
 
 // StoreBase is the base class of partition store.

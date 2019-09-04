@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/tiglabs/baudengine/util/cbjson"
+	"github.com/vearch/vearch/util/cbjson"
 )
 
 // Registry is a list of metrics. It provides a simple way of iterating over them.

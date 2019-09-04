@@ -15,9 +15,9 @@
 package request
 
 import (
-	"github.com/tiglabs/baudengine/proto/entity"
-	"github.com/tiglabs/baudengine/proto/pspb"
-	"github.com/tiglabs/baudengine/util/cbjson"
+	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/util/cbjson"
 )
 
 func NewObjRequest(reqCtx *RequestContext, pid entity.PartitionID, value interface{}) (*ObjRequest, error) {

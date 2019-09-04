@@ -17,12 +17,12 @@ package ginutil
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/util/cbjson"
-	"github.com/tiglabs/baudengine/util/monitoring"
-	"github.com/tiglabs/baudengine/util/netutil"
-	"github.com/tiglabs/baudengine/util/reflect"
-	"github.com/tiglabs/baudengine/util/server/baudhttp"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/util/cbjson"
+	"github.com/vearch/vearch/util/monitoring"
+	"github.com/vearch/vearch/util/netutil"
+	"github.com/vearch/vearch/util/reflect"
+	"github.com/vearch/vearch/util/server/baudhttp"
 	"net/http"
 	"time"
 )

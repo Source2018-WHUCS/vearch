@@ -17,8 +17,8 @@ package raftstore
 import (
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/config"
-	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/vearch/vearch/config"
+	"github.com/vearch/vearch/proto/entity"
 	"github.com/tiglabs/log"
 	"github.com/tiglabs/raft"
 	"sync"

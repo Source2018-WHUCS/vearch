@@ -17,8 +17,8 @@ package document
 import (
 	"fmt"
 	"github.com/spf13/cast"
-	. "github.com/tiglabs/baudengine/test"
-	"github.com/tiglabs/baudengine/test/testutil"
+	. "github.com/vearch/vearch/test"
+	"github.com/vearch/vearch/test/testutil"
 	"github.com/tiglabs/log"
 	"net/http"
 	"testing"

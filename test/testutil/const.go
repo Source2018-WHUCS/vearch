@@ -22,7 +22,7 @@ import (
 	"strings"
 	"sync"
 )
-import tigos "github.com/tiglabs/baudengine/util/runtime/os"
+import tigos "github.com/vearch/vearch/util/runtime/os"
 
 type StringMap map[string]interface{}
 

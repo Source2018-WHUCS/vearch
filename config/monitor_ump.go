@@ -3,8 +3,8 @@
 package config
 
 import (
-	. "github.com/tiglabs/baudengine/util/monitoring"
-	"github.com/tiglabs/baudengine/util/ump"
+	. "github.com/vearch/vearch/util/monitoring"
+	"github.com/vearch/vearch/util/ump"
 	"sync"
 )
 

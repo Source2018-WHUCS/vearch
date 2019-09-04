@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tiglabs/baudengine/util/metrics"
-	"github.com/tiglabs/baudengine/util/metrics/metric"
+	"github.com/vearch/vearch/util/metrics"
+	"github.com/vearch/vearch/util/metrics/metric"
 )
 
 var emptyMetadata = metrics.Metadata{}

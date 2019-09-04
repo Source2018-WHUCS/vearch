@@ -22,9 +22,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tiglabs/baudengine/util/atomic"
+	"github.com/vearch/vearch/util/atomic"
 	"github.com/tiglabs/log"
-	"github.com/tiglabs/baudengine/util/multierror"
+	"github.com/vearch/vearch/util/multierror"
 )
 
 const (

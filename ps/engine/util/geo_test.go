@@ -16,7 +16,7 @@ package util
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudengine/util/assert"
+	"github.com/vearch/vearch/util/assert"
 	"math"
 	"strconv"
 	"testing"

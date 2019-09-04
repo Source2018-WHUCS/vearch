@@ -15,7 +15,7 @@
 package netutil
 
 import (
-	"github.com/tiglabs/baudengine/util/gogc"
+	"github.com/vearch/vearch/util/gogc"
 	"io"
 	"net/http"
 	"net/http/pprof"

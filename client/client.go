@@ -15,8 +15,8 @@
 package client
 
 import (
-	"github.com/tiglabs/baudengine/config"
-	"github.com/tiglabs/baudengine/master/store"
+	"github.com/vearch/vearch/config"
+	"github.com/vearch/vearch/master/store"
 )
 
 type Client struct {

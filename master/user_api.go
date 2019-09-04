@@ -17,9 +17,9 @@ package master
 import (
 	"context"
 	"github.com/gin-gonic/gin"
-	"github.com/tiglabs/baudengine/util"
-	"github.com/tiglabs/baudengine/util/ginutil"
-	"github.com/tiglabs/baudengine/util/server/baudhttp"
+	"github.com/vearch/vearch/util"
+	"github.com/vearch/vearch/util/ginutil"
+	"github.com/vearch/vearch/util/server/baudhttp"
 	"net/http"
 )
 

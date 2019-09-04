@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"github.com/blevesearch/bleve/analysis/analyzer/keyword"
 	"github.com/blevesearch/bleve/registry"
-	"github.com/tiglabs/baudengine/util"
+	"github.com/vearch/vearch/util"
 	"strings"
 
 	"github.com/mmcloughlin/geohash"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/proto/pspb"
+	"github.com/vearch/vearch/proto/pspb"
 )
 
 const (

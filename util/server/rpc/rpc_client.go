@@ -17,12 +17,12 @@ package server
 import (
 	"context"
 	"github.com/smallnest/rpcx/protocol"
-	"github.com/tiglabs/baudengine/util/baudlog"
+	"github.com/vearch/vearch/util/baudlog"
 	"strings"
 
 	"github.com/smallnest/rpcx/client"
-	"github.com/tiglabs/baudengine/util/atomic"
-	"github.com/tiglabs/baudengine/util/server/rpc/handler"
+	"github.com/vearch/vearch/util/atomic"
+	"github.com/vearch/vearch/util/server/rpc/handler"
 	"github.com/tiglabs/log"
 )
 

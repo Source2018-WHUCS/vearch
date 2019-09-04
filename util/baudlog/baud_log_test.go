@@ -15,7 +15,7 @@
 package baudlog
 
 import (
-	"github.com/tiglabs/baudengine/util/assert"
+	"github.com/vearch/vearch/util/assert"
 	"testing"
 	"github.com/tiglabs/log"
 	"time"

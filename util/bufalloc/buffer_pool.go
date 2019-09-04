@@ -17,7 +17,7 @@ package bufalloc
 import (
 	"sync"
 
-	"github.com/tiglabs/baudengine/util/bytes"
+	"github.com/vearch/vearch/util/bytes"
 )
 
 const (

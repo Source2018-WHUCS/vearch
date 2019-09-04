@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tiglabs/baudengine/util/metrics"
+	"github.com/vearch/vearch/util/metrics"
 )
 
 var _ metrics.Metric = &CounterRate{}

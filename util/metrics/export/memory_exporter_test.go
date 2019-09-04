@@ -19,9 +19,9 @@ package export
 import (
 	"testing"
 
-	"github.com/tiglabs/baudengine/util/bufalloc"
-	"github.com/tiglabs/baudengine/util/metrics"
-	"github.com/tiglabs/baudengine/util/metrics/metric"
+	"github.com/vearch/vearch/util/bufalloc"
+	"github.com/vearch/vearch/util/metrics"
+	"github.com/vearch/vearch/util/metrics/metric"
 )
 
 func TestMemoryExporter(t *testing.T) {

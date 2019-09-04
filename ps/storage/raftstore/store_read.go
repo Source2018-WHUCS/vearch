@@ -16,10 +16,10 @@ package raftstore
 
 import (
 	"context"
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/proto/entity"
-	"github.com/tiglabs/baudengine/proto/request"
-	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/proto/request"
+	"github.com/vearch/vearch/proto/response"
 	"github.com/tiglabs/log"
 )
 

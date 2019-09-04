@@ -16,7 +16,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudengine/tools/cbdbexport/logic"
+	"github.com/vearch/vearch/tools/cbdbexport/logic"
 	"os"
 
 	"github.com/spf13/cobra"

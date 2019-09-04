@@ -22,15 +22,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tiglabs/baudengine/util/metrics/mserver"
+	"github.com/vearch/vearch/util/metrics/mserver"
 
-	"github.com/tiglabs/baudengine/client"
-	"github.com/tiglabs/baudengine/config"
-	"github.com/tiglabs/baudengine/router/document"
-	"github.com/tiglabs/baudengine/util"
-	"github.com/tiglabs/baudengine/util/baudlog"
-	_ "github.com/tiglabs/baudengine/util/init"
-	"github.com/tiglabs/baudengine/util/netutil"
+	"github.com/vearch/vearch/client"
+	"github.com/vearch/vearch/config"
+	"github.com/vearch/vearch/router/document"
+	"github.com/vearch/vearch/util"
+	"github.com/vearch/vearch/util/baudlog"
+	_ "github.com/vearch/vearch/util/init"
+	"github.com/vearch/vearch/util/netutil"
 	"github.com/tiglabs/log"
 )
 

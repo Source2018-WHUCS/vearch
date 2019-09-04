@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/tiglabs/baudengine/tools/cbdbexport/cmd"
+import "github.com/vearch/vearch/tools/cbdbexport/cmd"
 
 func main() {
 	cmd.Execute()

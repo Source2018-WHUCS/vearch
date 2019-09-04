@@ -16,12 +16,12 @@ package document
 
 import (
 	"fmt"
-	. "github.com/tiglabs/baudengine/test"
+	. "github.com/vearch/vearch/test"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/test/testutil"
-	"github.com/tiglabs/baudengine/util/assert"
-	"github.com/tiglabs/baudengine/util/cbjson"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/test/testutil"
+	"github.com/vearch/vearch/util/assert"
+	"github.com/vearch/vearch/util/cbjson"
 	"github.com/tiglabs/log"
 	"net/http"
 	"testing"

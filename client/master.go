@@ -18,14 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/baudengine/config"
+	"github.com/vearch/vearch/config"
 	"sync"
 	"time"
 
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/master/store"
-	"github.com/tiglabs/baudengine/proto"
-	. "github.com/tiglabs/baudengine/proto/entity"
+	"github.com/vearch/vearch/master/store"
+	"github.com/vearch/vearch/proto"
+	. "github.com/vearch/vearch/proto/entity"
 	"github.com/tiglabs/log"
 	"go.etcd.io/etcd/clientv3"
 )

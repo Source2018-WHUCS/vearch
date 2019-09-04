@@ -17,19 +17,19 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/proto/request"
-	"github.com/tiglabs/baudengine/proto/response"
-	"github.com/tiglabs/baudengine/util/cbjson"
-	server "github.com/tiglabs/baudengine/util/server/rpc"
-	"github.com/tiglabs/baudengine/util/uuid"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/proto/request"
+	"github.com/vearch/vearch/proto/response"
+	"github.com/vearch/vearch/util/cbjson"
+	server "github.com/vearch/vearch/util/server/rpc"
+	"github.com/vearch/vearch/util/uuid"
 	"sync"
 	"time"
 
 	"bytes"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/proto/entity"
-	"github.com/tiglabs/baudengine/util/server/rpc/handler"
+	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/util/server/rpc/handler"
 	"github.com/tiglabs/log"
 )
 

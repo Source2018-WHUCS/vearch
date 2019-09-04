@@ -16,17 +16,17 @@ package ps
 
 import (
 	"context"
-	"github.com/tiglabs/baudengine/proto/request"
+	"github.com/vearch/vearch/proto/request"
 	"sync"
 
-	"github.com/tiglabs/baudengine/proto/response"
+	"github.com/vearch/vearch/proto/response"
 
-	"github.com/tiglabs/baudengine/config"
-	"github.com/tiglabs/baudengine/proto/entity"
-	"github.com/tiglabs/baudengine/proto/pspb"
-	"github.com/tiglabs/baudengine/ps/engine"
-	"github.com/tiglabs/baudengine/ps/psutil"
-	"github.com/tiglabs/baudengine/ps/storage/raftstore"
+	"github.com/vearch/vearch/config"
+	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/ps/engine"
+	"github.com/vearch/vearch/ps/psutil"
+	"github.com/vearch/vearch/ps/storage/raftstore"
 	"github.com/tiglabs/log"
 )
 

@@ -17,7 +17,7 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"github.com/tiglabs/baudengine/util/monitoring"
+	"github.com/vearch/vearch/util/monitoring"
 	"net"
 	"net/url"
 	"os"

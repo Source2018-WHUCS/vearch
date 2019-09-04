@@ -15,9 +15,9 @@
 package response
 
 import (
-	"github.com/tiglabs/baudengine/proto"
-	sort "github.com/tiglabs/baudengine/ps/engine/sortorder"
-	"github.com/tiglabs/baudengine/util/cbjson"
+	"github.com/vearch/vearch/proto"
+	sort "github.com/vearch/vearch/ps/engine/sortorder"
+	"github.com/vearch/vearch/util/cbjson"
 	"math"
 	"time"
 )

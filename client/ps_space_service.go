@@ -16,20 +16,20 @@ package client
 
 import (
 	"fmt"
-	"github.com/tiglabs/baudengine/proto/request"
-	"github.com/tiglabs/baudengine/proto/response"
-	"github.com/tiglabs/baudengine/util"
+	"github.com/vearch/vearch/proto/request"
+	"github.com/vearch/vearch/proto/response"
+	"github.com/vearch/vearch/util"
 	"math"
 	"sync"
 	"time"
 
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/proto/pspb"
-	"github.com/tiglabs/baudengine/util/bytes"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/util/bytes"
 
 	"github.com/spaolacci/murmur3"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/proto/entity"
+	"github.com/vearch/vearch/proto/entity"
 	"github.com/tiglabs/log"
 	"runtime/debug"
 )

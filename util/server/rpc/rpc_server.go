@@ -21,7 +21,7 @@ import (
 	"github.com/smallnest/rpcx/protocol"
 	"github.com/smallnest/rpcx/server"
 	"github.com/smallnest/rpcx/share"
-	"github.com/tiglabs/baudengine/util/server/rpc/handler"
+	"github.com/vearch/vearch/util/server/rpc/handler"
 	"net"
 )
 

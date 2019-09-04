@@ -17,8 +17,8 @@ package response
 import (
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/baudengine/proto/pspb"
-	"github.com/tiglabs/baudengine/util/cbjson"
+	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/util/cbjson"
 	"net/http"
 )
 

@@ -14,7 +14,7 @@
 
 package response
 
-import "github.com/tiglabs/baudengine/util/cbjson"
+import "github.com/vearch/vearch/util/cbjson"
 
 type Shards struct {
     Total      int `json:"total"`

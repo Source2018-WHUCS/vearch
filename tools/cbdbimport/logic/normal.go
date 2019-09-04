@@ -22,9 +22,9 @@ import (
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/util/cbjson"
-	"github.com/tiglabs/baudengine/util/netutil"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/util/cbjson"
+	"github.com/vearch/vearch/util/netutil"
 )
 
 func NewNormal(master, router, datafile string) *normal {

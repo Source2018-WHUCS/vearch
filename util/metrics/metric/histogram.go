@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/codahale/hdrhistogram"
-	"github.com/tiglabs/baudengine/util/metrics"
+	"github.com/vearch/vearch/util/metrics"
 )
 
 // histogramLatency is the maximum value tracked in latency histograms.

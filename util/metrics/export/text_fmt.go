@@ -23,8 +23,8 @@ import (
 
 	"strconv"
 
-	"github.com/tiglabs/baudengine/util/bytes"
-	"github.com/tiglabs/baudengine/util/metrics"
+	"github.com/vearch/vearch/util/bytes"
+	"github.com/vearch/vearch/util/metrics"
 )
 
 var (

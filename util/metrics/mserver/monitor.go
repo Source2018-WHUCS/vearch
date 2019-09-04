@@ -15,9 +15,9 @@
 package mserver
 
 import (
-	"github.com/tiglabs/baudengine/proto"
-	"github.com/tiglabs/baudengine/util/metrics"
-	"github.com/tiglabs/baudengine/util/metrics/sysstat"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/util/metrics"
+	"github.com/vearch/vearch/util/metrics/sysstat"
 )
 
 func NewErrServerStatus(ip string, err error) *ServerStats {

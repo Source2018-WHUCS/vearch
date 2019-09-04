@@ -15,7 +15,7 @@
 package document
 
 import (
-	. "github.com/tiglabs/baudengine/test"
+	. "github.com/vearch/vearch/test"
 	"github.com/tiglabs/log"
 	"net/http"
 	"testing"
