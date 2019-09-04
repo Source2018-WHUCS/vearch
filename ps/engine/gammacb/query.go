@@ -114,7 +114,7 @@ func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
 	}
 
 	for field, rv := range tmp {
-		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(cast.ToString(rv["value"])), C.Char(isUnion)), nil
+		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(cast.ToString(rv["value"])), C.char(isUnion)), nil
 	}
 
 	return nil, nil
