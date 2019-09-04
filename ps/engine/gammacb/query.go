@@ -99,14 +99,27 @@ func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
 		return nil, err
 	}
 
+	isUnion := 1
+
+	if operator, found := tmp["operator"]; found {
+		op := strings.ToLower(cast.ToString(operator)
+		switch op {
+		case "and":
+			isUnion = 0
+		case "or":
+			isUnion = 1
+		default:
+			return nil, fmt.Errorf("err term filter by operator:[%s]", op)
+		}
+	}
+
 	for field, rv := range tmp {
-		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(cast.ToString(rv["value"]))), nil
+		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(cast.ToString(rv["value"])), C.char(isUnion)), nil
 	}
 
 	return nil, nil
 
 }
-
 
 func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 
@@ -254,48 +267,6 @@ func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 	return nil, nil
 
 }
-
-/**
-{
-  "query": {
-      "sum": [
-        {
-          "field": "feature1",
-          "feature": [0,0,0,0,0],
-          "boost":0.8,
-        },
-        {
-          "field": "feature2",
-          "feature": [0,0,0,0,0],
-          "boost":0.9,
-        }
-      ]
-  }
-}
-
-{
-  "query": {
-      "and": [
-        {
-          "field": "feature1",
-          "feature": [0,0,0,0,0],
-          "symbol":">=",
-          "value":0.8,
-        },
-        {
-          "field": "feature2",
-          "feature": [0,0,0,0,0],
-          "symbol":">=",
-          "value":0.9,
-        }
-      ]
-  },
-  "size":10
-}
-
-
-
-*/
 
 func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 

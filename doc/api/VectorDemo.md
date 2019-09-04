@@ -39,29 +39,6 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
   }
 ' http://$IP:8817/space/tpy/_create  
 ````
-* table 
-
-| name   |      default      |  description |
-|----------|:-------------:|------:|
-| dynamic_schema |  left-aligned | $1600 |
-| partition_num |    centered   |   $12 |
-| replica_num | right-aligned |    $1 |
-| properties | right-aligned |    $1 |
-
-* engine
-
-
-| name   |      default      |  description |
-|----------|:-------------:|------:|
-| name |  left-aligned | $1600 |
-| max_size |    centered   |   $12 |
-| nprobe | right-aligned |    $1 |
-| metric_type | right-aligned |    $1 |
-| ncentroids | right-aligned |    $1 |
-| nsubvector | right-aligned |    $1 |
-| nbits_per_idx | right-aligned |    $1 |
-
-* properties
 
 
 
@@ -115,7 +92,8 @@ curl -H "content-type: application/json" -XPOST -d'
           },
           {
               "term":{
-                "tags":["t1","t2"]
+                "tags":["t1","t2"],
+                "operator":"and"
               }
           }
        ]
@@ -129,6 +107,8 @@ curl -H "content-type: application/json" -XPOST -d'
 }
 ' http://11.3.149.73/tpy/tpy/_search?size=10
 ````
+
+* filter->term-> operator [`and`, `or`] default `or` 
 
 ### delete Document
 
