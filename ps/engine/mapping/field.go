@@ -19,8 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/blevesearch/bleve/analysis/analyzer/keyword"
-	"github.com/blevesearch/bleve/registry"
 	"github.com/vearch/vearch/util"
 	"strings"
 
@@ -79,21 +77,19 @@ func NewFieldMapping(name string, i FieldMappingI) *FieldMapping {
 
 func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 	tmp := struct {
-		Type           string          `json:"type"`
-		Analyzer       string          `json:"analyzer,omitempty"`
-		SearchAnalyzer string          `json:"search_analyzer,omitempty"`
-		DocValues      *bool           `json:"doc_values,omitempty"`
-		Index          *string         `json:"index,omitempty"`
-		Store          *bool           `json:"store,omitempty"`
-		TermVector     *string         `json:"term_vector,omitempty"`
-		Format         *string         `json:"format,omitempty"`
-		CopyTo         json.RawMessage `json:"copy_to,omitempty"`
-		IgnoreAbove    int             `json:"ignore_above,omitempty"`
-		Dimension      int             `json:"dimension,omitempty"`
-		ModelId        string          `json:"model_id,omitempty"`
-		RetrievalType  *string         `json:"retrieval_type,omitempty"`
-		StoreType      *string         `json:"store_type,omitempty"`
-		Array          bool            `json:"array,omitempty"`
+		Type          string          `json:"type"`
+		DocValues     *bool           `json:"doc_values,omitempty"`
+		Index         *string         `json:"index,omitempty"`
+		Store         *bool           `json:"store,omitempty"`
+		TermVector    *string         `json:"term_vector,omitempty"`
+		Format        *string         `json:"format,omitempty"`
+		CopyTo        json.RawMessage `json:"copy_to,omitempty"`
+		IgnoreAbove   int             `json:"ignore_above,omitempty"`
+		Dimension     int             `json:"dimension,omitempty"`
+		ModelId       string          `json:"model_id,omitempty"`
+		RetrievalType *string         `json:"retrieval_type,omitempty"`
+		StoreType     *string         `json:"store_type,omitempty"`
+		Array         bool            `json:"array,omitempty"`
 	}{}
 	err := json.Unmarshal(data, &tmp)
 	if err != nil {
@@ -144,49 +140,12 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 	//set index
 	if tmp.Index != nil {
 		switch *tmp.Index {
-		case "analyzed":
-			if mapping, ok := fieldMapping.(*TextFieldMapping); !ok {
-				return fmt.Errorf("type:[%s] can not set analyzed", fieldMapping.FieldType().String())
-			} else {
-				mapping.Analyzer = DefaultAnalyzer
-			}
-			fieldMapping.Base().Option |= pspb.FieldOption_Index
-		case "not_analyzed":
-			if mapping, ok := fieldMapping.(*TextFieldMapping); !ok {
-				return fmt.Errorf("type:[%s] can not set not_analyzed", fieldMapping.FieldType().String())
-			} else {
-				mapping.Analyzer = keyword.Name
-			}
-			fieldMapping.Base().Option |= pspb.FieldOption_Index
 		case "no", "false":
 			fieldMapping.Base().Option = fieldMapping.Base().Option & withOutIndex
 		default:
-			return errors.New("invalid index")
+			fieldMapping.Base().Option |= pspb.FieldOption_Index
 		}
 
-	}
-
-	//seg analyzer
-	if tmp.Analyzer != "" && tmp.Analyzer != DefaultAnalyzer {
-		a, err := registry.NewCache().AnalyzerNamed(tmp.Analyzer)
-		if a == nil || err != nil {
-			return fmt.Errorf("mapping err not found analysis for %s ", tmp.Analyzer)
-		}
-
-		if mapping, ok := fieldMapping.(*TextFieldMapping); ok {
-			mapping.Analyzer = tmp.Analyzer
-		} else {
-			return fmt.Errorf("type:[%s] can not set analyzer", fieldMapping.FieldType().String())
-		}
-	}
-
-	if tmp.SearchAnalyzer != "" {
-		if mapping, ok := fieldMapping.(*TextFieldMapping); ok {
-			//TODO ANSJ check analysis name is ok ???
-			mapping.SearchAnalyzer = tmp.Analyzer
-		} else {
-			return fmt.Errorf("type:[%s] can not set analyzer", fieldMapping.FieldType().String())
-		}
 	}
 
 	//set docvalues
@@ -396,9 +355,9 @@ type VectortFieldMapping struct {
 	*BaseFieldMapping
 	Dimension     int     `json:"dimension"`
 	ModelId       string  `json:"model_id"`
-	Format        *string `json:"format,omitempty"` //"normalization", "normal"
+	Format        *string `json:"format,omitempty"`         //"normalization", "normal"
 	RetrievalType string  `json:"retrieval_type,omitempty"` // "IVFPQ", "PACINS", ...
-	StoreType     string  `json:"store_type,omitempty"` // "MemoryOnly", "MemoryWithDisk"
+	StoreType     string  `json:"store_type,omitempty"`     // "MemoryOnly", "MemoryWithDisk"
 }
 
 func NewVectorFieldMapping(name string) *VectortFieldMapping {
@@ -438,32 +397,18 @@ func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*
 		}
 		return field, nil
 	case pspb.FieldType_DATE:
-		dateFM := fm.FieldMappingI.(*DateFieldMapping)
-		// automatic indexing behavior
+		// UTC time
+		parsedDateTime, err := cast.ToTimeE(val)
+		if err != nil {
+			return nil, fmt.Errorf("parse date %s faield, err %v", val, err)
+		}
+		return &pspb.Field{
+			Name:   fieldName,
+			Type:   pspb.FieldType_DATE,
+			Value:  &pspb.FieldValue{Time: &pspb.TimeStamp{Usec: parsedDateTime.UnixNano()}},
+			Option: fm.Options(),
+		}, nil
 
-		dateTimeParser := ctx.im.DefaultDateTimeParser
-		if dateFM.Format != "" {
-			if temp, err := ctx.im.GetDateTimeParser(dateFM.Format); err != nil {
-				return nil, err
-			} else {
-				dateTimeParser = temp
-			}
-		}
-		if dateTimeParser != nil {
-			// UTC time
-			parsedDateTime, err := dateTimeParser.ParseDateTime(val)
-			if err != nil {
-				return nil, fmt.Errorf("parse date %s faield, err %v", val, err)
-			}
-			return &pspb.Field{
-				Name:   fieldName,
-				Type:   pspb.FieldType_DATE,
-				Value:  &pspb.FieldValue{Time: &pspb.TimeStamp{Usec: parsedDateTime.UnixNano()}},
-				Option: fm.Options(),
-			}, nil
-		} else {
-			return nil, fmt.Errorf("date time parser not found")
-		}
 	case pspb.FieldType_INT:
 		numericFM := fm.FieldMappingI.(*NumericFieldMapping)
 		if numericFM.Coerce {

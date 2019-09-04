@@ -23,7 +23,6 @@ import "C"
 import (
 	"context"
 	"fmt"
-	_ "github.com/blevesearch/bleve/config"
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/pspb"

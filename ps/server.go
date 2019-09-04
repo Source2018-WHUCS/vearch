@@ -35,12 +35,8 @@ import (
 	"github.com/vearch/vearch/util/routine"
 	rpc "github.com/vearch/vearch/util/server/rpc"
 	"github.com/tiglabs/log"
-
 	"runtime/debug"
-
 	"github.com/tiglabs/raft"
-
-	_ "github.com/blevesearch/bleve"
 	_ "github.com/vearch/vearch/util/init"
 )
 

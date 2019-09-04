@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/blevesearch/bleve/registry"
+	"github.com/spf13/cast"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/util"
 	"github.com/tiglabs/log"
@@ -26,9 +26,6 @@ import (
 	"math"
 	"strings"
 )
-
-//get cache for analyzer
-var cache = registry.NewCache()
 
 func ParseSchema(schema []byte) (*DocumentMapping, error) {
 	tmp := make(map[string]json.RawMessage)
@@ -182,16 +179,13 @@ func (dm *DocumentMapping) processProperty(context *walkContext, fieldName strin
 		} else if context.isDynamic() {
 			var field *pspb.Field
 			// automatic indexing behavior
-			dateTimeParser := context.im.DefaultDateTimeParser
-			if dateTimeParser != nil {
-				parsedDateTime, err := dateTimeParser.ParseDateTime(propertyValueString)
-				if err == nil {
-					field = &pspb.Field{
-						Name:   pathString,
-						Type:   pspb.FieldType_DATE,
-						Value:  &pspb.FieldValue{Time: &pspb.TimeStamp{Usec: parsedDateTime.UnixNano()}},
-						Option: NewDateFieldMapping("").Options(),
-					}
+			parsedDateTime, err := cast.ToTimeE(propertyValueString)
+			if err == nil {
+				field = &pspb.Field{
+					Name:   pathString,
+					Type:   pspb.FieldType_DATE,
+					Value:  &pspb.FieldValue{Time: &pspb.TimeStamp{Usec: parsedDateTime.UnixNano()}},
+					Option: NewDateFieldMapping("").Options(),
 				}
 			}
 			if field == nil {

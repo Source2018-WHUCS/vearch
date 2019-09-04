@@ -355,14 +355,6 @@ func (this *clusterApi) createSpace(c *gin.Context) {
 		space.DynamicSchema = "true"
 	}
 
-	if space.DefaultAnalyzer == "" {
-		space.DefaultAnalyzer = mapping.DefaultAnalyzer
-	}
-
-	if space.DefaultDateTimeParser == "" {
-		space.DefaultDateTimeParser = mapping.DefaultDateTimeParser
-	}
-
 	if space.DefaultField == "" {
 		space.DefaultField = mapping.DefaultField
 	}

@@ -72,15 +72,12 @@ type Space struct {
 	Engine       *Engine         `json:"engine"`
 
 	DynamicSchema         DynamicType     `json:"dynamic_schema,omitempty"`    // has three types true , false , strict
-	DefaultAnalyzer       string          `json:"default_analyzer"`            //default cb_standard
-	DefaultDateTimeParser string          `json:"default_datetime_parser"`     //default optional.Name
 	DefaultField          string          `json:"default_field"`               //default _all
 	StoreDynamic          bool            `json:"store_dynamic"`               //default false
 	StoreSource           *bool           `json:"store_source"`                //default true
 	DocValuesDynamic      *bool           `json:"docvalues_dynamic,omitempty"` //default true
 	Models                json.RawMessage `json:"models,omitempty"`            //json model config for python plugin
 
-	//worked
 	WorkedPartitions []*Partition `json:"worked_partitions"` // partitionids not sorted
 }
 

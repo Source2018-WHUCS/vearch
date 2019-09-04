@@ -16,9 +16,6 @@
 package mapping
 
 import (
-	"github.com/blevesearch/bleve/analysis"
-	"github.com/blevesearch/bleve/analysis/analyzer/keyword"
-	"github.com/blevesearch/bleve/analysis/datetime/optional"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/tiglabs/log"
@@ -28,7 +25,6 @@ import (
 const DefaultField = "_all"
 const DefaultAnalyzer = "keyword"
 const DefaultTokenizer = "keyword"
-const DefaultDateTimeParser = optional.Name
 
 // An IndexMapping controls how objects are placed
 // into an index.
@@ -41,9 +37,7 @@ type IndexMapping struct {
 	DocumentMapping *DocumentMapping `json:"doc_mapping"`
 	//it is not config in index
 	DefaultAnalyzerName       string                      `json:"-"`
-	DefaultAnalyzer           *analysis.Analyzer          `json:"-"`
 	DefaultDateTimeParserName string                      `json:"-"`
-	DefaultDateTimeParser     analysis.DateTimeParser     `json:"-"`
 	DefaultField              string                      `json:"-"`
 	StoreDynamic              bool                        `json:"-"`
 	DocValuesDynamic          bool                        `json:"-"`
@@ -53,20 +47,12 @@ type IndexMapping struct {
 
 // NewIndexMapping creates a new IndexMapping that will use all the default indexing rules
 func NewIndexMapping() *IndexMapping {
-	dtp, err := cache.DateTimeParserNamed(DefaultDateTimeParser)
-	if err != nil {
-		log.Error("init default analyzer err name[%s]", DefaultAnalyzer)
-	}
 	mapping := &IndexMapping{
-		DocumentMapping:       NewDocumentMapping(),
-		DefaultDateTimeParser: dtp,
-		DefaultField:          DefaultField,
-		DynamicSchema:         "true",
-		StoreDynamic:          false,
-		DocValuesDynamic:      true,
-	}
-	if err := mapping.SetDefaultAnalyzer(DefaultAnalyzer); err != nil {
-		log.Error("init analyzer %v fail cause: %v", DefaultAnalyzer, err)
+		DocumentMapping:  NewDocumentMapping(),
+		DefaultField:     DefaultField,
+		DynamicSchema:    "true",
+		StoreDynamic:     false,
+		DocValuesDynamic: true,
 	}
 	return mapping
 }
@@ -83,65 +69,6 @@ func (im *IndexMapping) GetField(path string) *FieldMapping {
 //you can use it like dm.DocumentMappingForField("person.name")
 func (im *IndexMapping) GetDocument(path string) *DocumentMapping {
 	return im.fieldCacher[path]
-}
-
-//you can use it like dm.DocumentMappingForField("person.name")
-func (im *IndexMapping) GetAnalyzerName(path string) string {
-	field := im.GetField(path)
-	if field != nil {
-		if field.FieldMappingI.FieldType() == pspb.FieldType_TEXT {
-			return field.FieldMappingI.(*TextFieldMapping).Analyzer
-		} else if field.FieldMappingI.FieldType() == pspb.FieldType_KEYWORD {
-			return keyword.Name
-		} else {
-			log.Error("can not cast field:[%s] , type is:[%s], to textField so can not set analyzer", path, field.FieldType())
-		}
-	}
-	return im.DefaultAnalyzerName
-}
-
-func (im *IndexMapping) GetAnalyzerByPoint(name *string) (*analysis.Analyzer, error) {
-	if name == nil {
-		return im.DefaultAnalyzer, nil
-	}
-	return im.GetAnalyzer(*name)
-}
-
-//you can use it like dm.DocumentMappingForField("person.name")
-func (im *IndexMapping) GetAnalyzer(name string) (*analysis.Analyzer, error) {
-	if name == "" || name == im.DefaultAnalyzerName {
-		return im.DefaultAnalyzer, nil
-	}
-	return cache.AnalyzerNamed(name)
-}
-
-func (im *IndexMapping) SetDefaultAnalyzer(name string) (err error) {
-	im.DefaultAnalyzer, err = cache.AnalyzerNamed(name)
-	if err != nil {
-		return
-	}
-	im.DefaultAnalyzerName = name
-	return
-}
-
-func (im *IndexMapping) GetDateTimeParser(name string) (analysis.DateTimeParser, error) {
-	if name == "" || name == im.DefaultDateTimeParserName {
-		return im.DefaultDateTimeParser, nil
-	}
-	dateTimeParser, err := cache.DateTimeParserNamed(name)
-	if err != nil {
-		return nil, err
-	}
-	return dateTimeParser, nil
-}
-
-func (im *IndexMapping) SetDefaultDateTimeParse(name string) (err error) {
-	im.DefaultDateTimeParser, err = cache.DateTimeParserNamed(name)
-	if err != nil {
-		return
-	}
-	im.DefaultDateTimeParserName = name
-	return
 }
 
 func (im *IndexMapping) InitFieldCache() {
@@ -220,21 +147,6 @@ func (im *IndexMapping) newWalkContext(dynamic entity.DynamicType) *walkContext 
 	}
 }
 
-func (im *IndexMapping) GetFieldsAnalyzer() (map[string]*analysis.Analyzer, error) {
-	result := make(map[string]*analysis.Analyzer)
-	for f, d := range im.fieldCacher {
-		if d.Field.FieldType() != pspb.FieldType_TEXT && d.Field.FieldType() != pspb.FieldType_KEYWORD{
-			continue
-		}
-		analyzer, err := im.GetAnalyzer(im.GetAnalyzerName(f))
-		if err != nil {
-			return nil, err
-		}
-		result[f] = analyzer
-	}
-	return result, nil
-}
-
 func (im *IndexMapping) GetFieldsType() map[string]pspb.FieldType {
 	result := make(map[string]pspb.FieldType)
 	for f, fm := range im.fieldCacher {
@@ -263,12 +175,6 @@ func Space2Mapping(space *entity.Space) (indexMapping *IndexMapping, err error) 
 	indexMapping = NewIndexMapping()
 	indexMapping.DocumentMapping = docMapping
 	indexMapping.DynamicSchema = space.DynamicSchema
-	if err := indexMapping.SetDefaultAnalyzer(space.DefaultAnalyzer); err != nil {
-		return nil, err
-	}
-	if err := indexMapping.SetDefaultDateTimeParse(space.DefaultDateTimeParser); err != nil {
-		return nil, err
-	}
 	indexMapping.DefaultField = space.DefaultField
 	indexMapping.StoreDynamic = space.StoreDynamic
 	indexMapping.DocValuesDynamic = *space.DocValuesDynamic
