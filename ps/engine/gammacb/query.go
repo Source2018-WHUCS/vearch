@@ -102,7 +102,7 @@ func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
 	isUnion := 1
 
 	if operator, found := tmp["operator"]; found {
-		op := strings.ToLower(cast.ToString(operator)
+		op := strings.ToLower(cast.ToString(operator))
 		switch op {
 		case "and":
 			isUnion = 0
@@ -114,7 +114,7 @@ func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
 	}
 
 	for field, rv := range tmp {
-		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(cast.ToString(rv["value"])), C.char(isUnion)), nil
+		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(cast.ToString(rv["value"])), C.Char(isUnion)), nil
 	}
 
 	return nil, nil
