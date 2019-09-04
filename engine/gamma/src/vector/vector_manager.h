@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef VECTOR_MANAGER_H_
 #define VECTOR_MANAGER_H_
 
@@ -45,11 +52,11 @@ public:
     return index_total_mem_bytes + vector_total_mem_bytes;
   }
 
-  int Dump(const std::string &path);
-  int Load(const std::string &path);
+  int Dump(const std::string &path, int dump_docid, int max_docid);
+  int Load(const std::vector<std::string> &path);
 
 private:
-  void Close();  // release all resource
+  void Close(); // release all resource
 
 private:
   RetrievalModel default_model_;
@@ -58,6 +65,8 @@ private:
   int max_doc_size_;
   bool table_created_;
   IVFPQParameters *ivfpq_param_;
+  VectorInfo **vectors_info_;
+  int vectors_num_;
 
   std::map<std::string, RawVector *> raw_vectors_;
   std::map<std::string, GammaIndex *> vector_indexes_;

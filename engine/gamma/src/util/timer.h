@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef SRC_SEARCHER_UTIL_TIMER_H_
 #define SRC_SEARCHER_UTIL_TIMER_H_
 
@@ -6,8 +13,8 @@
 #include <unistd.h>
 #include <vector>
 
-namespace tig_gamma {
-namespace NI {
+namespace utils {
+
 class Timer {
   struct StatInfo;
 
@@ -76,7 +83,7 @@ private:
 
   std::vector<StatInfo> stats_;
 };
-} // namespace NI
-} // namespace tig_gamma
+
+} // namespace utils
 
 #endif // SRC_SEARCHER_UTIL_TIMER_H_

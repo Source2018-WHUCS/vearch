@@ -1,15 +1,41 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "numeric_index.h"
+#include "tag_index.h"
 
 namespace tig_gamma {
 namespace NI {
 
-int Indexes::Search(const std::vector<RangeFilter> &filters,
+// specialization for string
+template <>
+int Indexes::Add<std::string>(const std::string &field,
+                              std::function<std::string(const int)> cb) {
+  if (!GetIndex(field)) {
+    auto idx = new (std::nothrow) TagIndex(field);
+    if (idx) {
+      idx->Set(cb);
+      indexes_.insert({field, idx});
+      return 0;
+    }
+  }
+  return -1;
+}
+
+int Indexes::Search(const std::vector<FilterInfo> &filters,
                     RangeQueryResultV1 &out) const {
   out.Clear();
   int fsize = filters.size();
 
   if (1 == fsize) {
     auto &_ = filters[0];
+    if (_.is_union) {
+      out.SetFlags(out.Flags() | 0x4);
+    }
     return Search(_.field, _.lower_value, _.upper_value, out);
   }
 
@@ -22,9 +48,14 @@ int Indexes::Search(const std::vector<RangeFilter> &filters,
   int k = -1, k_size = std::numeric_limits<int>::max();
 
   for (int i = 0; i < fsize; i++) {
-    results[j + 1].SetFlags(out.Flags());
-
     auto &_ = filters[i];
+
+    int flags = out.Flags();
+    if (_.is_union) {
+      flags |= 0x4;
+    }
+
+    results[j + 1].SetFlags(flags);
     int retval = Search(_.field, _.lower_value, _.upper_value, results[j + 1]);
     if (retval < 0) {
       ;
@@ -50,7 +81,7 @@ int Indexes::Search(const std::vector<RangeFilter> &filters,
   return Intersect(results, j, k, out);
 }
 
-int Indexes::Search(const std::vector<RangeFilter> &filters,
+int Indexes::Search(const std::vector<FilterInfo> &filters,
                     RangeQueryResult &out) const {
   out.Clear();
   int fsize = filters.size();

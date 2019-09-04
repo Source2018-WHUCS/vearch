@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef GAMMA_INDEX_H_
 #define GAMMA_INDEX_H_
 
@@ -126,6 +133,9 @@ struct GammaIndex {
                      const GammaSearchCondition *condition,
                      VectorResult &result) = 0;
   virtual long GetTotalMemBytes() = 0;
+
+  virtual int Dump(const std::string &dir, int max_vid) = 0;
+  virtual int Load(const std::vector<std::string> &index_dirs) = 0;
 
   size_t d_;
 

@@ -1,3 +1,13 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * Modified by The Gamma Authors.
+ *
+ */
+
 #include "gamma_index_ivfpq.h"
 
 #include <algorithm>
@@ -34,13 +44,17 @@ GammaIVFPQIndex::GammaIVFPQIndex(faiss::Index *quantizer, size_t d,
     this->invlists = nullptr;
   }
 
-  bool ret = rt_invert_index_ptr_->init();
+  bool ret = rt_invert_index_ptr_->Init();
 
   if (ret) {
     this->invlists =
         new RTInvertedLists(rt_invert_index_ptr_, nlist, code_size);
   }
   this->nprobe = nprobe;
+
+#ifdef PERFORMANCE_TESTING
+  search_count_ = 0;
+#endif
 }
 
 faiss::InvertedListScanner *
@@ -195,7 +209,7 @@ bool GammaIVFPQIndex::Add(int n, const float *vec) {
   }
 
   /* stage 2 : add invert info to invert index */
-  rt_invert_index_ptr_->addKeys(new_keys, new_codes);
+  rt_invert_index_ptr_->AddKeys(new_keys, new_codes);
 #ifdef PERFORMANCE_TESTING
   double t1 = faiss::getmillisecs();
   if (indexed_vec_count_ % 10000 == 0) {
@@ -220,10 +234,6 @@ void GammaIVFPQIndex::SearchIVFPQ(int n, const float *x,
   search_preassigned(n, x, condition, idx, coarse_dis, distances, labels, total,
                      false);
 }
-
-#ifdef PERFORMANCE_TESTING
-std::atomic<uint64_t> search_count(0);
-#endif
 
 void GammaIVFPQIndex::search_preassigned(
     int n, const float *x, const GammaSearchCondition *condition,
@@ -266,13 +276,17 @@ void GammaIVFPQIndex::search_preassigned(
 #ifdef PERFORMANCE_TESTING
   double s_start = utils::getmillisecs();
 #endif
+
+  int ni_total = -1;
+  if (condition->numeric_results &&
+      condition->numeric_results->GetAllResult().size() >= 1) {
+    ni_total = condition->numeric_results->GetAllResult()[0].Size();
+  }
+
   if (condition->numeric_results &&
       condition->numeric_results->GetAllResult().size() == 1 &&
-      condition->numeric_results->GetAllResult()[0].GetDocIds().size() <
-          50000) {
-
-    const std::vector<int> docid_list =
-        condition->numeric_results->GetAllResult()[0].GetDocIds();
+      condition->numeric_results->GetAllResult()[0].Size() < 50000) {
+    const std::vector<int> docid_list = condition->numeric_results->ToDocs();
 
 #ifdef DEBUG
     std::stringstream ss;
@@ -322,7 +336,6 @@ void GammaIVFPQIndex::search_preassigned(
 
 #pragma omp parallel reduction(+ : nlistv, ndis, nheap)
     {
-
       faiss::InvertedListScanner *scanner =
           get_InvertedListScanner(store_pairs);
       faiss::ScopeDeleter1<faiss::InvertedListScanner> del(scanner);
@@ -438,10 +451,11 @@ void GammaIVFPQIndex::search_preassigned(
         } else { // sort by distance
           reorder_result(k, simi, idxi);
         }
+        total[i] = ni_total;
 
 #ifdef PERFORMANCE_TESTING
         double end = utils::getmillisecs();
-        if (++search_count % 1000 == 0) {
+        if (++search_count_ % 1000 == 0) {
           std::stringstream perf_ss;
           perf_ss << "ivfqp range filter, doc id list size="
                   << docid_list.size() << ", vid list len=" << vid_list_len
@@ -464,7 +478,6 @@ void GammaIVFPQIndex::search_preassigned(
 
 #pragma omp parallel reduction(+ : nlistv, ndis, nheap)
   {
-
     faiss::InvertedListScanner *scanner = get_InvertedListScanner(store_pairs);
     faiss::ScopeDeleter1<faiss::InvertedListScanner> del(scanner);
 
@@ -543,11 +556,11 @@ void GammaIVFPQIndex::search_preassigned(
                             recall_simi, recall_idxi, recall_num);
 
           nscan += list_size;
-          total[i] += list_size;
 
           if (max_codes && nscan >= max_codes)
             break;
         }
+        total[i] = ni_total;
 
         ndis += nscan;
 
@@ -613,7 +626,7 @@ void GammaIVFPQIndex::search_preassigned(
 
 #ifdef PERFORMANCE_TESTING
         double end = utils::getmillisecs();
-        if (++search_count % 1000 == 0) {
+        if (++search_count_ % 1000 == 0) {
           std::stringstream perf_ss;
           perf_ss << "ivfqp query parallel "
                   << "coarse cost=" << coarse_end - query_start << "ms, "
@@ -629,7 +642,6 @@ void GammaIVFPQIndex::search_preassigned(
 
       }      // parallel for
     } else { // parallelize over inverted lists
-
       std::vector<long> local_idx(recall_num);
       std::vector<float> local_dis(recall_num);
 
@@ -648,7 +660,7 @@ void GammaIVFPQIndex::search_preassigned(
           // can't do the test on max_codes
         }
 
-        total[i] += ndis; // ???
+        total[i] = ni_total;
 
         // merge thread-local results
 
@@ -743,7 +755,7 @@ void GammaIVFPQIndex::search_preassigned(
           }
 #ifdef PERFORMANCE_TESTING
           double s_end = utils::getmillisecs();
-          if (++search_count % 1000 == 0) {
+          if (++search_count_ % 10000 == 0) {
             std::stringstream perf_ss;
             perf_ss << "ivfpq nprobe parallel: "
                     << "coarse cost=" << coarse_end - s_start << "ms, "
@@ -1021,10 +1033,10 @@ RTInvertedLists::RTInvertedLists(realtime::RTInvertIndex *rt_invert_index_ptr,
 size_t RTInvertedLists::list_size(size_t list_no) const {
   if (!rt_invert_index_ptr_)
     return 0;
-  long *ivt_list = NULL;
+  long *ivt_list = nullptr;
   size_t list_size = 0;
-  uint8_t *ivt_codes_list = NULL;
-  bool ret = rt_invert_index_ptr_->getIvtList(list_no, ivt_list, list_size,
+  uint8_t *ivt_codes_list = nullptr;
+  bool ret = rt_invert_index_ptr_->GetIvtList(list_no, ivt_list, list_size,
                                               ivt_codes_list);
   if (!ret)
     return 0;
@@ -1033,27 +1045,27 @@ size_t RTInvertedLists::list_size(size_t list_no) const {
 
 const uint8_t *RTInvertedLists::get_codes(size_t list_no) const {
   if (!rt_invert_index_ptr_)
-    return NULL;
-  long *ivt_list = NULL;
+    return nullptr;
+  long *ivt_list = nullptr;
   size_t list_size = 0;
-  uint8_t *ivt_codes_list = NULL;
-  bool ret = rt_invert_index_ptr_->getIvtList(list_no, ivt_list, list_size,
+  uint8_t *ivt_codes_list = nullptr;
+  bool ret = rt_invert_index_ptr_->GetIvtList(list_no, ivt_list, list_size,
                                               ivt_codes_list);
   if (!ret)
-    return NULL;
+    return nullptr;
   return ivt_codes_list;
 }
 
 const long *RTInvertedLists::get_ids(size_t list_no) const {
   if (!rt_invert_index_ptr_)
-    return NULL;
-  long *ivt_list = NULL;
+    return nullptr;
+  long *ivt_list = nullptr;
   size_t list_size = 0;
-  uint8_t *ivt_codes_list = NULL;
-  bool ret = rt_invert_index_ptr_->getIvtList(list_no, ivt_list, list_size,
+  uint8_t *ivt_codes_list = nullptr;
+  bool ret = rt_invert_index_ptr_->GetIvtList(list_no, ivt_list, list_size,
                                               ivt_codes_list);
   if (!ret)
-    return NULL;
+    return nullptr;
   return ivt_list;
 }
 

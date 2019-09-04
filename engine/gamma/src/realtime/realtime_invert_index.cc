@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "realtime_invert_index.h"
 #include "log.h"
 #include "utils.h"
@@ -9,39 +16,39 @@ RTInvertIndex::RTInvertIndex(faiss::Index *index, long max_vec_size,
                              size_t bucket_keys, size_t bucket_keys_limit)
     : _bucket_keys(bucket_keys), _bucket_keys_limit(bucket_keys_limit),
       _max_vec_size(max_vec_size) {
-  _cur_ptr = NULL;
+  _cur_ptr = nullptr;
   if (index) {
     _index_ivf = dynamic_cast<faiss::IndexIVF *>(index);
   } else {
-    _index_ivf = NULL;
+    _index_ivf = nullptr;
   }
 }
 
 RTInvertIndex::~RTInvertIndex() {
   if (!_index_ivf) {
     delete _index_ivf;
-    _index_ivf = NULL;
+    _index_ivf = nullptr;
   }
   if (!_cur_ptr) {
     delete _cur_ptr;
-    _cur_ptr = NULL;
+    _cur_ptr = nullptr;
   }
 }
 
-bool RTInvertIndex::init() {
-  if (NULL == _index_ivf)
+bool RTInvertIndex::Init() {
+  if (nullptr == _index_ivf)
     return false;
   _cur_ptr = new (std::nothrow) RealTimeMemData(
       _index_ivf->nlist, _max_vec_size, _bucket_keys, _index_ivf->code_size);
-  if (NULL == _cur_ptr)
+  if (nullptr == _cur_ptr)
     return false;
 
-  if (!_cur_ptr->init())
+  if (!_cur_ptr->Init())
     return false;
   return true;
 }
 
-bool RTInvertIndex::addKeys(std::map<int, std::vector<long>> &new_keys,
+bool RTInvertIndex::AddKeys(std::map<int, std::vector<long>> &new_keys,
                             std::map<int, std::vector<uint8_t>> &new_codes) {
   // error, not index_ivf
   if (!_index_ivf)
@@ -67,7 +74,7 @@ bool RTInvertIndex::addKeys(std::map<int, std::vector<long>> &new_keys,
         _cur_ptr->_cur_invert_ptr->_cur_bucket_keys[bucket_no]) {
       std::vector<long> &new_keys_vec = new_keys[bucket_no];
       std::vector<uint8_t> &new_codes_vec = new_codes[bucket_no];
-      _cur_ptr->addKeys((size_t)bucket_no, (size_t)keys_size, new_keys_vec,
+      _cur_ptr->AddKeys((size_t)bucket_no, (size_t)keys_size, new_keys_vec,
                         new_codes_vec);
     } else { // can not add new keys any more
       if (_cur_ptr->_cur_invert_ptr->_cur_bucket_keys[bucket_no] * 2 >=
@@ -97,11 +104,11 @@ bool RTInvertIndex::addKeys(std::map<int, std::vector<long>> &new_keys,
           free(p);
         }
 #endif
-        if (!_cur_ptr->extendBucketMem(bucket_no)) {
+        if (!_cur_ptr->ExtendBucketMem(bucket_no)) {
           return false;
         }
 
-        _cur_ptr->addKeys((size_t)bucket_no, (size_t)keys_size,
+        _cur_ptr->AddKeys((size_t)bucket_no, (size_t)keys_size,
                           new_keys[bucket_no], new_codes[bucket_no]);
       }
     }
@@ -110,10 +117,10 @@ bool RTInvertIndex::addKeys(std::map<int, std::vector<long>> &new_keys,
   return true;
 }
 
-bool RTInvertIndex::getIvtList(const size_t &bucket_no, long *&ivt_list,
+bool RTInvertIndex::GetIvtList(const size_t &bucket_no, long *&ivt_list,
                                size_t &ivt_size, uint8_t *&ivt_codes_list) {
   ivt_size = _cur_ptr->_cur_invert_ptr->_retrieve_idx_pos[bucket_no];
-  return _cur_ptr->getIvtList(bucket_no, ivt_list, ivt_codes_list);
+  return _cur_ptr->GetIvtList(bucket_no, ivt_list, ivt_codes_list);
 }
 
 int RTInvertIndex::RetrieveCodes(
@@ -129,6 +136,14 @@ int RTInvertIndex::RetrieveCodes(
     std::vector<std::vector<long>> &bucket_vids) {
   return _cur_ptr->RetrieveCodes(vids_list, vids_list_size, bucket_codes,
                                  bucket_vids);
+}
+
+int RTInvertIndex::Dump(const std::string &dir, int max_vid) {
+  return _cur_ptr->Dump(dir, max_vid);
+}
+
+int RTInvertIndex::Load(const std::vector<std::string> &index_dirs) {
+  return _cur_ptr->Load(index_dirs);
 }
 
 } // namespace realtime

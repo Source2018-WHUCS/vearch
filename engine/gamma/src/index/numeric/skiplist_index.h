@@ -1,9 +1,10 @@
-
 /**
- * Copyright(C) JD.COM, all rights reserved.
- * Author: Chen Jianyu (chenjianyu@jd.com)
- * Descriptor: skiplist index
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
  */
+
 #ifndef SRC_SEARCHER_INDEX_NUMERIC_SKIPLIST_INDEX_H_
 #define SRC_SEARCHER_INDEX_NUMERIC_SKIPLIST_INDEX_H_
 
@@ -68,11 +69,13 @@ template <typename T> struct DupList {
   void SetTail(DupNode<T> *x) { tail_.store(x, std::memory_order_release); }
   DupNode<T> *Tail() { return tail_.load(std::memory_order_acquire); }
 
+  int Size() const { return size_; }
+
 private:
   std::atomic<DupNode<T> *> tail_;
 
   // only used to locate the insertion slot in the rt.Insert() thread.
-  int size_;
+  std::atomic<int> size_;
 };
 
 template <typename K, typename V> struct Node {
@@ -200,7 +203,7 @@ private:
   std::atomic<int> level_; // Height of the entrie list
   std::atomic<size_t> size_;
 
-  Random random_;
+  utils::Random random_;
 
 private:
   // TODO use memory allocator

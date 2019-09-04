@@ -1,8 +1,10 @@
 /**
- * Copyright(C) JD.COM, all rights reserved.
- * Author: Chen Jianyu (chenjianyu@jd.com)
- * Description: performance test
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
  */
+
 #include "test.h"
 #include "util/timer.h"
 #include "util/utils.h"
@@ -129,6 +131,62 @@ public:
     std::this_thread::sleep_for(std::chrono::seconds(10));
   }
 
+  void StartAddThread2() {
+    add_task_ = std::thread([this]() {
+      long fsize = utils::get_file_size("./data/querys.dat");
+
+      FILE *fp = fopen("./data/vectors.dat", fsize > 0 ? "rb" : "wb");
+      if (not fp) {
+        LOG(ERROR) << "open file error!";
+        return;
+      }
+
+      size_t d = table_info_.meta.dimension;
+
+      vector<float> xb(d * 1);
+      srand48(1024);
+      std::generate(xb.begin(), xb.end(), drand48);
+
+      if (fsize > 0) {
+        if (fread(xb.data(), sizeof(float), d, fp) != d) {
+          LOG(ERROR) << "read file error!";
+        }
+      } else {
+        if (fwrite(xb.data(), sizeof(float), d, fp) != d) {
+          LOG(ERROR) << "write file error!";
+        }
+      }
+
+      _AddDoc(engine_, table_info_,
+              {
+                  {"branch", 7},
+                  {"product_code", 101},
+                  {"type", 1},
+              },
+              xb);
+
+      _AddDoc(engine_, table_info_,
+              {
+                  {"branch", 7},
+                  {"product_code", 201},
+                  {"type", 1},
+              },
+              xb);
+
+      _AddDoc(engine_, table_info_,
+              {
+                  {"branch", 7},
+                  {"product_code", 101},
+                  {"type", 2},
+              },
+              xb);
+
+      fclose(fp);
+      LOG(INFO) << ">>> Add finished.";
+    });
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+  }
+
   double Search(const int count, int direct_search_type = 0) {
     assert(count > 0);
     long fsize = utils::get_file_size("./data/querys.dat");
@@ -220,7 +278,7 @@ private:
                              field_infos,             // fields
                              t.field_mappings.size(), // fields_num
                              vector_infos,            // vectors_info
-                             1, kIVFPQParam);                  // vectors_num
+                             1, kIVFPQParam);         // vectors_num
     ResponseCode code = ::CreateTable(engine, table);
     DestroyTable(table);
 
@@ -389,7 +447,7 @@ void test_perf(int max_doc_size, int direct_search_type) {
   pt.StartAddThread();
   pt.BuildIndex();
 
-  tig_gamma::NI::Timer t0;
+  utils::Timer t0;
   t0.Start("Search");
   auto avg_cost_ms = pt.Search(1000, direct_search_type);
   t0.Stop();
@@ -398,20 +456,68 @@ void test_perf(int max_doc_size, int direct_search_type) {
   LOG(INFO) << "finish test_perf, AVG cost -> " << avg_cost_ms << " ms.";
 }
 
+void test_bugfix() {
+  tig_gamma::TableInfo t;
+  t.table_name = "bugfix";
+  t.field_mappings = {
+      {"_id", STRING},
+      {"branch", INT},
+      {"product_code", INT},
+      {"type", INT},
+  };
+
+  t.meta.vector_name = "image2";
+  t.meta.dimension = 512;
+  t.meta.retrieval_type = "IVFPQ";
+  t.meta.store_type = "MemoryOnly";
+  t.meta.model_id = "VGG";
+
+  PerfTest pt(1000);
+
+  pt.Init("table2", "logs");
+  pt.CreateTable(t);
+  LOG(INFO) << "Init & CreateTable done!";
+
+  pt.StartAddThread2();
+  // pt.BuildIndex();
+
+  utils::Timer t0;
+  t0.Start("Search");
+  auto avg_cost_ms = pt.Search(1, 0);
+  t0.Stop();
+  t0.Output();
+
+  LOG(INFO) << "finish test_perf, AVG cost -> " << avg_cost_ms << " ms.";
+}
+
 int main(int argc, char *argv[]) {
+  int tc = 0;
   int max_doc_size = kDefaultMaxDocSize;
   int direct_search_type = 0;
 
   if (argc > 1) {
-    max_doc_size = std::stoi(argv[1]);
+    tc = std::stoi(argv[1]);
   }
   if (argc > 2) {
-    direct_search_type = std::stoi(argv[2]);
+    max_doc_size = std::stoi(argv[2]);
+  }
+  if (argc > 3) {
+    direct_search_type = std::stoi(argv[3]);
   }
 
   fprintf(stderr, "set max_doc_size to %d\n", max_doc_size);
   fprintf(stderr, "set direct_search_type to %d\n", direct_search_type);
 
-  test_perf(max_doc_size, direct_search_type);
+  switch (tc) {
+  case 0:
+    test_perf(max_doc_size, direct_search_type);
+    break;
+  case 1:
+    test_bugfix();
+    break;
+  default:
+    break;
+  }
+
   return 0;
 }

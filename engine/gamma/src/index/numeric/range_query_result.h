@@ -1,8 +1,10 @@
 /**
- * Copyright(C) JD.COM, all rights reserved.
- * Author: Chen Jianyu (chenjianyu@jd.com)
- * Description: numeric range query result
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
  */
+
 #ifndef SRC_SEARCHER_INDEX_NUMERIC_RANGE_QUERY_RESULT_H_
 #define SRC_SEARCHER_INDEX_NUMERIC_RANGE_QUERY_RESULT_H_
 
@@ -73,7 +75,6 @@ public:
     next_ = -1;
     n_doc_ = -1;
     bitmap_.clear();
-    docids.clear();
   }
 
 public:
@@ -86,13 +87,9 @@ public:
     int n = max_ - min_ + 1;
     assert(n > 0);
     bitmap_.resize(n, init_value);
-    docids.reserve(n / 10); // reserve memory to store docids
   }
 
-  void Set(int pos) {
-    bitmap_[pos] = true;
-    docids.push_back(pos + min_);
-  }
+  void Set(int pos) { bitmap_[pos] = true; }
 
   int Min() const { return min_; }
   int Max() const { return max_; }
@@ -103,8 +100,6 @@ public:
   int Flags() { return flags_; }
 
   BitmapType &Ref() { return bitmap_; }
-
-  const std::vector<int> &GetDocIds() const { return docids; }
 
   /**
    * @return sorted docIDs
@@ -121,7 +116,6 @@ private:
   mutable int n_doc_;
 
   BitmapType bitmap_;
-  std::vector<int> docids;
 };
 // do intersection lazily
 class RangeQueryResult {

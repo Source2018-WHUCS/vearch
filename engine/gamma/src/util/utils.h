@@ -1,9 +1,17 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef UTILS_H_
 #define UTILS_H_
 
 #include "gamma_api.h"
 #include <cassert>
 #include <functional>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -49,12 +57,6 @@ std::vector<std::string> ls_folder(const std::string &dir_name,
 
 ssize_t write_n(int fd, const char *buf, ssize_t nbyte, int retry);
 
-ByteArray *string_to_bytearray(const std::string &str);
-
-std::string float_array_to_string(float *data, int len);
-std::string VectorQueryToString(VectorQuery *vector_query);
-std::string RequestToString(const Request *request);
-
 template <class T> inline T *NewArray(int len, const char *msg) {
   assert(len > 0);
   T *data = new (std::nothrow) T[len];
@@ -63,6 +65,8 @@ template <class T> inline T *NewArray(int len, const char *msg) {
   }
   return data;
 }
+
+std::string join(const std::vector<std::string> &strs, char separator);
 
 typedef struct MEM_PACKED {
   char name[20];
@@ -75,6 +79,21 @@ typedef struct MEM_PACK {
 } MEM_PACK;
 
 MEM_PACK *get_memoccupy();
+
+// Based on http://stackoverflow.com/questions/236129/split-a-string-in-c Split
+// a string by a delim
+inline std::vector<std::string> Split(const std::string &s, char delim) {
+  std::vector<std::string> elems;
+  if (not s.empty()) {
+    std::stringstream ss;
+    ss.str(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+      elems.push_back(item);
+    }
+  }
+  return elems;
+}
 
 } // namespace utils
 

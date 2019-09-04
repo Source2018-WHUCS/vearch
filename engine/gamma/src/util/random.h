@@ -1,9 +1,15 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #pragma once
 
 #include <cstdint>
 
-namespace tig_gamma {
-namespace NI {
+namespace utils {
 
 class Random {
 public:
@@ -53,5 +59,4 @@ private:
   uint32_t seed;
 };
 
-} // namespace NI
-} // namespace tig_gamma
+} // namespace utils

@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef GAMMA_COMMON_DATA_H_
 #define GAMMA_COMMON_DATA_H_
 
@@ -21,8 +28,8 @@ enum class ResultCode : std::uint16_t {
   Undefined
 };
 
-enum RawVectorType { MemoryOnly, MemoryWithDisk };
-enum RetrievalModel { IVFPQ, GPU_IVFPQ, SPTAG, PACINS };
+enum RawVectorType { MemoryOnly };
+enum RetrievalModel { IVFPQ };
 
 struct VectorDocField {
   std::string name;
@@ -123,7 +130,7 @@ struct GammaQuery {
   VectorQuery **vec_query;
   int vec_num;
   GammaSearchCondition *condition;
-  OnlineLogger *logger;
+  utils::OnlineLogger *logger;
 };
 
 struct GammaResult {
@@ -160,6 +167,58 @@ struct GammaResult {
   int results_count;
 
   VectorDoc *docs;
+};
+
+struct IVFPQParamHelper {
+  IVFPQParamHelper(IVFPQParameters *ivfpq_param) { ivfpq_param_ = ivfpq_param; }
+  void SetDefaultValue() {
+    if (ivfpq_param_->metric_type == -1)
+      ivfpq_param_->metric_type = InnerProduct;
+    if (ivfpq_param_->nprobe == -1)
+      ivfpq_param_->nprobe = 10;
+    if (ivfpq_param_->ncentroids == -1)
+      ivfpq_param_->ncentroids = 256;
+    if (ivfpq_param_->nsubvector == -1)
+      ivfpq_param_->nsubvector = 32;
+    if (ivfpq_param_->nbits_per_idx == -1)
+      ivfpq_param_->nbits_per_idx = 8;
+  }
+
+  bool Validate() {
+    if (ivfpq_param_->metric_type < InnerProduct ||
+        ivfpq_param_->metric_type > L2 || ivfpq_param_->nprobe <= 0 ||
+        ivfpq_param_->ncentroids <= 0 || ivfpq_param_->nsubvector <= 0 ||
+        ivfpq_param_->nbits_per_idx <= 0)
+      return false;
+    if (ivfpq_param_->nsubvector % 4 != 0) {
+      LOG(ERROR) << "only support multiple of 4 now, nsubvector="
+                 << ivfpq_param_->nsubvector;
+      return false;
+    }
+    if (ivfpq_param_->nbits_per_idx != 8) {
+      LOG(ERROR) << "only support 8 now, nbits_per_idx="
+                 << ivfpq_param_->nbits_per_idx;
+      return false;
+    }
+    if (ivfpq_param_->nprobe > ivfpq_param_->ncentroids) {
+      LOG(ERROR) << "nprobe=" << ivfpq_param_->nprobe
+                 << " > ncentroids=" << ivfpq_param_->ncentroids;
+      return false;
+    }
+    return true;
+  }
+
+  std::string ToString() {
+    std::stringstream ss;
+    ss << "ivfpq parameters: metric_type=" << ivfpq_param_->metric_type
+       << ", nprobe=" << ivfpq_param_->nprobe
+       << ", ncentroids=" << ivfpq_param_->ncentroids
+       << ", nsubvector=" << ivfpq_param_->nsubvector
+       << ", nbits_per_idx=" << ivfpq_param_->nbits_per_idx;
+    return ss.str();
+  }
+
+  IVFPQParameters *ivfpq_param_;
 };
 
 } // namespace tig_gamma

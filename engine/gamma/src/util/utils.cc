@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "utils.h"
 
 #include <dirent.h>
@@ -227,58 +234,21 @@ ssize_t write_n(int fd, const char *buf, ssize_t n_bytes, int retry) {
   return write_bytes;
 }
 
-ByteArray *string_to_bytearray(const std::string &str) {
-  ByteArray *ba = static_cast<ByteArray *>(malloc(sizeof(ByteArray)));
-  ba->len = str.size();
-  ba->value = static_cast<char *>(malloc(str.size() * sizeof(char)));
-  memcpy(ba->value, str.data(), ba->len);
-  return ba;
-}
-
-std::string float_array_to_string(float *data, int len) {
-  if (data == nullptr)
-    return "";
+std::string join(const std::vector<std::string> &strs, char separator) {
   std::stringstream ss;
   ss << "[";
-  for (int i = 0; i < len; i++) {
-    ss << data[i];
-    if (i != len - 1) {
-      ss << ",";
+  for (size_t i = 0; i < strs.size(); i++) {
+    if (i != 0) {
+      ss << separator;
     }
+    ss << strs[i];
   }
   ss << "]";
   return ss.str();
 }
 
-std::string VectorQueryToString(VectorQuery *vector_query) {
-  std::stringstream ss;
-  ss << "name:"
-     << std::string(vector_query->name->value, vector_query->name->len)
-     << " min score:" << vector_query->min_score
-     << " max score:" << vector_query->max_score
-     << " boost:" << vector_query->boost
-     << " has boost:" << vector_query->has_boost << " value:"
-     << float_array_to_string((float *)vector_query->value->value,
-                              vector_query->value->len / sizeof(float));
-  return ss.str();
-}
-
-std::string RequestToString(const Request *request) {
-  std::stringstream ss;
-  ss << "{req_num:" << request->req_num << " topn:" << request->topn
-     << " has_rank:" << request->has_rank
-     << " vec_num:" << request->vec_fields_num;
-  for (int i = 0; i < request->vec_fields_num; i++) {
-    ss << " vec_id:" << i << " [" << VectorQueryToString(request->vec_fields[i])
-       << "]";
-  }
-  ss << "}";
-  return ss.str();
-}
-
 MEM_PACK *get_memoccupy() {
   FILE *fd;
-  int n;
   double mem_total, mem_used_rate;
   char buff[256];
   MEM_OCCUPY *m = (MEM_OCCUPY *)malloc(sizeof(MEM_OCCUPY));

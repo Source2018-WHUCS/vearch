@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include <chrono>
 #include <faiss/utils.h>
 #include <fstream>
@@ -9,9 +16,11 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include <sys/mman.h>
+#include <fcntl.h>
 
 #include "test.h"
-#include "util/cJSON.h"
+#include "cJSON.h"
 #include "util/utils.h"
 
 using std::string;
@@ -131,7 +140,6 @@ void TestMultiUrl() {
   printf("Create table ret [%d]\n", ret);
 
   double start = utils::getmillisecs();
-  int doc_id = 0;
 
   string profile_file = "/root/xiedabin/vector-db/build/sku_multi_url.txt";
   string feature_file = "/root/xiedabin/vector-db/build/multi_url_feat.dat";
@@ -221,7 +229,7 @@ void TestMultiUrl() {
 
   double add_time = utils::getmillisecs() - start;
 
-  printf("Add use time [%.1f]ms, num=%d\n", add_time, idx);
+  printf("Add use time [%.1f]ms, num=%ld\n", add_time, idx);
 
   std::thread t(BuildIndex, engine);
   t.detach();
@@ -358,7 +366,6 @@ void TestOneUrl() {
   printf("Create table ret [%d]\n", ret);
 
   double start = utils::getmillisecs();
-  int doc_id = 0;
 
   string profile_file = "/root/wxd/feat_dir/sku_url_cid0_1.txt";
   string feature_file = "/root/wxd/feat_dir/feat_same0_0.dat";
@@ -488,7 +495,7 @@ void TestOneUrl() {
 
   double add_time = utils::getmillisecs() - start;
 
-  printf("Add use time [%.1f]ms, num=%d\n", add_time, idx);
+  printf("Add use time [%.1f]ms, num=%ld\n", add_time, idx);
 
   while (GetIndexStatus(engine) != INDEXED) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -560,6 +567,177 @@ void TestOneUrl() {
   printf("Finshed!\n");
 }
 
+void TestSearchDirectlyL2() {
+  setvbuf(stdout, (char *)NULL, _IONBF, 0);
+  string path = "TestSearchDirectlyL2_files";
+  string log_dir = "TestSearchDirectlyL2_log";
+  int max_doc_size = 5000000;
+  struct Config *config = MakeConfig(StringToByteArray(path), max_doc_size);
+  SetLogDictionary(StringToByteArray(log_dir));
+  void *engine = Init(config);
+  DestroyConfig(config);
+
+  EXPECT_NE(engine, nullptr);
+
+  struct ByteArray *table_name = MakeByteArray("test", 4);
+  int d = 512;
+
+  std::vector<string> fields_vec = {"sku", "_id", "cid1", "cid2", "cid3"};
+  std::vector<enum DataType> fields_type = {LONG, STRING, INT, INT, INT};
+
+  struct FieldInfo **field_infos = MakeFieldInfos(fields_vec.size());
+
+  for (size_t i = 0; i < fields_vec.size(); ++i) {
+    struct FieldInfo *field_info =
+        MakeFieldInfo(StringToByteArray(fields_vec[i]), fields_type[i], 1);
+    SetFieldInfo(field_infos, i, field_info);
+  }
+
+  struct VectorInfo **vectors_info = MakeVectorInfos(1);
+  string model_id = "model";
+  string vector_name = "abc";
+  string retrieval_type = "IVFPQ";
+  string store_type = "MemoryOnly";
+  struct VectorInfo *vector_info = MakeVectorInfo(
+      StringToByteArray(vector_name), FLOAT, d, StringToByteArray(model_id),
+      StringToByteArray(retrieval_type), StringToByteArray(store_type));
+  SetVectorInfo(vectors_info, 0, vector_info);
+
+  IVFPQParameters *pqParam = MakeIVFPQParameters(L2, 50, 256, 32, 8);
+  struct Table *table = MakeTable(table_name, field_infos, fields_vec.size(),
+                                  vectors_info, 1, pqParam);
+  enum ResponseCode ret = CreateTable(engine, table);
+  DestroyTable(table);
+
+  printf("Create table ret [%d]\n", ret);
+
+  double start = utils::getmillisecs();
+
+  string profile_file = "/root/wxd/feat_dir/sku_url_cid0_1.txt";
+  string feature_file = "/root/wxd/feat_dir/feat_same0_0.dat";
+
+  FILE *fp_feature = fopen(feature_file.c_str(), "rb");
+  EXPECT_NE(fp_feature, nullptr);
+
+  std::ifstream fin;
+  fin.open(profile_file.c_str());
+  std::string str;
+  long idx = 0;
+  std::vector<float> xb(d * 1);
+  std::vector<float> search_feat(d * 1);
+  long search_doc_id = 4; // small
+  // long search_doc_id = 13;
+  while (!fin.eof()) {
+    std::getline(fin, str);
+    if (str == "")
+      break;
+
+    struct Field **fields = MakeFields(fields_vec.size() + 1);
+    auto profiles = std::move(utils::split(str, "\t"));
+
+    for (size_t i = 0; i < fields_vec.size(); ++i) {
+      enum DataType data_type = fields_type[i];
+      struct ByteArray *name = StringToByteArray(fields_vec[i]);
+      struct ByteArray *value;
+
+      if (fields_type[i] == INT) {
+        value =
+            static_cast<struct ByteArray *>(malloc(sizeof(struct ByteArray)));
+        value->value = static_cast<char *>(malloc(sizeof(int)));
+        value->len = sizeof(int);
+        int v = atoi(profiles[i].c_str());
+        memcpy(value->value, &v, value->len);
+      } else if (fields_type[i] == LONG) {
+        value =
+            static_cast<struct ByteArray *>(malloc(sizeof(struct ByteArray)));
+        value->value = static_cast<char *>(malloc(sizeof(long)));
+        value->len = sizeof(long);
+        long v = atol(profiles[i].c_str());
+        memcpy(value->value, &v, value->len);
+      } else {
+        value = StringToByteArray(profiles[i]);
+      }
+      struct Field *field = MakeField(name, value, NULL, data_type);
+      SetField(fields, i, field);
+    }
+
+    fread((void *)xb.data(), sizeof(float), d, fp_feature);
+    struct ByteArray *value = FloatToByteArray(xb.data(), d);
+    struct ByteArray *name = StringToByteArray(vector_name);
+    struct Field *field =
+        MakeField(name, value, StringToByteArray(profiles[1]), VECTOR);
+    SetField(fields, fields_vec.size(), field);
+
+    struct Doc *doc = MakeDoc(fields, fields_vec.size() + 1);
+    AddDoc(engine, doc);
+    DestroyDoc(doc);
+
+    if (idx == search_doc_id) {
+      search_feat.assign(xb.begin(), xb.end());
+    }
+
+    ++idx;
+    if (idx > 3) {
+      break;
+    }
+  }
+
+  fin.close();
+  fclose(fp_feature);
+
+  int fd = open(feature_file.c_str(), O_RDONLY, 0);
+  size_t mmap_size = 100 * sizeof(float) * d;
+  float *all_feature =
+      static_cast<float *>(mmap(NULL, mmap_size, PROT_READ, MAP_SHARED, fd, 0));
+  close(fd);
+
+  double add_time = utils::getmillisecs() - start;
+
+  printf("Add use time [%.1f]ms, num=%ld\n", add_time, idx);
+
+  struct VectorQuery **vector_querys = MakeVectorQuerys(1);
+  struct ByteArray *value;
+
+  value = FloatToByteArray(all_feature, d);
+
+  struct VectorQuery *vector_query = MakeVectorQuery(
+      StringToByteArray(vector_name), value, 0, 1000000, 0.1, 0);
+  SetVectorQuery(vector_querys, 0, vector_query);
+
+  struct Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0,
+                                        nullptr, 0, nullptr, 0, 1, 0, nullptr);
+  request->topn = 100;
+  struct Response *response = Search(engine, request);
+  PrintResponse(response);
+  ASSERT_EQ(4, response->results[0]->result_num);
+  ASSERT_EQ(0, response->results[0]->result_items[0]->score);
+  DestroyResponse(response);
+
+  // search after delete 0
+  string del_docid = "jfs/t154/294/2731244841/132212/aeedae14/53d72ee8Nfb5d326d.jpg";
+  assert(0 == DelDoc(engine, StringToByteArray(del_docid)));
+  response = Search(engine, request);
+  PrintResponse(response);
+  ASSERT_EQ(3, response->results[0]->result_num);
+  DestroyResponse(response);
+
+  // search after delete 2
+  del_docid = "jfs/t2890/57/1536529718/401130/5156ac6e/57427c3fN3c367faf.jpg";
+  assert(0 == DelDoc(engine, StringToByteArray(del_docid)));
+  response = Search(engine, request);
+  PrintResponse(response);
+  ASSERT_EQ(2, response->results[0]->result_num);
+  DestroyResponse(response);
+
+  munmap(all_feature, mmap_size);
+
+  Dump(engine);
+
+  Close(engine);
+
+  printf("Finshed!\n");
+}
+
 void TestSearchWithoutVector() {
   setvbuf(stdout, (char *)NULL, _IONBF, 0);
   string path = "TestSearchWithoutVector_files";
@@ -604,7 +782,6 @@ void TestSearchWithoutVector() {
   printf("Create table ret [%d]\n", ret);
 
   double start = utils::getmillisecs();
-  int doc_id = 0;
 
   string profile_file = "/root/wxd/feat_dir/sku_url_cid0_1.txt";
   string feature_file = "/root/wxd/feat_dir/feat_same0_0.dat";
@@ -684,7 +861,7 @@ void TestSearchWithoutVector() {
 
   double add_time = utils::getmillisecs() - start;
 
-  printf("Add use time [%.1f]ms, num=%d\n", add_time, idx);
+  printf("Add use time [%.1f]ms, num=%ld\n", add_time, idx);
 
   while (GetIndexStatus(engine) != INDEXED) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -780,7 +957,6 @@ void TestDelDocByQuery() {
   printf("Create table ret [%d]\n", ret);
 
   double start = utils::getmillisecs();
-  int doc_id = 0;
 
   string profile_file = "/root/wxd/feat_dir/sku_url_cid0_1.txt";
   string feature_file = "/root/wxd/feat_dir/feat_same0_0.dat";
@@ -862,7 +1038,7 @@ void TestDelDocByQuery() {
 
   double add_time = utils::getmillisecs() - start;
 
-  printf("Add use time [%.1f]ms, num=%d\n", add_time, idx);
+  printf("Add use time [%.1f]ms, num=%ld\n", add_time, idx);
 
   while (GetIndexStatus(engine) != INDEXED) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -929,7 +1105,7 @@ void TestDelDocByQuery() {
   DestroyResponse(response);
 
   int count = 0;
-  for (int i = 0; i < added_profiles.size(); i++) {
+  for (size_t i = 0; i < added_profiles.size(); i++) {
     std::vector<string> profile = added_profiles[i];
     if (profile[4] == "1371") {
       ASSERT_EQ(nullptr,
@@ -1050,7 +1226,6 @@ void TestMultiIndex() {
   printf("Create table ret [%d]\n", ret);
 
   double start = utils::getmillisecs();
-  int doc_id = 0;
   int vector_byte_size = sizeof(float) * d;
 
   string profile_file =
@@ -1110,7 +1285,7 @@ void TestMultiIndex() {
   // fin.close();
 
   double add_time = utils::getmillisecs() - start;
-  printf("Add use time [%.1f]ms, num=%d\n", add_time, idx);
+  printf("Add use time [%.1f]ms, num=%ld\n", add_time, idx);
 
   std::thread t(BuildIndex, engine);
   t.detach();
@@ -1283,7 +1458,6 @@ void TestMultiIndexResultConsistent() {
   printf("Create table ret [%d]\n", ret);
 
   double start = utils::getmillisecs();
-  int doc_id = 0;
   int vector_byte_size = sizeof(float) * d;
 
   string profile_file =
@@ -1343,7 +1517,7 @@ void TestMultiIndexResultConsistent() {
   // fin.close();
 
   double add_time = utils::getmillisecs() - start;
-  printf("Add use time [%.1f]ms, num=%d\n", add_time, idx);
+  printf("Add use time [%.1f]ms, num=%ld\n", add_time, idx);
 
   std::thread t(BuildIndex, engine);
   t.detach();
@@ -1394,7 +1568,7 @@ void TestMultiIndexResultConsistent() {
          << VectorToString(doc_id_list0.data(), doc_id_list0.size())
          << ", size=" << doc_id_list0.size() << endl;
     map<string, bool> doc_id_map0;
-    for (int i = 0; i < doc_id_list0.size(); i++) {
+    for (size_t i = 0; i < doc_id_list0.size(); i++) {
       doc_id_map0.insert(std::make_pair(doc_id_list0[i], true));
     }
     DestroyResponse(response);
@@ -1412,7 +1586,7 @@ void TestMultiIndexResultConsistent() {
     cerr << "########## request by vector1: doc id list="
          << VectorToString(doc_id_list1.data(), doc_id_list1.size()) << endl;
     std::map<string, bool> comm_doc_id_map;
-    for (int i = 0; i < doc_id_list1.size(); i++) {
+    for (size_t i = 0; i < doc_id_list1.size(); i++) {
       string doc_id = doc_id_list1[i];
       if (doc_id_map0.find(doc_id) != doc_id_map0.end()) {
         comm_doc_id_map.insert(std::make_pair(doc_id, true));
@@ -1436,7 +1610,7 @@ void TestMultiIndexResultConsistent() {
     cerr << "########## request by two vector: doc id list="
          << VectorToString(doc_id_list.data(), doc_id_list.size()) << endl;
     ASSERT_EQ(comm_doc_id_map.size(), doc_id_list.size());
-    for (int i = 0; i < doc_id_list.size(); i++) {
+    for (size_t i = 0; i < doc_id_list.size(); i++) {
       ASSERT_NE(comm_doc_id_map.end(), comm_doc_id_map.find(doc_id_list[i]))
           << "i=" << i;
     }
@@ -1498,7 +1672,6 @@ void TestMultiIndexSearchPerf() {
   printf("Create table ret [%d]\n", ret);
 
   double start = utils::getmillisecs();
-  int doc_id = 0;
   int vector_byte_size = sizeof(float) * d;
 
   string profile_file =
@@ -1558,7 +1731,7 @@ void TestMultiIndexSearchPerf() {
   // fin.close();
 
   double add_time = utils::getmillisecs() - start;
-  printf("Add use time [%.1f]ms, num=%d\n", add_time, idx);
+  printf("Add use time [%.1f]ms, num=%ld\n", add_time, idx);
 
   std::thread t(BuildIndex, engine);
   t.detach();
@@ -1717,7 +1890,7 @@ void TestGetDocAfterUpdate() {
   string doc_key = "doc_1";
   vector<string> field_values = {doc_key, "10"};
   vector<float> xb(d);
-  for (int i = 0; i < xb.size(); i++) {
+  for (size_t i = 0; i < xb.size(); i++) {
     xb[i] = i;
   }
   vector<float *> vec_field_values = {xb.data()};
@@ -1783,6 +1956,7 @@ void PrintUsage() {
   cerr << "\t 6:TestSearchWithoutVector" << endl;
   cerr << "\t 7:TestGetDocAfterUpdate" << endl;
   cerr << "\t 8:TestDelDocByQuery" << endl;
+  cerr << "\t 9:TestSearchDirectlyL2" << endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -1816,6 +1990,9 @@ int main(int argc, char *argv[]) {
     break;
   case 8:
     TestDelDocByQuery();
+    break;
+  case 9:
+    TestSearchDirectlyL2();
     break;
   default:
     PrintUsage();

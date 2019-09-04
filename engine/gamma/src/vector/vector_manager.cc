@@ -1,8 +1,14 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "vector_manager.h"
 #include "gamma_index_factory.h"
 #include "raw_vector_factory.h"
 #include "utils.h"
-#include "ivfpq_param_helper.h"
 
 namespace tig_gamma {
 
@@ -12,6 +18,33 @@ bool InnerProductCmp(const VectorDoc &a, const VectorDoc &b) {
 
 bool L2Cmp(const VectorDoc &a, const VectorDoc &b) { return a.score < b.score; }
 
+ByteArray *CopyByteArray(ByteArray *ba) {
+  return MakeByteArray(ba->value, ba->len);
+}
+
+VectorInfo **CopyVectorInfos(VectorInfo **vectors_info, int vector_info_num) {
+  VectorInfo **ret_vector_infos = MakeVectorInfos(vector_info_num);
+  for (int i = 0; i < vector_info_num; i++) {
+    VectorInfo *vector_info = MakeVectorInfo(
+        CopyByteArray(vectors_info[i]->name), vectors_info[i]->data_type,
+        vectors_info[i]->dimension, CopyByteArray(vectors_info[i]->model_id),
+        CopyByteArray(vectors_info[i]->retrieval_type),
+        CopyByteArray(vectors_info[i]->store_type));
+    ret_vector_infos[i] = vector_info;
+  }
+  return ret_vector_infos;
+}
+
+ByteArray *ReadByteArray(FILE *fp) {
+  int len = 0;
+  fread((void *)&len, sizeof(len), 1, fp);
+  char *data = new char[len];
+  fread((void *)data, sizeof(char), len, fp);
+  ByteArray *ba = MakeByteArray(data, len);
+  delete[] data;
+  return ba;
+}
+
 VectorManager::VectorManager(const RetrievalModel &model,
                              const RawVectorType &store_type,
                              const char *docids_bitmap, int max_doc_size)
@@ -19,6 +52,8 @@ VectorManager::VectorManager(const RetrievalModel &model,
       docids_bitmap_(docids_bitmap), max_doc_size_(max_doc_size) {
   table_created_ = false;
   ivfpq_param_ = nullptr;
+  vectors_info_ = nullptr;
+  vectors_num_ = 0;
 }
 
 VectorManager::~VectorManager() { Close(); }
@@ -45,6 +80,10 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
   }
   LOG(INFO) << ivfpq_param_helper.ToString();
 
+  // copy vector info
+  vectors_num_ = vectors_num;
+  vectors_info_ = CopyVectorInfos(vectors_info, vectors_num);
+
   for (int i = 0; i < vectors_num; i++) {
     std::string vec_name(vectors_info[i]->name->value,
                          vectors_info[i]->name->len);
@@ -56,8 +95,6 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
     RawVectorType store_type = default_store_type_;
     if (!strcasecmp("MemoryOnly", store_type_str.c_str())) {
       store_type = RawVectorType::MemoryOnly;
-    } else if (!strcasecmp("MemoryWithDisk", store_type_str.c_str())) {
-      store_type = RawVectorType::MemoryWithDisk;
     } else {
       LOG(WARNING) << "NO support for store type " << store_type_str
                    << ", default to " << default_store_type_;
@@ -80,12 +117,6 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
     RetrievalModel model = default_model_;
     if (!strcasecmp("IVFPQ", retrieval_type_str.c_str())) {
       model = RetrievalModel::IVFPQ;
-    } else if (!strcasecmp("GPU_IVFPQ", retrieval_type_str.c_str())) {
-      model = RetrievalModel::GPU_IVFPQ;
-    } else if (!strcasecmp("SPTAG", retrieval_type_str.c_str())) {
-      model = RetrievalModel::SPTAG;
-    } else if (!strcasecmp("PACINS", retrieval_type_str.c_str())) {
-      model = RetrievalModel::PACINS;
     } else {
       LOG(WARNING) << "NO support for retrieval type " << retrieval_type_str
                    << ", default to " << default_model_;
@@ -149,7 +180,7 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
 
   query.condition->sort_by_docid = query.vec_num > 1 ? true : false;
   query.condition->metric_type =
-    static_cast<DistanceMetricType>(ivfpq_param_->metric_type);
+      static_cast<DistanceMetricType>(ivfpq_param_->metric_type);
   std::string vec_names[query.vec_num];
   for (int i = 0; i < query.vec_num; i++) {
     std::string name = std::string(query.vec_query[i]->name->value,
@@ -205,10 +236,9 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
             if (common_docid_count == query.vec_num) {
               results[i].docs[common_idx].docid = start_docid;
               results[i].docs[common_idx++].score = score;
-              int total = results[i].total;
-              if (total > all_vector_results[j].total[i]) {
-                results[i].total = all_vector_results[j].total[i];
-              }
+              results[i].total = all_vector_results[j].total[i] > 0
+                                     ? all_vector_results[j].total[i]
+                                     : results[i].total;
 
               start_docid++;
               common_docid_count = 0;
@@ -233,13 +263,14 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
       }
     }
   } else {
-
     for (int i = 0; i < n; i++) {
       // double score = 0;
       if (!results[i].init(query.condition->topn, vec_names, query.vec_num)) {
         continue;
       }
-      results[i].total = all_vector_results[0].total[i];
+      results[i].total = all_vector_results[0].total[i] > 0
+                             ? all_vector_results[0].total[i]
+                             : results[i].total;
       int pos = 0, topn = all_vector_results[0].topn;
       for (int j = 0; j < topn; j++) {
         int real_pos = i * topn + j;
@@ -269,107 +300,135 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
   return ret;
 }
 
-int VectorManager::Dump(const string &path) {
-  string pq_param_file = path + "/" + "ivfpq.param";
-  FILE *param_fp = fopen(pq_param_file.c_str(), "wb");
-  if (param_fp == nullptr) {
-    LOG(ERROR) << "open error, file=" << pq_param_file.c_str();
+int VectorManager::Dump(const string &path, int dump_docid, int max_docid) {
+  string info_file = path + "/" + "vector.info";
+  FILE *info_fp = fopen(info_file.c_str(), "wb");
+  if (info_fp == nullptr) {
+    LOG(ERROR) << "open vector info error, file=" << info_file.c_str();
     return -1;
   }
-  assert(1 == fwrite((void *)&ivfpq_param_->metric_type,
-                     sizeof(ivfpq_param_->metric_type), 1, param_fp));
-  assert(1 == fwrite((void *)&ivfpq_param_->nprobe,
-                     sizeof(ivfpq_param_->nprobe), 1, param_fp));
-  assert(1 == fwrite((void *)&ivfpq_param_->ncentroids,
-                     sizeof(ivfpq_param_->ncentroids), 1, param_fp));
-  assert(1 == fwrite((void *)&ivfpq_param_->nsubvector,
-                     sizeof(ivfpq_param_->nsubvector), 1, param_fp));
-  assert(1 == fwrite((void *)&ivfpq_param_->nbits_per_idx,
-                     sizeof(ivfpq_param_->nbits_per_idx), 1, param_fp));
-  fclose(param_fp);
+  // dump vectors info
+  fwrite((void *)&vectors_num_, sizeof(vectors_num_), 1, info_fp);
+  for (int i = 0; i < vectors_num_; i++) {
+    VectorInfo *vi = vectors_info_[i];
+    fwrite((void *)&vi->name->len, sizeof(vi->name->len), 1, info_fp);
+    fwrite((void *)vi->name->value, sizeof(char), vi->name->len, info_fp);
+    fwrite((void *)&vi->data_type, sizeof(vi->data_type), 1, info_fp);
+    fwrite((void *)&vi->dimension, sizeof(vi->dimension), 1, info_fp);
+    fwrite((void *)&vi->model_id->len, sizeof(vi->model_id->len), 1, info_fp);
+    fwrite((void *)vi->model_id->value, sizeof(char), vi->model_id->len,
+           info_fp);
+    fwrite((void *)&vi->retrieval_type->len, sizeof(vi->retrieval_type->len), 1,
+           info_fp);
+    fwrite((void *)vi->retrieval_type->value, sizeof(char),
+           vi->retrieval_type->len, info_fp);
+    fwrite((void *)&vi->store_type->len, sizeof(vi->store_type->len), 1,
+           info_fp);
+    fwrite((void *)vi->store_type->value, sizeof(char), vi->store_type->len,
+           info_fp);
+  }
+  // dump ivfqp parameters
+  fwrite((void *)&ivfpq_param_->metric_type, sizeof(ivfpq_param_->metric_type),
+         1, info_fp);
+  fwrite((void *)&ivfpq_param_->nprobe, sizeof(ivfpq_param_->nprobe), 1,
+         info_fp);
+  fwrite((void *)&ivfpq_param_->ncentroids, sizeof(ivfpq_param_->ncentroids), 1,
+         info_fp);
+  fwrite((void *)&ivfpq_param_->nsubvector, sizeof(ivfpq_param_->nsubvector), 1,
+         info_fp);
+  fwrite((void *)&ivfpq_param_->nbits_per_idx,
+         sizeof(ivfpq_param_->nbits_per_idx), 1, info_fp);
+  fclose(info_fp);
 
-  std::map<std::string, RawVector *>::iterator iter = raw_vectors_.begin();
-  for (; iter != raw_vectors_.end(); iter++) {
-    if (0 != iter->second->Dump(path)) {
-      LOG(ERROR) << "vector table " << iter->first << " dump failed!";
+  for (const auto &iter : vector_indexes_) {
+    const string &vec_name = iter.first;
+    GammaIndex *index = iter.second;
+
+    int ret = index->raw_vec_->Dump(path, dump_docid, max_docid);
+    if (ret != 0) {
+      LOG(ERROR) << "vector " << vec_name << " dump failed!";
       return -1;
     }
+    LOG(INFO) << "vector " << vec_name << " dump success!";
+
+    int dump_num =
+        index->Dump(path, index->raw_vec_->GetLastVectorID(max_docid));
+    if (dump_num < 0) {
+      LOG(ERROR) << "vector " << vec_name << " dump gamma index failed!";
+      return -1;
+    }
+    LOG(INFO) << "vector " << vec_name << " dump gamma index success!";
   }
   return 0;
 }
 
-int VectorManager::Load(const string &path) {
+int VectorManager::Load(const std::vector<std::string> &index_dirs) {
   Close();
-  ivfpq_param_ = static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
-  string pq_param_file = path + "/ivfpq.param";
-  FILE *param_fp = fopen(pq_param_file.c_str(), "rb");
-  if (param_fp == nullptr) {
-    LOG(ERROR) << "open error, file=" << pq_param_file.c_str();
+  string info_file = index_dirs[0] + "/vector.info";
+  FILE *info_fp = fopen(info_file.c_str(), "rb");
+  if (info_fp == nullptr) {
+    LOG(ERROR) << "open vector info error, file=" << info_file.c_str();
     return -1;
   }
-  assert(1 == fread((void *)&ivfpq_param_->metric_type,
-                    sizeof(ivfpq_param_->metric_type), 1, param_fp));
-  assert(1 == fread((void *)&ivfpq_param_->nprobe, sizeof(ivfpq_param_->nprobe),
-                    1, param_fp));
-  assert(1 == fread((void *)&ivfpq_param_->ncentroids,
-                    sizeof(ivfpq_param_->ncentroids), 1, param_fp));
-  assert(1 == fread((void *)&ivfpq_param_->nsubvector,
-                    sizeof(ivfpq_param_->nsubvector), 1, param_fp));
-  assert(1 == fread((void *)&ivfpq_param_->nbits_per_idx,
-                    sizeof(ivfpq_param_->nbits_per_idx), 1, param_fp));
-  fclose(param_fp);
-  IVFPQParamHelper ivfpq_param_helper(ivfpq_param_);
+  // load vectors info
+  int vectors_num = 0;
+  fread((void *)&vectors_num, sizeof(vectors_num), 1, info_fp);
+  if (vectors_num <= 0) {
+    LOG(ERROR) << "vector number=" << vectors_num << " <= 0";
+    fclose(info_fp);
+    return -1;
+  }
+  VectorInfo **vectors_info = MakeVectorInfos(vectors_num);
+  for (int i = 0; i < vectors_num; i++) {
+    VectorInfo *vi = static_cast<VectorInfo *>(malloc(sizeof(VectorInfo)));
+    vi->name = ReadByteArray(info_fp);
+    fread((void *)&vi->data_type, sizeof(vi->data_type), 1, info_fp);
+    fread((void *)&vi->dimension, sizeof(vi->dimension), 1, info_fp);
+    vi->model_id = ReadByteArray(info_fp);
+    vi->retrieval_type = ReadByteArray(info_fp);
+    vi->store_type = ReadByteArray(info_fp);
+    vectors_info[i] = vi;
+  }
+  // load ivfpq parameters
+  IVFPQParameters *ivfpq_param =
+      static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
+  fread((void *)&ivfpq_param->metric_type, sizeof(ivfpq_param->metric_type), 1,
+        info_fp);
+  fread((void *)&ivfpq_param->nprobe, sizeof(ivfpq_param->nprobe), 1, info_fp);
+  fread((void *)&ivfpq_param->ncentroids, sizeof(ivfpq_param->ncentroids), 1,
+        info_fp);
+  fread((void *)&ivfpq_param->nsubvector, sizeof(ivfpq_param->nsubvector), 1,
+        info_fp);
+  fread((void *)&ivfpq_param->nbits_per_idx, sizeof(ivfpq_param->nbits_per_idx),
+        1, info_fp);
+  fclose(info_fp);
+
+  IVFPQParamHelper ivfpq_param_helper(ivfpq_param);
   if (!ivfpq_param_helper.Validate()) {
     LOG(INFO) << "load: validate ivf pq parameters error";
     return -1;
   }
-  LOG(INFO) <<"load: " << ivfpq_param_helper.ToString();
+  LOG(INFO) << "load: " << ivfpq_param_helper.ToString();
 
-  const std::vector<string> files = utils::ls(path);
-  for (const auto file : files) {
-    auto strs = utils::split(file, ".");
-    if (strs.size() == 2 && strs[1] == "fet") {
-      string vec_name = strs[0];
-      strs = utils::split(vec_name, "/");
-      vec_name = strs[strs.size() - 1];
-      FILE *fet_fp = fopen(file.c_str(), "rb");
-      if (fet_fp == nullptr) {
-        LOG(ERROR) << "open error: feature file=" << file.c_str();
-        return -1;
-      }
-      int dimension = 0;
-      int type;
-      assert(1 == fread((void *)&type, sizeof(type), 1, fet_fp));
-      assert(1 == fread((void *)&dimension, sizeof(dimension), 1, fet_fp));
-      fclose(fet_fp);
+  if (CreateVectorTable(vectors_info, vectors_num, ivfpq_param) != 0) {
+    LOG(ERROR) << "load: create vector table error";
+    return -1;
+  }
+  DestroyIVFPQParameters(ivfpq_param);
+  DestroyVectorInfos(vectors_info, vectors_num);
 
-      RawVectorType vec_type = static_cast<RawVectorType>(type);
-      RawVector *raw_vec = RawVectorFactory::Create(vec_type, vec_name,
-                                                    dimension, max_doc_size_);
-      if (raw_vec == nullptr) {
-        LOG(ERROR) << "create raw vector error";
-        return -1;
-      }
-      int ret = raw_vec->Load(path);
-      if (ret != 0) {
-        LOG(ERROR) << "load error: vector name=" << vec_name
-                   << ", vector type=" << vec_type
-                   << ", dimension=" << dimension << ", ret=" << ret;
-        return -1;
-      }
-      raw_vectors_[vec_name] = raw_vec;
-
-      RetrievalModel model = default_model_; // it should be retrieved from file
-      GammaIndex *index = GammaIndexFactory::Create(
-          model, dimension, docids_bitmap_, raw_vec, ivfpq_param_);
-      if (index == nullptr) {
-        LOG(ERROR) << "Load: create gamma index " << vec_name << " error!";
-        return -1;
-      }
-      LOG(INFO) << "load vector success: vector name=" << vec_name
-                << ", vector type=" << vec_type << ", dimension=" << dimension;
-      vector_indexes_[vec_name] = index;
+  std::map<std::string, GammaIndex *>::iterator iter = vector_indexes_.begin();
+  for (; iter != vector_indexes_.end(); iter++) {
+    if (0 != iter->second->raw_vec_->Load(index_dirs)) {
+      LOG(ERROR) << "vector " << iter->first << " load failed!";
+      return -1;
     }
+    LOG(INFO) << "vector " << iter->first << " load success!";
+
+    if (iter->second->Load(index_dirs) < 0) {
+      LOG(ERROR) << "vector " << iter->first << " load gamma index failed!";
+    }
+    LOG(ERROR) << "vector " << iter->first << " load gamma index success!";
   }
   return 0;
 }
@@ -397,6 +456,12 @@ void VectorManager::Close() {
   if (ivfpq_param_ != nullptr) {
     DestroyIVFPQParameters(ivfpq_param_);
     ivfpq_param_ = nullptr;
+  }
+
+  if (vectors_info_ != nullptr) {
+    DestroyVectorInfos(vectors_info_, vectors_num_);
+    vectors_info_ = nullptr;
+    vectors_num_ = 0;
   }
 }
 } // namespace tig_gamma

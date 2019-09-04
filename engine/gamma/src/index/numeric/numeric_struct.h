@@ -1,8 +1,10 @@
 /**
- * Copyright(C) JD.COM, all rights reserved.
- * Author: Chen Jianyu (chenjianyu@jd.com)
- * Description: numeric enum & struct
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
  */
+
 #ifndef SRC_SEARCHER_INDEX_NUMERIC_NUMERIC_STRUCT_H_
 #define SRC_SEARCHER_INDEX_NUMERIC_NUMERIC_STRUCT_H_
 
@@ -20,6 +22,8 @@ enum class IndexFieldType : uint8_t {
   LONG,
   FLOAT,
   DOUBLE,
+
+  STRING,
 };
 
 struct IndexField {
@@ -41,8 +45,8 @@ struct Index {
                      RangeQueryResultV1 &) const {
     return -1;
   }
-  virtual void Add(const char *, int) {}
-  virtual int Build() { return -1; }
+  virtual void Add(const std::string &, int) {}
+  virtual int Build(const int /*num_docs*/) { return -1; }
   virtual size_t MemoryUsage() const { return 0; }
   virtual void Output(const std::string &) {}
   virtual int Dump(const IndexIO &) { return -1; }

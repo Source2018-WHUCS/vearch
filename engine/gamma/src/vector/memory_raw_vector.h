@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) The Gamma Authors.
+ *
+ * This source code is licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef MEMORY_RAW_VECTOR_H_
 #define MEMORY_RAW_VECTOR_H_
 
@@ -15,12 +22,11 @@ public:
   const float *GetVector(long vid) const override;
   int Add(int docid, Field *&field) override;
   const float *GetVectorHeader() override;
-  int Gets(int k, long *ids_list,
-           std::vector<const float *> &results) const override;
+  int Gets(int k, long *ids_list, std::vector<const float *> &results) const override;
   int GetSource(int vid, char *&str, int &len) override;
 
-  int Dump(const std::string &path) override;
-  int Load(const std::string &path) override;
+  int Dump(const std::string &path, int dump_docid, int max_docid) override;
+  int Load(const std::vector<std::string> &path) override;
 
 private:
   float *vector_mem_; // vector memory

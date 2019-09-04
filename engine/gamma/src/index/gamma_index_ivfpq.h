@@ -1,9 +1,19 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * Modified by The Gamma Authors.
+ *
+ */
+
 #ifndef GAMMA_INDEX_IVFPQ_H_
 #define GAMMA_INDEX_IVFPQ_H_
 
-#include "log.h"
 #include "gamma_common_data.h"
 #include "gamma_index.h"
+#include "log.h"
 #include "numeric_index.h"
 #include "raw_vector.h"
 #include "realtime_invert_index.h"
@@ -15,6 +25,7 @@
 #include "faiss/IndexIVFPQ.h"
 #include "faiss/InvertedLists.h"
 #include "faiss/hamming.h"
+#include "faiss/index_io.h"
 #include "faiss/utils.h"
 
 namespace tig_gamma {
@@ -810,6 +821,181 @@ struct RTInvertedLists : faiss::InvertedLists {
   realtime::RTInvertIndex *rt_invert_index_ptr_;
 };
 
+/*************************************************************
+ * I/O macros
+ *
+ * we use macros so that we have a line number to report in abort
+ * (). This makes debugging a lot easier. The IOReader or IOWriter is
+ * always called f and thus is not passed in as a macro parameter.
+ **************************************************************/
+
+#define WRITEANDCHECK(ptr, n)                                                  \
+  {                                                                            \
+    size_t ret = (*f)(ptr, sizeof(*(ptr)), n);                                 \
+    FAISS_THROW_IF_NOT_FMT(ret == (n), "write error in %s: %ld != %ld (%s)",   \
+                           f->name.c_str(), ret, size_t(n), strerror(errno));  \
+  }
+
+#define READANDCHECK(ptr, n)                                                   \
+  {                                                                            \
+    size_t ret = (*f)(ptr, sizeof(*(ptr)), n);                                 \
+    FAISS_THROW_IF_NOT_FMT(ret == (n), "read error in %s: %ld != %ld (%s)",    \
+                           f->name.c_str(), ret, size_t(n), strerror(errno));  \
+  }
+
+#define WRITE1(x) WRITEANDCHECK(&(x), 1)
+#define READ1(x) READANDCHECK(&(x), 1)
+
+#define WRITEVECTOR(vec)                                                       \
+  {                                                                            \
+    size_t size = (vec).size();                                                \
+    WRITEANDCHECK(&size, 1);                                                   \
+    WRITEANDCHECK((vec).data(), size);                                         \
+  }
+
+// will fail if we write 256G of data at once...
+#define READVECTOR(vec)                                                        \
+  {                                                                            \
+    size_t size;                                                               \
+    READANDCHECK(&size, 1);                                                    \
+    FAISS_THROW_IF_NOT(size >= 0 && size < (1L << 40));                        \
+    (vec).resize(size);                                                        \
+    READANDCHECK((vec).data(), size);                                          \
+  }
+
+/****************************************************************
+ * Write
+ *****************************************************************/
+static void write_index_header(const faiss::Index *idx, faiss::IOWriter *f) {
+  WRITE1(idx->d);
+  WRITE1(idx->ntotal);
+  faiss::Index::idx_t dummy = 1 << 20;
+  WRITE1(dummy);
+  WRITE1(dummy);
+  WRITE1(idx->is_trained);
+  WRITE1(idx->metric_type);
+}
+
+static void write_ivf_header(const faiss::IndexIVF *ivf, faiss::IOWriter *f) {
+  write_index_header(ivf, f);
+  WRITE1(ivf->nlist);
+  WRITE1(ivf->nprobe);
+  faiss::write_index(ivf->quantizer, f);
+  WRITE1(ivf->maintain_direct_map);
+  WRITEVECTOR(ivf->direct_map);
+}
+
+static void read_index_header(faiss::Index *idx, faiss::IOReader *f) {
+  READ1(idx->d);
+  READ1(idx->ntotal);
+  faiss::Index::idx_t dummy;
+  READ1(dummy);
+  READ1(dummy);
+  READ1(idx->is_trained);
+  READ1(idx->metric_type);
+  idx->verbose = false;
+}
+
+static void
+read_ivf_header(faiss::IndexIVF *ivf, faiss::IOReader *f,
+                std::vector<std::vector<faiss::Index::idx_t>> *ids = nullptr) {
+  read_index_header(ivf, f);
+  READ1(ivf->nlist);
+  READ1(ivf->nprobe);
+  ivf->quantizer = faiss::read_index(f);
+  ivf->own_fields = true;
+  if (ids) { // used in legacy "Iv" formats
+    ids->resize(ivf->nlist);
+    for (size_t i = 0; i < ivf->nlist; i++)
+      READVECTOR((*ids)[i]);
+  }
+  READ1(ivf->maintain_direct_map);
+  READVECTOR(ivf->direct_map);
+}
+
+static void write_ProductQuantizer(const faiss::ProductQuantizer *pq,
+                                   faiss::IOWriter *f) {
+  WRITE1(pq->d);
+  WRITE1(pq->M);
+  WRITE1(pq->nbits);
+  WRITEVECTOR(pq->centroids);
+}
+
+static void read_ProductQuantizer(faiss::ProductQuantizer *pq,
+                                  faiss::IOReader *f) {
+  READ1(pq->d);
+  READ1(pq->M);
+  READ1(pq->nbits);
+  pq->set_derived_values();
+  READVECTOR(pq->centroids);
+}
+
+// namespace {
+
+struct FileIOReader : faiss::IOReader {
+  FILE *f = nullptr;
+  bool need_close = false;
+
+  FileIOReader(FILE *rf) : f(rf) {}
+
+  FileIOReader(const char *fname) {
+    name = fname;
+    f = fopen(fname, "rb");
+    FAISS_THROW_IF_NOT_FMT(f, "could not open %s for reading: %s", fname,
+                           strerror(errno));
+    need_close = true;
+  }
+
+  ~FileIOReader() override {
+    if (need_close) {
+      int ret = fclose(f);
+      if (ret != 0) { // we cannot raise and exception in the destructor
+        fprintf(stderr, "file %s close error: %s", name.c_str(),
+                strerror(errno));
+      }
+    }
+  }
+
+  size_t operator()(void *ptr, size_t size, size_t nitems) override {
+    return fread(ptr, size, nitems, f);
+  }
+
+  int fileno() override { return ::fileno(f); }
+};
+
+struct FileIOWriter : faiss::IOWriter {
+  FILE *f = nullptr;
+  bool need_close = false;
+
+  FileIOWriter(FILE *wf) : f(wf) {}
+
+  FileIOWriter(const char *fname) {
+    name = fname;
+    f = fopen(fname, "wb");
+    FAISS_THROW_IF_NOT_FMT(f, "could not open %s for writing: %s", fname,
+                           strerror(errno));
+    need_close = true;
+  }
+
+  ~FileIOWriter() override {
+    if (need_close) {
+      int ret = fclose(f);
+      if (ret != 0) {
+        // we cannot raise and exception in the destructor
+        fprintf(stderr, "file %s close error: %s", name.c_str(),
+                strerror(errno));
+      }
+    }
+  }
+
+  size_t operator()(const void *ptr, size_t size, size_t nitems) override {
+    return fwrite(ptr, size, nitems, f);
+  }
+  int fileno() override { return ::fileno(f); }
+};
+
+// } // anonymous namespace
+
 struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
   GammaIVFPQIndex(faiss::Index *quantizer, size_t d, size_t nlist, size_t M,
                   size_t nbits_per_idx, const char *docids_bitmap,
@@ -846,11 +1032,72 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
     if (!rt_invert_index_ptr_) {
       return 0;
     }
-    return rt_invert_index_ptr_->getTotalMemBytes();
+    return rt_invert_index_ptr_->GetTotalMemBytes();
+  }
+
+  int Dump(const std::string &dir, int max_vid) override {
+    if (!rt_invert_index_ptr_) {
+      return -1;
+    }
+    string info_file = dir + "/gamma_index.info";
+    faiss::IOWriter *f = new FileIOWriter(info_file.c_str());
+    const IndexIVFPQ *ivpq = static_cast<const IndexIVFPQ *>(this);
+    write_ivf_header(ivpq, f);
+    WRITE1(ivpq->by_residual);
+    WRITE1(ivpq->code_size);
+    tig_gamma::write_ProductQuantizer(&ivpq->pq, f);
+    delete f;
+
+    LOG(INFO) << "dump: d=" << ivpq->d << ", ntotal=" << ivpq->ntotal
+              << ", is_trained=" << ivpq->is_trained
+              << ", metric_type=" << ivpq->metric_type
+              << ", nlist=" << ivpq->nlist << ", nprobe=" << ivpq->nprobe
+              << ", maintain_direct_map=" << ivpq->maintain_direct_map
+              << ", by_residual=" << ivpq->by_residual
+              << ", code_size=" << ivpq->code_size << ", pq: d=" << ivpq->pq.d
+              << ", M=" << ivpq->pq.M << ", nbits=" << ivpq->pq.nbits;
+
+    return rt_invert_index_ptr_->Dump(dir, max_vid);
+  }
+
+  int Load(const std::vector<std::string> &index_dirs) {
+    if (!rt_invert_index_ptr_) {
+      return -1;
+    }
+
+    string info_file = index_dirs[index_dirs.size() - 1] + "/gamma_index.info";
+    faiss::IOReader *f = new FileIOReader(info_file.c_str());
+    IndexIVFPQ *ivpq = static_cast<IndexIVFPQ *>(this);
+    read_ivf_header(ivpq, f, nullptr); // not legacy
+    READ1(ivpq->by_residual);
+    READ1(ivpq->code_size);
+    read_ProductQuantizer(&ivpq->pq, f);
+
+    // precomputed table not stored. It is cheaper to recompute it
+    ivpq->use_precomputed_table = 0;
+    if (ivpq->by_residual)
+      ivpq->precompute_table();
+    delete f;
+
+    LOG(INFO) << "load: d=" << ivpq->d << ", ntotal=" << ivpq->ntotal
+              << ", is_trained=" << ivpq->is_trained
+              << ", metric_type=" << ivpq->metric_type
+              << ", nlist=" << ivpq->nlist << ", nprobe=" << ivpq->nprobe
+              << ", maintain_direct_map=" << ivpq->maintain_direct_map
+              << ", by_residual=" << ivpq->by_residual
+              << ", code_size=" << ivpq->code_size << ", pq: d=" << ivpq->pq.d
+              << ", M=" << ivpq->pq.M << ", nbits=" << ivpq->pq.nbits;
+
+    indexed_vec_count_ = rt_invert_index_ptr_->Load(index_dirs);
+    return indexed_vec_count_;
   }
 
   int indexed_vec_count_;
   realtime::RTInvertIndex *rt_invert_index_ptr_;
+
+#ifdef PERFORMANCE_TESTING
+  std::atomic<uint64_t> search_count_;
+#endif
 };
 
 } // namespace tig_gamma
