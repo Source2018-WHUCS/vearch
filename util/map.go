@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-created by lvxin for project baudengine at 18-11-1 上午11:47
+created by lvxin for project vearch at 18-11-1 上午11:47
 */
 package util
 

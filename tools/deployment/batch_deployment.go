@@ -277,14 +277,14 @@ func deploy(ipMap map[string]bool, config *ssh.ClientConfig, binPath string) {
 			copyFile(client, confDir+"/config.toml", conf.Dir+"/config.toml")
 			copyFile(client, confDir+"/start.sh", conf.Dir+"/start.sh")
 			copyFile(client, confDir+"/stop.sh", conf.Dir+"/stop.sh")
-			copyFile(client, binPath, conf.Dir+"/baudengine")
+			copyFile(client, binPath, conf.Dir+"/vearch")
 			for i := range conf.Copy {
 				copyDir(client, conf.Copy[i], path.Join(conf.Dir, "copy"))
 			}
 
 			runCommand(client, "chmod u+x "+conf.Dir+"/start.sh")
 			runCommand(client, "chmod u+x "+conf.Dir+"/stop.sh")
-			runCommand(client, "chmod u+x "+conf.Dir+"/baudengine")
+			runCommand(client, "chmod u+x "+conf.Dir+"/vearch")
 			wg.Done()
 		}(ip)
 	}
