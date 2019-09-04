@@ -25,14 +25,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/spf13/cast"
+	"github.com/tiglabs/log"
 	pkg "github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine"
 	"github.com/vearch/vearch/util/baudlog"
 	"github.com/vearch/vearch/util/ioutil2"
-	"github.com/tiglabs/log"
-	"go.uber.org/atomic"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -47,7 +46,6 @@ type writerImpl struct {
 	engine  *gammaEngine
 	path    string
 	lock    sync.RWMutex
-	lastSn  atomic.Int64
 	running bool
 }
 
@@ -137,9 +135,16 @@ func (wi *writerImpl) Delete(ctx context.Context, docCmd *pspb.DocCmd) *response
 }
 
 func (wi *writerImpl) Flush(ctx context.Context, sn int64) error {
-	wi.lastSn.Store(sn)
 	if code := C.Dump(wi.engine.gamma); code != 0 {
 		return fmt.Errorf("dump index err response code :[%d]", code)
+	}
+	wi.lock.Lock()
+	defer wi.lock.Unlock()
+
+	fileName := filepath.Join(wi.path, indexSn)
+	err := ioutil2.WriteFileAtomic(fileName, []byte(string(strconv.FormatInt(sn, 10))), os.ModePerm)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -172,17 +177,15 @@ func (wi *writerImpl) Commit(ctx context.Context, snx int64) (chan error, error)
 
 		log.Info("begin dump data for gamma")
 
-		wi.lastSn.Store(sn)
-
-		fileName := filepath.Join(wi.path, indexSn)
-		err := ioutil2.WriteFileAtomic(fileName, []byte(string(strconv.FormatInt(sn, 10))), os.ModePerm)
-		if err != nil {
-			return
-		}
 
 		if code := C.Dump(wi.engine.gamma); code != 0 {
 			fc <- baudlog.LogErrAndReturn(fmt.Errorf("dump index err response code :[%d]", code))
 		} else {
+			fileName := filepath.Join(wi.path, indexSn)
+			err := ioutil2.WriteFileAtomic(fileName, []byte(string(strconv.FormatInt(sn, 10))), os.ModePerm)
+			if err != nil {
+				return
+			}
 			fc <- nil
 		}
 
