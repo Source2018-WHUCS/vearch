@@ -39,7 +39,7 @@ int Indexes::Search(const std::vector<FilterInfo> &filters,
     return Search(_.field, _.lower_value, _.upper_value, out);
   }
 
-  // Timer t;
+  // utils::Timer t;
   // t.Start("Search");
 
   RangeQueryResultV1 results[fsize];
@@ -87,8 +87,11 @@ int Indexes::Search(const std::vector<FilterInfo> &filters,
   int fsize = filters.size();
 
   if (1 == fsize) {
-    RangeQueryResultV1 tmp(out.Flags());
     auto &_ = filters[0];
+    if (_.is_union) {
+      out.SetFlags(out.Flags() | 0x4);
+    }
+    RangeQueryResultV1 tmp(out.Flags());
     int retval = Search(_.field, _.lower_value, _.upper_value, tmp);
     if (retval > 0) {
       out.Add(tmp);
@@ -96,7 +99,7 @@ int Indexes::Search(const std::vector<FilterInfo> &filters,
     return retval;
   }
 
-  // Timer t;
+  // utils::Timer t;
   // t.Start("Search");
 
   RangeQueryResultV1 results[fsize];
@@ -105,9 +108,14 @@ int Indexes::Search(const std::vector<FilterInfo> &filters,
   int k = -1, k_size = std::numeric_limits<int>::max();
 
   for (int i = 0; i < fsize; i++) {
-    results[j + 1].SetFlags(out.Flags());
-
     auto &_ = filters[i];
+
+    int flags = out.Flags();
+    if (_.is_union) {
+      flags |= 0x4;
+    }
+
+    results[j + 1].SetFlags(flags);
     int retval = Search(_.field, _.lower_value, _.upper_value, results[j + 1]);
     if (retval < 0) {
       ;

@@ -59,6 +59,8 @@ public:
   }
 
   void BuildIndex() {
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+
     std::thread t(::BuildIndex, engine_);
     t.detach();
 
@@ -118,9 +120,9 @@ public:
 
         _AddDoc(engine_, table_info_,
                 {
-                    {"branch", branch},
-                    {"product_code", product_code},
-                    {"type", type},
+                    {"branch", std::to_string(branch)},
+                    {"product_code", std::to_string(product_code)},
+                    {"type", std::to_string(type)},
                 },
                 xb);
       }
@@ -128,12 +130,12 @@ public:
       fclose(fp);
       LOG(INFO) << ">>> Add finished.";
     });
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
   }
 
   void StartAddThread2() {
     add_task_ = std::thread([this]() {
-      long fsize = utils::get_file_size("./data/querys.dat");
+      long fsize = utils::get_file_size("./data/vectors.dat");
 
       FILE *fp = fopen("./data/vectors.dat", fsize > 0 ? "rb" : "wb");
       if (not fp) {
@@ -159,35 +161,90 @@ public:
 
       _AddDoc(engine_, table_info_,
               {
-                  {"branch", 7},
-                  {"product_code", 101},
-                  {"type", 1},
+                  {"branch", "7"},
+                  {"product_code", "101"},
+                  {"type", "1"},
               },
               xb);
 
       _AddDoc(engine_, table_info_,
               {
-                  {"branch", 7},
-                  {"product_code", 201},
-                  {"type", 1},
+                  {"branch", "7"},
+                  {"product_code", "201"},
+                  {"type", "1"},
               },
               xb);
 
       _AddDoc(engine_, table_info_,
               {
-                  {"branch", 7},
-                  {"product_code", 101},
-                  {"type", 2},
+                  {"branch", "7"},
+                  {"product_code", "101"},
+                  {"type", "2"},
               },
               xb);
 
       fclose(fp);
       LOG(INFO) << ">>> Add finished.";
     });
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
   }
 
-  double Search(const int count, int direct_search_type = 0) {
+  void StartAddThread3() {
+    add_task_ = std::thread([this]() {
+      long fsize = utils::get_file_size("./data/querys.dat");
+
+      FILE *fp = fopen("./data/querys.dat", fsize > 0 ? "rb" : "wb");
+      if (not fp) {
+        LOG(ERROR) << "open file error!";
+        return;
+      }
+
+      size_t d = table_info_.meta.dimension;
+
+      vector<float> xb(d * 1);
+      srand48(1024);
+      std::generate(xb.begin(), xb.end(), drand48);
+
+      if (fsize > 0) {
+        if (fread(xb.data(), sizeof(float), d, fp) != d) {
+          LOG(ERROR) << "read file error!";
+        }
+      } else {
+        if (fwrite(xb.data(), sizeof(float), d, fp) != d) {
+          LOG(ERROR) << "write file error!";
+        }
+      }
+
+      fclose(fp);
+
+      // BLOCK
+      {
+        std::ifstream ifs("./data/tags.txt");
+        if (!ifs) {
+          LOG(ERROR) << "open tags file error!";
+          return;
+        }
+
+        string line;
+        int times = max_doc_size_;
+        while (times-- && std::getline(ifs, line)) {
+          // LOG(INFO) << "line -> " << line;
+          _AddDoc(engine_, table_info_,
+                  {
+                      {"tag_field", line},
+                  },
+                  xb);
+        }
+
+        ifs.close();
+      }
+
+      LOG(INFO) << ">>> Add finished.";
+    });
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+  }
+
+  double Search(const int count, int direct_search_type, int filt_type = 0) {
     assert(count > 0);
     long fsize = utils::get_file_size("./data/querys.dat");
 
@@ -218,7 +275,8 @@ public:
         }
       }
 
-      auto time_cost_ms = _Search(engine_, table_info_, xb, direct_search_type);
+      auto time_cost_ms =
+          _Search(engine_, table_info_, xb, direct_search_type, filt_type);
       LOG(INFO) << "time cost " << time_cost_ms << " ms.";
 
       if (the_1st) {
@@ -229,6 +287,55 @@ public:
     }
 
     fclose(fp);
+    return (total_cost_ms / count);
+  }
+
+  double SearchUseSameVec(const int count, int direct_search_type,
+                          int filt_type = 0) {
+    assert(count > 0);
+    long fsize = utils::get_file_size("./data/querys.dat");
+
+    FILE *fp = fopen("./data/querys.dat", fsize > 0 ? "rb" : "wb");
+    if (not fp) {
+      LOG(ERROR) << "open file error!";
+      return -1;
+    }
+
+    size_t d = table_info_.meta.dimension;
+    double total_cost_ms = 0;
+    bool the_1st = true;
+
+    LOG(INFO) << ">>> Search ...";
+    int times = count;
+
+    vector<float> xb(d * 1);
+    srand48(times);
+    std::generate(xb.begin(), xb.end(), drand48);
+
+    if (fsize > 0) {
+      if (fread(xb.data(), sizeof(float), d, fp) != d) {
+        LOG(ERROR) << "read file error!";
+      }
+    } else {
+      if (fwrite(xb.data(), sizeof(float), d, fp) != d) {
+        LOG(ERROR) << "write file error!";
+      }
+    }
+
+    fclose(fp);
+
+    while (times--) {
+      auto time_cost_ms =
+          _Search(engine_, table_info_, xb, direct_search_type, filt_type);
+      LOG(INFO) << "time cost " << time_cost_ms << " ms.";
+
+      if (the_1st) {
+        the_1st = false; // discard the 1st one
+      } else {
+        total_cost_ms += time_cost_ms;
+      }
+    }
+
     return (total_cost_ms / count);
   }
 
@@ -260,7 +367,8 @@ private:
       ByteArray *name = StringToByteArray(_.first);
       DataType type = _.second;
 
-      FieldInfo *field_info = MakeFieldInfo(name, type, 1);
+      BOOL is_index = (_.first == "_id" ? 0 : 1);
+      FieldInfo *field_info = MakeFieldInfo(name, type, is_index);
       SetFieldInfo(field_infos, i++, field_info);
     }
 
@@ -278,7 +386,8 @@ private:
                              field_infos,             // fields
                              t.field_mappings.size(), // fields_num
                              vector_infos,            // vectors_info
-                             1, kIVFPQParam);         // vectors_num
+                             1,
+                             kIVFPQParam); // vectors_num
     ResponseCode code = ::CreateTable(engine, table);
     DestroyTable(table);
 
@@ -287,7 +396,7 @@ private:
     }
   }
 
-  static void _AddDoc(void *engine, TableInfo &t, map<string, int> vm,
+  static void _AddDoc(void *engine, TableInfo &t, map<string, string> vm,
                       const vector<float> &xb) {
     static int doc_id = 0;
     int field_num = t.field_mappings.size() + 1; // the last one is VECTOR
@@ -305,7 +414,9 @@ private:
         doc_id++; // increment
       } else {
         if (type == INT) {
-          value = ToByteArray<int>(vm[_.first]);
+          value = ToByteArray<int>(std::stoi(vm[_.first]));
+        } else if (type == STRING) {
+          value = StringToByteArray(vm[_.first]);
         } else {
           LOG(ERROR) << "not support.";
         }
@@ -332,7 +443,7 @@ private:
   }
 
   static double _Search(void *engine, TableInfo &t, const vector<float> &xb,
-                        int direct_search_type) {
+                        int direct_search_type, int filt_type = 0) {
     size_t d = t.meta.dimension;
     VectorQuery **querys = MakeVectorQuerys(1);
 
@@ -346,36 +457,71 @@ private:
                         1, 0);                                 // boost
     SetVectorQuery(querys, 0, query);
 
-    RangeFilter **filters = MakeRangeFilters(3);
+    Request *request = nullptr;
 
-    auto add_filter = [filters](int index, const string &field, int l,
-                                int u = -1) -> void {
-      u = (u < 0) ? l : u;
-      RangeFilter *filter =
-          MakeRangeFilter(StringToByteArray(field),             // field
-                          StringToByteArray(std::to_string(l)), // lower_value
-                          StringToByteArray(std::to_string(u)), // upper_value
-                          1,                                    // include_lower
-                          1);                                   // include_upper
-      SetRangeFilter(filters, index, filter);
-    };
+    if (filt_type == 0) {
+      RangeFilter **range_filters = MakeRangeFilters(3);
 
-    add_filter(0, "branch", 7);
-    add_filter(1, "product_code", 101);
-    add_filter(2, "type", 1);
+      auto add_filter = [range_filters](int index, const string &field, int l,
+                                        int u = -1) -> void {
+        u = (u < 0) ? l : u;
+        RangeFilter *filter =
+            MakeRangeFilter(StringToByteArray(field),             // field
+                            StringToByteArray(std::to_string(l)), // lower_value
+                            StringToByteArray(std::to_string(u)), // upper_value
+                            1,  // include_lower
+                            1); // include_upper
+        SetRangeFilter(range_filters, index, filter);
+      };
 
-    Request *request = MakeRequest(100,                // topk
-                                   querys,             // vector querys
-                                   1,                  // vector querys num
-                                   nullptr,            // fields
-                                   0,                  // fields_num
-                                   filters,            // range_filters
-                                   3,                  // range_filters_num
-                                   nullptr,            // term_filters
-                                   0,                  // term_filters_num
-                                   1,                  // req_num
-                                   direct_search_type, // direct_search_type
-                                   StringToByteArray("debug"));
+      add_filter(0, "branch", 7);
+      add_filter(1, "product_code", 101);
+      add_filter(2, "type", 1);
+
+      request = MakeRequest(100,                // topk
+                            querys,             // vector querys
+                            1,                  // vector querys num
+                            nullptr,            // fields
+                            0,                  // fields_num
+                            range_filters,      // range_filters
+                            3,                  // range_filters_num
+                            nullptr,            // term_filters
+                            0,                  // term_filters_num
+                            1,                  // req_num
+                            direct_search_type, // direct_search_type
+                            StringToByteArray("debug"));
+
+    } else {
+      TermFilter **term_filters = MakeTermFilters(1);
+
+      auto add_filter = [term_filters](int index, const string &field,
+                                       const string &value,
+                                       const BOOL is_union) -> void {
+        TermFilter *filter =
+            MakeTermFilter(StringToByteArray(field), // field
+                           StringToByteArray(value), // lower_value
+                           is_union);                // is_union
+        SetTermFilter(term_filters, index, filter);
+      };
+
+      add_filter(0, "tag_field", "男人\001女人", 0);
+      // add_filter(0, "tag_field", "男人\001女人", 1);
+      // add_filter(0, "tag_field", "男人\001女人\001孩子", 0);
+      // add_filter(0, "tag_field", "男人\001女人\001孩子", 1);
+
+      request = MakeRequest(100,                // topk
+                            querys,             // vector querys
+                            1,                  // vector querys num
+                            nullptr,            // fields
+                            0,                  // fields_num
+                            nullptr,            // range_filters
+                            0,                  // range_filters_num
+                            term_filters,       // term_filters
+                            1,                  // term_filters_num
+                            1,                  // req_num
+                            direct_search_type, // direct_search_type
+                            StringToByteArray("debug"));
+    }
 
     auto t0 = utils::getmillisecs();
     Response *response = ::Search(engine, request);
@@ -384,6 +530,7 @@ private:
     for (int i = 0; i < response->req_num; i++) {
       SearchResult *result = GetSearchResult(response, i);
       printf("request [%d] total call %d\n", i, result->total);
+      printf("result_num %d\n", result->result_num);
 
       for (int j = 0; j < result->result_num; j++) {
         ResultItem *result_item = GetResultItem(result, j);
@@ -449,7 +596,7 @@ void test_perf(int max_doc_size, int direct_search_type) {
 
   utils::Timer t0;
   t0.Start("Search");
-  auto avg_cost_ms = pt.Search(1000, direct_search_type);
+  auto avg_cost_ms = pt.Search(100, direct_search_type);
   t0.Stop();
   t0.Output();
 
@@ -490,6 +637,68 @@ void test_bugfix() {
   LOG(INFO) << "finish test_perf, AVG cost -> " << avg_cost_ms << " ms.";
 }
 
+void test_tags(int max_doc_size) {
+  tig_gamma::TableInfo t;
+  t.table_name = "test_tags";
+  t.field_mappings = {
+      {"_id", STRING},
+      {"tag_field", STRING},
+  };
+
+  t.meta.vector_name = "vt";
+  t.meta.dimension = 512;
+  t.meta.retrieval_type = "IVFPQ";
+  t.meta.store_type = "MemoryOnly";
+  t.meta.model_id = "VGG";
+
+  PerfTest pt(max_doc_size);
+
+  pt.Init("table3", "logs");
+  pt.CreateTable(t);
+  LOG(INFO) << "Init & CreateTable done!";
+
+  auto gen_tags = [](int n) {
+    vector<string> tag_table = {
+        "男人",
+        "女人",
+        "孩子",
+        "男人女人",
+        "男人孩子",
+        "女人孩子",
+        "男人女人孩子",
+        "老人",
+        "",
+    };
+
+    std::ofstream ofs("./data/tags.txt");
+    if (!ofs) {
+      LOG(ERROR) << "open tags file error!";
+      return;
+    }
+
+    srand(time(0));
+    for (int i = 0; i < n; i++) {
+      int index = rand() % tag_table.size();
+      ofs << tag_table[index] << "\n";
+    }
+
+    ofs.close();
+  };
+
+  gen_tags(max_doc_size);
+
+  pt.StartAddThread3();
+
+  utils::Timer t0;
+  t0.Start("Search");
+  auto avg_cost_ms = pt.SearchUseSameVec(100, 0, 1);
+  t0.Stop();
+
+  t0.Output();
+
+  LOG(INFO) << "finish test_tags, AVG cost -> " << avg_cost_ms << " ms.";
+}
+
 int main(int argc, char *argv[]) {
   int tc = 0;
   int max_doc_size = kDefaultMaxDocSize;
@@ -514,6 +723,9 @@ int main(int argc, char *argv[]) {
     break;
   case 1:
     test_bugfix();
+    break;
+  case 2:
+    test_tags(max_doc_size);
     break;
   default:
     break;

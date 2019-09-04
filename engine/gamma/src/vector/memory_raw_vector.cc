@@ -164,8 +164,8 @@ int MemoryRawVector::Dump(const string &path, int dump_docid, int max_docid) {
   assert((size_t)total == nwrite);
 
   // dump inc vector to feature file
-  nwrite = fwrite((void *)(vector_mem_ + vid_begin * dimension_), sizeof(float) * dimension_,
-                  total, fet_fp);
+  nwrite = fwrite((void *)(vector_mem_ + vid_begin * dimension_),
+                  sizeof(float) * dimension_, total, fet_fp);
   assert((size_t)total == nwrite);
 
   // dump inc source
@@ -185,8 +185,7 @@ int MemoryRawVector::Dump(const string &path, int dump_docid, int max_docid) {
   LOG(INFO) << "dump feature file path=" << fet_file_path
             << ", source file path=" << src_file_path
             << "begin vector id=" << vid_begin << ", total=" << total
-            << ", dimension=" << dimension_
-            << ", source length=" << src_len;
+            << ", dimension=" << dimension_ << ", source length=" << src_len;
 
   return 0;
 }
@@ -213,8 +212,7 @@ int MemoryRawVector::Load(const std::vector<std::string> &dirs) {
     fread((void *)&vid_begin, sizeof(vid_begin), 1, fet_fp);
     assert(-1 != vid_begin);
     fread((void *)&total, sizeof(total), 1, fet_fp);
-    fread((void *)(vid2docid_.data() + vid_begin), sizeof(int), total,
-          fet_fp);
+    fread((void *)(vid2docid_.data() + vid_begin), sizeof(int), total, fet_fp);
     head_len += sizeof(vid_begin) + sizeof(total) + total * sizeof(int);
     vid_end = vid_begin + total - 1;
 
@@ -244,12 +242,11 @@ int MemoryRawVector::Load(const std::vector<std::string> &dirs) {
     fread((void *)&src_total, sizeof(int), 1, src_fp);
     head_len += sizeof(int);
     assert(src_total == total + 1);
-    read_n = fread((void *)(source_mem_pos_.data() + vid_begin),
-                           sizeof(long), src_total, src_fp);
+    read_n = fread((void *)(source_mem_pos_.data() + vid_begin), sizeof(long),
+                   src_total, src_fp);
     assert((size_t)src_total == read_n);
     head_len += sizeof(long) * src_total;
-    long src_len =
-        source_mem_pos_[vid_end + 1] - source_mem_pos_[vid_begin];
+    long src_len = source_mem_pos_[vid_end + 1] - source_mem_pos_[vid_begin];
     if (src_file_size - head_len != (size_t)src_len) {
       LOG(ERROR) << "invalid source file size=" << src_file_size
                  << ", source length=" << src_len
@@ -259,7 +256,7 @@ int MemoryRawVector::Load(const std::vector<std::string> &dirs) {
       return -1;
     }
     read_n = fread((void *)(str_mem_ptr_ + source_mem_pos_[vid_begin]),
-                    sizeof(char), src_len, src_fp);
+                   sizeof(char), src_len, src_fp);
     assert((size_t)src_len == read_n);
     fclose(src_fp);
 

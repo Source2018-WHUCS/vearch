@@ -3,8 +3,8 @@ SET(Faiss_INCLUDE_SEARCH_PATHS
    /usr/include/faiss
    /usr/local/include
    /usr/local/include/faiss
-   $ENV{Faiss_HOME}
-   $ENV{Faiss_HOME}/include
+   $ENV{FAISS_HOME}
+   $ENV{FAISS_HOME}/include
 )
 
 SET(Faiss_LIB_SEARCH_PATHS
@@ -14,8 +14,8 @@ SET(Faiss_LIB_SEARCH_PATHS
     /usr/lib64
     /usr/local/lib
     /usr/local/lib64
-    $ENV{Faiss_HOME}
-    $ENV{Faiss_HOME}/lib
+    $ENV{FAISS_HOME}
+    $ENV{FAISS_HOME}/lib
  )
 
 FIND_PATH(Faiss_INCLUDE_DIR NAMES faiss/Index.h PATHS ${Faiss_INCLUDE_SEARCH_PATHS})
@@ -42,7 +42,7 @@ IF (Faiss_FOUND)
   ENDIF (NOT Faiss_FIND_QUIETLY)
 ELSE (Faiss_FOUND)
   IF (Faiss_FIND_REQUIRED)
-    MESSAGE(FATAL_ERROR "Could not find Faiss, please install faiss or set $Faiss_HOME")
+    MESSAGE(FATAL_ERROR "Could not find Faiss, please install faiss or set $FAISS_HOME")
   ENDIF (Faiss_FIND_REQUIRED)
 ENDIF (Faiss_FOUND)
 

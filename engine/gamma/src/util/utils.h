@@ -67,6 +67,18 @@ template <class T> inline T *NewArray(int len, const char *msg) {
 }
 
 std::string join(const std::vector<std::string> &strs, char separator);
+template <class T> std::string join(const T *a, int n, char separator) {
+  std::stringstream ss;
+  ss << "[";
+  for (size_t i = 0; i < n; i++) {
+    if (i != 0) {
+      ss << separator;
+    }
+    ss << a[i];
+  }
+  ss << "]";
+  return ss.str();
+}
 
 typedef struct MEM_PACKED {
   char name[20];

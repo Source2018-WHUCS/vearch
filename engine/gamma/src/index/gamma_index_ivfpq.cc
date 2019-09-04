@@ -63,17 +63,17 @@ GammaIVFPQIndex::get_InvertedListScanner(bool store_pairs) const {
     if (store_pairs) {
       faiss::InvertedListScanner *scanner =
           new GammaIndexScanner<faiss::METRIC_INNER_PRODUCT, true,
-                                faiss::CMin<float, long>, 2>(*this);
+                                faiss::CMin<float, idx_t>, 2>(*this);
       ((GammaIndexScanner<faiss::METRIC_INNER_PRODUCT, true,
-                          faiss::CMin<float, long>, 2> *)scanner)
+                          faiss::CMin<float, idx_t>, 2> *)scanner)
           ->SetVecFilter(this->docids_bitmap_, this->raw_vec_);
       return scanner;
     } else {
       faiss::InvertedListScanner *scanner =
           new GammaIndexScanner<faiss::METRIC_INNER_PRODUCT, false,
-                                faiss::CMin<float, long>, 2>(*this);
+                                faiss::CMin<float, idx_t>, 2>(*this);
       ((GammaIndexScanner<faiss::METRIC_INNER_PRODUCT, false,
-                          faiss::CMin<float, long>, 2> *)scanner)
+                          faiss::CMin<float, idx_t>, 2> *)scanner)
           ->SetVecFilter(this->docids_bitmap_, this->raw_vec_);
       return scanner;
     }
@@ -81,17 +81,17 @@ GammaIVFPQIndex::get_InvertedListScanner(bool store_pairs) const {
     if (store_pairs) {
       faiss::InvertedListScanner *scanner =
           new GammaIndexScanner<faiss::METRIC_L2, true,
-                                faiss::CMax<float, long>, 2>(*this);
+                                faiss::CMax<float, idx_t>, 2>(*this);
 
-      ((GammaIndexScanner<faiss::METRIC_L2, true, faiss::CMax<float, long>, 2>
+      ((GammaIndexScanner<faiss::METRIC_L2, true, faiss::CMax<float, idx_t>, 2>
             *)scanner)
           ->SetVecFilter(this->docids_bitmap_, this->raw_vec_);
       return scanner;
     } else {
       faiss::InvertedListScanner *scanner =
           new GammaIndexScanner<faiss::METRIC_L2, false,
-                                faiss::CMax<float, long>, 2>(*this);
-      ((GammaIndexScanner<faiss::METRIC_L2, false, faiss::CMax<float, long>, 2>
+                                faiss::CMax<float, idx_t>, 2>(*this);
+      ((GammaIndexScanner<faiss::METRIC_L2, false, faiss::CMax<float, idx_t>, 2>
             *)scanner)
           ->SetVecFilter(this->docids_bitmap_, this->raw_vec_);
       return scanner;
@@ -116,8 +116,9 @@ int GammaIVFPQIndex::AddRTVecsToIndex() {
   int ret = 0;
   int total_stored_vecs = raw_vec_->GetVectorNum();
   if (indexed_vec_count_ > total_stored_vecs) {
-    LOG(ERROR) << "internal error : indexed_vec_count should not greater than "
-                  "total_stored_vecs!";
+    LOG(ERROR) << "internal error : indexed_vec_count=" << indexed_vec_count_
+               << " should not greater than total_stored_vecs="
+               << total_stored_vecs;
     ret = -1;
   } else if (indexed_vec_count_ == total_stored_vecs) {
     ;
@@ -145,7 +146,7 @@ int GammaIVFPQIndex::AddRTVecsToIndex() {
 }
 
 static float *compute_residuals(const faiss::Index *quantizer, long n,
-                                const float *x, const long *list_nos) {
+                                const float *x, const idx_t *list_nos) {
   size_t d = quantizer->d;
   float *residuals = new float[n * d];
   for (int i = 0; i < n; i++) {
@@ -164,10 +165,10 @@ bool GammaIVFPQIndex::Add(int n, const float *vec) {
   std::map<int, std::vector<long>> new_keys;
   std::map<int, std::vector<uint8_t>> new_codes;
 
-  long *idx;
-  faiss::ScopeDeleter<long> del_idx;
+  idx_t *idx;
+  faiss::ScopeDeleter<idx_t> del_idx;
 
-  long *idx0 = new long[n];
+  idx_t *idx0 = new idx_t[n];
   quantizer->assign(n, vec, idx0);
   idx = idx0;
   del_idx.set(idx);
@@ -188,6 +189,7 @@ bool GammaIVFPQIndex::Add(int n, const float *vec) {
 
   size_t n_ignore = 0;
   size_t n_add = 0;
+  long vid = indexed_vec_count_;
   for (int i = 0; i < n; i++) {
     long key = idx[i];
     assert(key < (long)nlist);
@@ -196,10 +198,10 @@ bool GammaIVFPQIndex::Add(int n, const float *vec) {
       continue;
     }
 
-    long id = (long)(indexed_vec_count_++);
+    // long id = (long)(indexed_vec_count_++);
     uint8_t *code = xcodes + i * code_size;
 
-    new_keys[key].push_back(id);
+    new_keys[key].push_back(vid++);
 
     size_t ofs = new_codes[key].size();
     new_codes[key].resize(ofs + code_size);
@@ -210,6 +212,7 @@ bool GammaIVFPQIndex::Add(int n, const float *vec) {
 
   /* stage 2 : add invert info to invert index */
   rt_invert_index_ptr_->AddKeys(new_keys, new_codes);
+  indexed_vec_count_ = vid;
 #ifdef PERFORMANCE_TESTING
   double t1 = faiss::getmillisecs();
   if (indexed_vec_count_ % 10000 == 0) {
@@ -221,9 +224,9 @@ bool GammaIVFPQIndex::Add(int n, const float *vec) {
 
 void GammaIVFPQIndex::SearchIVFPQ(int n, const float *x,
                                   const GammaSearchCondition *condition,
-                                  float *distances, long *labels, int *total) {
-  long *idx = new long[n * nprobe];
-  faiss::ScopeDeleter<long> del(idx);
+                                  float *distances, idx_t *labels, int *total) {
+  idx_t *idx = new idx_t[n * nprobe];
+  faiss::ScopeDeleter<idx_t> del(idx);
   float *coarse_dis = new float[n * nprobe];
   faiss::ScopeDeleter<float> del2(coarse_dis);
 
@@ -237,7 +240,7 @@ void GammaIVFPQIndex::SearchIVFPQ(int n, const float *x,
 
 void GammaIVFPQIndex::search_preassigned(
     int n, const float *x, const GammaSearchCondition *condition,
-    const long *keys, const float *coarse_dis, float *distances, long *labels,
+    const idx_t *keys, const float *coarse_dis, float *distances, idx_t *labels,
     int *total, bool store_pairs, const faiss::IVFSearchParameters *params) {
   int nprobe = params ? params->nprobe : this->nprobe;
   long max_codes = params ? params->max_codes : this->max_codes;
@@ -246,19 +249,19 @@ void GammaIVFPQIndex::search_preassigned(
 
   size_t nlistv = 0, ndis = 0, nheap = 0;
 
-  using HeapForIP = faiss::CMin<float, long>;
-  using HeapForL2 = faiss::CMax<float, long>;
+  using HeapForIP = faiss::CMin<float, idx_t>;
+  using HeapForL2 = faiss::CMax<float, idx_t>;
 
   int recall_num = condition->recall_num;
 
   float *recall_distances =
       utils::NewArray<float>(n * recall_num, "recall_distances");
-  long *recall_labels = utils::NewArray<long>(n * recall_num, "recall_labels");
+  idx_t *recall_labels = utils::NewArray<idx_t>(n * recall_num, "recall_labels");
   faiss::ScopeDeleter<float> del1(recall_distances);
-  faiss::ScopeDeleter<long> del2(recall_labels);
+  faiss::ScopeDeleter<idx_t> del2(recall_labels);
 
   // intialize + reorder a result heap
-  auto init_result = [&](int topk, float *simi, long *idxi) {
+  auto init_result = [&](int topk, float *simi, idx_t *idxi) {
     if (metric_type == faiss::METRIC_INNER_PRODUCT) {
       faiss::heap_heapify<HeapForIP>(topk, simi, idxi);
     } else {
@@ -266,7 +269,7 @@ void GammaIVFPQIndex::search_preassigned(
     }
   };
 
-  auto reorder_result = [&](int topk, float *simi, long *idxi) {
+  auto reorder_result = [&](int topk, float *simi, idx_t *idxi) {
     if (metric_type == faiss::METRIC_INNER_PRODUCT) {
       faiss::heap_reorder<HeapForIP>(topk, simi, idxi);
     } else {
@@ -358,10 +361,10 @@ void GammaIVFPQIndex::search_preassigned(
         scanner->set_query(x + i * d);
 
         float *simi = distances + i * k;
-        long *idxi = labels + i * k;
+        idx_t *idxi = labels + i * k;
 
         float *recall_simi = recall_distances + i * recall_num;
-        long *recall_idxi = recall_labels + i * recall_num;
+        idx_t *recall_idxi = recall_labels + i * recall_num;
 
         init_result(k, simi, idxi);
         init_result(recall_num, recall_simi, recall_idxi);
@@ -374,7 +377,7 @@ void GammaIVFPQIndex::search_preassigned(
             continue;
           }
           const uint8_t **codes = bucket_codes[key].data();
-          const long *vids = bucket_vids[key].data();
+          const idx_t *vids =reinterpret_cast<idx_t *> (bucket_vids[key].data());
 
           scanner->set_list(key, coarse_dis_i);
 
@@ -439,7 +442,7 @@ void GammaIVFPQIndex::search_preassigned(
 #endif
 
         if (condition->sort_by_docid) { // sort by doc id
-          std::vector<std::pair<long, float>> id_sim_pairs;
+          std::vector<std::pair<idx_t, float>> id_sim_pairs;
           for (int i = 0; i < k; i++) {
             id_sim_pairs.emplace_back(std::make_pair(idxi[i], simi[i]));
           }
@@ -493,7 +496,7 @@ void GammaIVFPQIndex::search_preassigned(
     // single list scan using the current scanner (with query
     // set porperly) and storing results in simi and idxi
     auto scan_one_list = [&](long key, float coarse_dis_i, float *simi,
-                             long *idxi, int topk) -> size_t {
+                             idx_t *idxi, int topk) -> size_t {
       if (key < 0) {
         // not enough centroids for multiprobe
         return 0;
@@ -511,7 +514,7 @@ void GammaIVFPQIndex::search_preassigned(
       nlistv++;
 
       faiss::InvertedLists::ScopedCodes scodes(invlists, key);
-      const long *ids = store_pairs ? nullptr : invlists->get_ids(key);
+      const idx_t *ids = store_pairs ? nullptr : invlists->get_ids(key);
 
       nheap +=
           scanner->scan_codes(list_size, scodes.get(), ids, simi, idxi, topk);
@@ -539,10 +542,10 @@ void GammaIVFPQIndex::search_preassigned(
 #endif
 
         float *simi = distances + i * k;
-        long *idxi = labels + i * k;
+        idx_t *idxi = labels + i * k;
 
         float *recall_simi = recall_distances + i * recall_num;
-        long *recall_idxi = recall_labels + i * recall_num;
+        idx_t *recall_idxi = recall_labels + i * recall_num;
 
         init_result(k, simi, idxi);
         init_result(recall_num, recall_simi, recall_idxi);
@@ -642,7 +645,7 @@ void GammaIVFPQIndex::search_preassigned(
 
       }      // parallel for
     } else { // parallelize over inverted lists
-      std::vector<long> local_idx(recall_num);
+      std::vector<idx_t> local_idx(recall_num);
       std::vector<float> local_dis(recall_num);
 
       for (int i = 0; i < n; i++) {
@@ -665,10 +668,10 @@ void GammaIVFPQIndex::search_preassigned(
         // merge thread-local results
 
         float *simi = distances + i * k;
-        long *idxi = labels + i * k;
+        idx_t *idxi = labels + i * k;
 
         float *recall_simi = recall_distances + i * recall_num;
-        long *recall_idxi = recall_labels + i * recall_num;
+        idx_t *recall_idxi = recall_labels + i * recall_num;
 
 #pragma omp single
         {
@@ -741,7 +744,7 @@ void GammaIVFPQIndex::search_preassigned(
 #endif
 
           if (condition->sort_by_docid) {
-            std::vector<std::pair<long, float>> id_sim_pairs;
+            std::vector<std::pair<idx_t, float>> id_sim_pairs;
             for (int z = 0; z < k; z++) {
               id_sim_pairs.emplace_back(std::make_pair(idxi[z], simi[z]));
             }
@@ -775,15 +778,15 @@ void GammaIVFPQIndex::search_preassigned(
 
 void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
                                      const GammaSearchCondition *condition,
-                                     float *distances, long *labels,
+                                     float *distances, idx_t *labels,
                                      int *total) {
   const float *vectors = raw_vec_->GetVector(0);
   int num_vectors = raw_vec_->GetVectorNum();
 
   long k = condition->topn; // topK
 
-  using HeapForIP = faiss::CMin<float, long>;
-  using HeapForL2 = faiss::CMax<float, long>;
+  using HeapForIP = faiss::CMin<float, idx_t>;
+  using HeapForL2 = faiss::CMax<float, idx_t>;
 
   size_t ndis = 0;
 
@@ -798,7 +801,7 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
      * that are in common between the two
      ******************************************************/
 
-    auto init_result = [&](int k, float *simi, long *idxi) {
+    auto init_result = [&](int k, float *simi, idx_t *idxi) {
       if (metric_type == faiss::METRIC_INNER_PRODUCT) {
         faiss::heap_heapify<HeapForIP>(k, simi, idxi);
       } else {
@@ -806,7 +809,7 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
       }
     };
 
-    auto reorder_result = [&](int k, float *simi, long *idxi) {
+    auto reorder_result = [&](int k, float *simi, idx_t *idxi) {
       if (metric_type == faiss::METRIC_INNER_PRODUCT) {
         faiss::heap_reorder<HeapForIP>(k, simi, idxi);
       } else {
@@ -814,7 +817,7 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
       }
     };
 
-    auto sort_by_docid = [&](int k, float *simi, long *idxi) {
+    auto sort_by_docid = [&](int k, float *simi, idx_t *idxi) {
       std::vector<std::pair<long, float>> id_sim_pairs;
       for (int i = 0; i < k; i++) {
         id_sim_pairs.emplace_back(std::make_pair(idxi[i], simi[i]));
@@ -827,7 +830,7 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
     };
 
     auto search_impl = [&](const float *xi, const float *y, int ny, int offset,
-                           float *simi, long *idxi, int k) -> int {
+                           float *simi, idx_t *idxi, int k) -> int {
       int total = 0;
       auto *nr = condition->numeric_results;
       bool ck_dis = (condition->min_dist >= 0 && condition->max_dist >= 0);
@@ -894,7 +897,7 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
         const float *xi = x + i * d;
 
         float *simi = distances + i * k;
-        long *idxi = labels + i * k;
+        idx_t *idxi = labels + i * k;
 
         init_result(k, simi, idxi);
 
@@ -908,7 +911,7 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
       }
     } else { // parallelize over vectors
 
-      std::vector<long> local_idx(k);
+      std::vector<idx_t> local_idx(k);
       std::vector<float> local_dis(k);
 
       size_t num_vectors_per_thread = num_vectors / num_threads;
@@ -937,7 +940,7 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
 
         // merge thread-local results
         float *simi = distances + i * k;
-        long *idxi = labels + i * k;
+        idx_t *idxi = labels + i * k;
 
 #pragma omp single
         init_result(k, simi, idxi);
@@ -978,12 +981,12 @@ int GammaIVFPQIndex::Search(const VectorQuery *query,
   } else {
     metric_type = faiss::METRIC_L2;
   }
-
+  idx_t * idx = reinterpret_cast<idx_t*>(result.docids);
   if (condition->use_direct_search) {
-    SearchDirectly(n, x, condition, result.dists, result.docids,
+    SearchDirectly(n, x, condition, result.dists, idx,
                    result.total.data());
   } else {
-    SearchIVFPQ(n, x, condition, result.dists, result.docids,
+    SearchIVFPQ(n, x, condition, result.dists, idx,
                 result.total.data());
   }
 
@@ -1056,7 +1059,7 @@ const uint8_t *RTInvertedLists::get_codes(size_t list_no) const {
   return ivt_codes_list;
 }
 
-const long *RTInvertedLists::get_ids(size_t list_no) const {
+const idx_t *RTInvertedLists::get_ids(size_t list_no) const {
   if (!rt_invert_index_ptr_)
     return nullptr;
   long *ivt_list = nullptr;
@@ -1066,18 +1069,19 @@ const long *RTInvertedLists::get_ids(size_t list_no) const {
                                               ivt_codes_list);
   if (!ret)
     return nullptr;
-  return ivt_list;
+  idx_t * ivt_lists = reinterpret_cast<idx_t *>(ivt_list);
+  return ivt_lists;
 }
 
 size_t RTInvertedLists::add_entries(size_t list_no, size_t n_entry,
-                                    const long *ids, const uint8_t *code) {
+                                    const idx_t *ids, const uint8_t *code) {
   return 0;
 }
 
 void RTInvertedLists::resize(size_t list_no, size_t new_size) {}
 
 void RTInvertedLists::update_entries(size_t list_no, size_t offset,
-                                     size_t n_entry, const long *ids_in,
+                                     size_t n_entry, const idx_t *ids_in,
                                      const uint8_t *codes_in) {}
 
 } // namespace tig_gamma

@@ -134,7 +134,7 @@ struct GammaIndex {
                      VectorResult &result) = 0;
   virtual long GetTotalMemBytes() = 0;
 
-  virtual int Dump(const std::string &dir, int max_vid) = 0;
+  virtual int Dump(const std::string &dir) = 0;
   virtual int Load(const std::vector<std::string> &index_dirs) = 0;
 
   size_t d_;

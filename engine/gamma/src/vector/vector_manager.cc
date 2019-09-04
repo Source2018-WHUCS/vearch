@@ -95,6 +95,8 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
     RawVectorType store_type = default_store_type_;
     if (!strcasecmp("MemoryOnly", store_type_str.c_str())) {
       store_type = RawVectorType::MemoryOnly;
+    } else if (!strcasecmp("MemoryWithDisk", store_type_str.c_str())) {
+      store_type = RawVectorType::MemoryWithDisk;
     } else {
       LOG(WARNING) << "NO support for store type " << store_type_str
                    << ", default to " << default_store_type_;
@@ -351,8 +353,7 @@ int VectorManager::Dump(const string &path, int dump_docid, int max_docid) {
     }
     LOG(INFO) << "vector " << vec_name << " dump success!";
 
-    int dump_num =
-        index->Dump(path, index->raw_vec_->GetLastVectorID(max_docid));
+    int dump_num = index->Dump(path);
     if (dump_num < 0) {
       LOG(ERROR) << "vector " << vec_name << " dump gamma index failed!";
       return -1;

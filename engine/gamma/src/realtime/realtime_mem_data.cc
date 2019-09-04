@@ -7,6 +7,7 @@
 
 #include "realtime_mem_data.h"
 #include "log.h"
+#include "utils.h"
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -146,11 +147,15 @@ int RTInvertBucketData::GetCurDumpPos(const size_t &bucket_no, int max_vid,
                                       int &dump_start_pos, int &size) {
   int start_pos = _dump_latest_pos[bucket_no];
   int end_pos = _retrieve_idx_pos[bucket_no];
+  if (end_pos == 0) {
+    LOG(ERROR) << "bucket no=" << bucket_no << "has no data to dump";
+    return -1;
+  }
   if (start_pos > end_pos) {
     LOG(ERROR) << "the latest dumping pos exceed the max retrieval pos";
     return -1;
   }
-  while ((long)max_vid < _idx_array[bucket_no][end_pos--])
+  while ((long)max_vid < _idx_array[bucket_no][--end_pos])
     ;
   if (start_pos > end_pos) {
     return -2;
@@ -337,6 +342,7 @@ int RealTimeMemData::Dump(const std::string &dir, int max_vid) {
   int buckets[_buckets_num];
   long *ids[_buckets_num];
   uint8_t *codes[_buckets_num];
+  LOG(INFO) << "dump max vector id=" << max_vid;
 
   int ids_count = 0;
   int real_dump_min_vid = INT_MAX, real_dump_max_vid = -1;
@@ -349,6 +355,13 @@ int RealTimeMemData::Dump(const std::string &dir, int max_vid) {
           _cur_invert_ptr->_codes_array[i] + (start_pos * _code_bytes_per_vec);
       int bucket_min_vid = _cur_invert_ptr->_idx_array[i][start_pos];
       int bucket_max_vid = _cur_invert_ptr->_idx_array[i][start_pos + size - 1];
+#ifdef DEBUG
+      LOG(INFO) << "dump bucket no=" << i << ", min vid=" << bucket_min_vid
+                << ", max vid=" << bucket_max_vid << ", size=" << size
+                << ", dir=" << dir
+                << ", _dump_latest_pos=" << _cur_invert_ptr->_dump_latest_pos[i]
+                << ", vids=" << utils::join(ids[i], size, ',');
+#endif
       if (real_dump_min_vid > bucket_min_vid) {
         real_dump_min_vid = bucket_min_vid;
       }
@@ -375,6 +388,11 @@ int RealTimeMemData::Dump(const std::string &dir, int max_vid) {
              buckets[i] * _code_bytes_per_vec, fp);
     }
     fclose(fp);
+    LOG(INFO) << "ids_count=" << ids_count
+              << ", real_dump_min_vid=" << real_dump_min_vid
+              << ", real_dump_max_vid=" << real_dump_max_vid
+              << ", _buckets_num=" << _buckets_num
+              << ", buckets=" << utils::join<int>(buckets, _buckets_num, ',');
   }
   return ids_count;
 }
@@ -427,7 +445,7 @@ int RealTimeMemData::Load(const std::vector<std::string> &index_dirs) {
   for (size_t i = 0; i < _buckets_num; i++) {
     size_t total_keys = total_bucket_ids[i] * 2;
     if (total_keys > _bucket_keys) {
-      total_keys = _bucket_keys;
+      total_keys = _bucket_keys; // TODO: use limited bucket keys
     }
     load_bucket_ids[i] = new long[total_keys];
     _total_mem_bytes += total_keys * sizeof(long);
@@ -447,6 +465,14 @@ int RealTimeMemData::Load(const std::vector<std::string> &index_dirs) {
     for (size_t j = 0; j < _buckets_num; j++) {
       fread((void *)(load_bucket_ids[j] + ids_load_offset_list[j]),
             sizeof(long), bucket_ids[i][j], fp_array[i]);
+#ifdef DEBUG
+      long min_vid = load_bucket_ids[j][ids_load_offset_list[j]];
+      long max_vid =
+          load_bucket_ids[j][ids_load_offset_list[j] + bucket_ids[i][j] - 1];
+      LOG(INFO) << "index id=" << i << ", bucket no=" << j
+                << ", min vid=" << min_vid << ", max vid=" << max_vid
+                << ", size=" << bucket_ids[i][j];
+#endif
       ids_load_offset_list[j] += bucket_ids[i][j];
       int codes_count = bucket_ids[i][j] * _code_bytes_per_vec;
       fread((void *)(load_bucket_codes[j] + codes_load_offset_list[j]),
@@ -462,8 +488,11 @@ int RealTimeMemData::Load(const std::vector<std::string> &index_dirs) {
     _cur_invert_ptr->_idx_array[i] = load_bucket_ids[i];
     delete[] _cur_invert_ptr->_codes_array[i];
     _cur_invert_ptr->_codes_array[i] = load_bucket_codes[i];
-
-    _cur_invert_ptr->_dump_latest_pos[i] = 0;
+    _cur_invert_ptr->_dump_latest_pos[i] = total_bucket_ids[i];
+#ifdef DEBUG
+    LOG(INFO) << "bucket id=" << i
+              << ", _dump_latest_pos=" << _cur_invert_ptr->_dump_latest_pos[i];
+#endif
   }
   return total_ids;
 }

@@ -276,6 +276,8 @@ Response *GammaEngine::Search(const Request *request) {
     }
 
     int retval = numeric_index_->Search(filters, numeric_filter_result);
+    OLOG(&logger, DEBUG, "search numeric index, ret: " << retval);
+
     if (retval == 0) {
       string msg = "No result: numeric filter return 0 result";
       for (int i = 0; i < response_results->req_num; i++) {
@@ -701,8 +703,7 @@ int GammaEngine::Dump() {
     return -1;
   }
 
-  fwrite((void *)(docids_bitmap_), sizeof(char), bitmap_bytes_size_,
-         fp_output);
+  fwrite((void *)(docids_bitmap_), sizeof(char), bitmap_bytes_size_, fp_output);
   fclose(fp_output);
   dump_docid_ = max_docid + 1;
 
@@ -783,6 +784,7 @@ int GammaEngine::Load() {
             << ", folders=" << utils::join(folders, ',');
 
   loaded_ = true;
+  dump_docid_ = max_docid_;
 
   return ret;
 }

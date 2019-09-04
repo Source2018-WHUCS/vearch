@@ -360,7 +360,7 @@ struct IVFPQScannerT : QueryTables {
 
   float dis0;
 
-  void init_list(long list_no, float coarse_dis, int mode) {
+  void init_list(idx_t list_no, float coarse_dis, int mode) {
     this->key = list_no;
     this->coarse_dis = coarse_dis;
 
@@ -374,8 +374,8 @@ struct IVFPQScannerT : QueryTables {
   /// tables are not precomputed, but pointers are provided to the
   /// relevant X_c|x_r tables
   size_t scan_list_with_pointer(size_t ncode, const uint8_t *codes,
-                                const long *ids, size_t k, float *heap_sim,
-                                long *heap_ids) const {
+                                const idx_t *ids, size_t k, float *heap_sim,
+                                idx_t *heap_ids) const {
     size_t nup = 0;
     for (size_t j = 0; j < ncode; j++) {
 
@@ -400,8 +400,8 @@ struct IVFPQScannerT : QueryTables {
 
   /// nothing is precomputed: access residuals on-the-fly
   size_t scan_on_the_fly_dist(size_t ncode, const uint8_t *codes,
-                              const long *ids, size_t k, float *heap_sim,
-                              long *heap_ids) const {
+                              const idx_t *ids, size_t k, float *heap_sim,
+                              idx_t *heap_ids) const {
     const float *dvec;
     float dis0 = 0;
     size_t nup = 0;
@@ -447,7 +447,7 @@ struct IVFPQScannerT : QueryTables {
   template <class HammingComputer>
   size_t scan_list_polysemous_hc(size_t ncode, const uint8_t *codes,
                                  const idx_t *ids, size_t k, float *heap_sim,
-                                 long *heap_ids) const {
+                                 idx_t *heap_ids) const {
     int ht = ivfpq.polysemous_ht;
     size_t n_hamming_pass = 0, nup = 0;
 
@@ -484,8 +484,8 @@ struct IVFPQScannerT : QueryTables {
   }
 
   size_t scan_list_polysemous(size_t ncode, const uint8_t *codes,
-                              const long *ids, size_t k, float *heap_sim,
-                              long *heap_ids) const {
+                              const idx_t *ids, size_t k, float *heap_sim,
+                              idx_t *heap_ids) const {
     switch (pq.code_size) {
 #define HANDLE_CODE_SIZE(cs)                                                   \
   case cs:                                                                     \
@@ -524,8 +524,8 @@ struct GammaIndexScanner : IVFPQScannerT<idx_t, store_pairs, C, METRIC_TYPE>,
   }
 
   size_t scan_list_with_table(size_t ncode, const uint8_t *codes,
-                              const long *ids, size_t k, float *heap_sim,
-                              long *heap_ids) const {
+                              const idx_t *ids, size_t k, float *heap_sim,
+                              idx_t *heap_ids) const {
     assert(this->pq.M % 4 == 0);
 
     // set filter func
@@ -640,8 +640,8 @@ struct GammaIndexScanner : IVFPQScannerT<idx_t, store_pairs, C, METRIC_TYPE>,
   }
 
   size_t scan_list_with_table(size_t ncode, const uint8_t **codes,
-                              const long *ids, size_t k, float *heap_sim,
-                              long *heap_ids) const {
+                              const idx_t *ids, size_t k, float *heap_sim,
+                              idx_t *heap_ids) const {
     int nup = 0;
     assert(this->pq.M % 4 == 0);
 
@@ -711,7 +711,7 @@ struct GammaIndexScanner : IVFPQScannerT<idx_t, store_pairs, C, METRIC_TYPE>,
     this->numeric_index_ptr_ = condition->numeric_results;
   }
 
-  inline void set_list(long list_no, float coarse_dis) override {
+  inline void set_list(idx_t list_no, float coarse_dis) override {
     this->init_list(list_no, coarse_dis, precompute_mode);
   }
 
@@ -727,8 +727,8 @@ struct GammaIndexScanner : IVFPQScannerT<idx_t, store_pairs, C, METRIC_TYPE>,
     return dis;
   }
 
-  inline size_t scan_codes(size_t ncode, const uint8_t *codes, const long *ids,
-                           float *heap_sim, long *heap_ids,
+  inline size_t scan_codes(size_t ncode, const uint8_t *codes, const idx_t *ids,
+                           float *heap_sim, idx_t *heap_ids,
                            size_t k) const override {
     if (this->polysemous_ht > 0) {
       assert(precompute_mode == 2);
@@ -745,8 +745,8 @@ struct GammaIndexScanner : IVFPQScannerT<idx_t, store_pairs, C, METRIC_TYPE>,
     return 0;
   }
 
-  inline size_t scan_codes(size_t ncode, const uint8_t **codes, const long *ids,
-                           float *heap_sim, long *heap_ids, size_t k) {
+  inline size_t scan_codes(size_t ncode, const uint8_t **codes, const idx_t *ids,
+                           float *heap_sim, idx_t *heap_ids, size_t k) {
     if (precompute_mode == 2) {
       this->scan_list_with_table(ncode, codes, ids, k, heap_sim, heap_ids);
     } else {
@@ -782,8 +782,6 @@ struct GammaIndexScanner : IVFPQScannerT<idx_t, store_pairs, C, METRIC_TYPE>,
 
 struct RTInvertedLists : faiss::InvertedLists {
 
-  using idx_t = int;
-
   RTInvertedLists(realtime::RTInvertIndex *rt_invert_index_ptr, size_t nlist,
                   size_t code_size);
 
@@ -805,18 +803,18 @@ struct RTInvertedLists : faiss::InvertedLists {
    *
    * @return ids      size list_size
    */
-  const long *get_ids(size_t list_no) const override;
+  const idx_t *get_ids(size_t list_no) const override;
 
   /*************************
    * writing functions     */
 
-  size_t add_entries(size_t list_no, size_t n_entry, const long *ids,
+  size_t add_entries(size_t list_no, size_t n_entry, const idx_t *ids,
                      const uint8_t *code) override;
 
   void resize(size_t list_no, size_t new_size) override;
 
   void update_entries(size_t list_no, size_t offset, size_t n_entry,
-                      const long *ids_in, const uint8_t *codes_in) override;
+                      const idx_t *ids_in, const uint8_t *codes_in) override;
 
   realtime::RTInvertIndex *rt_invert_index_ptr_;
 };
@@ -1015,18 +1013,18 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
 
   void search_preassigned(int n, const float *x,
                           const GammaSearchCondition *condition,
-                          const long *assign, const float *centroid_dis,
-                          float *distances, long *labels, int *total,
+                          const idx_t *assign, const float *centroid_dis,
+                          float *distances, idx_t *labels, int *total,
                           bool store_pairs,
                           const faiss::IVFSearchParameters *params = nullptr);
 
   // assign the vectors, then call search_preassign
   void SearchIVFPQ(int n, const float *x, const GammaSearchCondition *condition,
-                   float *distances, long *labels, int *total);
+                   float *distances, idx_t *labels, int *total);
 
   void SearchDirectly(int n, const float *x,
                       const GammaSearchCondition *condition, float *distances,
-                      long *labels, int *total);
+                      idx_t *labels, int *total);
 
   long GetTotalMemBytes() override {
     if (!rt_invert_index_ptr_) {
@@ -1035,7 +1033,7 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
     return rt_invert_index_ptr_->GetTotalMemBytes();
   }
 
-  int Dump(const std::string &dir, int max_vid) override {
+  int Dump(const std::string &dir) override {
     if (!rt_invert_index_ptr_) {
       return -1;
     }
@@ -1057,7 +1055,7 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
               << ", code_size=" << ivpq->code_size << ", pq: d=" << ivpq->pq.d
               << ", M=" << ivpq->pq.M << ", nbits=" << ivpq->pq.nbits;
 
-    return rt_invert_index_ptr_->Dump(dir, max_vid);
+    return rt_invert_index_ptr_->Dump(dir, indexed_vec_count_ - 1);
   }
 
   int Load(const std::vector<std::string> &index_dirs) {
@@ -1079,6 +1077,8 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
       ivpq->precompute_table();
     delete f;
 
+    indexed_vec_count_ = rt_invert_index_ptr_->Load(index_dirs);
+
     LOG(INFO) << "load: d=" << ivpq->d << ", ntotal=" << ivpq->ntotal
               << ", is_trained=" << ivpq->is_trained
               << ", metric_type=" << ivpq->metric_type
@@ -1086,9 +1086,9 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
               << ", maintain_direct_map=" << ivpq->maintain_direct_map
               << ", by_residual=" << ivpq->by_residual
               << ", code_size=" << ivpq->code_size << ", pq: d=" << ivpq->pq.d
-              << ", M=" << ivpq->pq.M << ", nbits=" << ivpq->pq.nbits;
+              << ", M=" << ivpq->pq.M << ", nbits=" << ivpq->pq.nbits
+              << ", indexed vector count=" << indexed_vec_count_;
 
-    indexed_vec_count_ = rt_invert_index_ptr_->Load(index_dirs);
     return indexed_vec_count_;
   }
 
