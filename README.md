@@ -31,6 +31,8 @@ Distributed deep learning vector search system
 ## Quick start
 
 * [doc/Deploy.md](doc/Deploy.md)
+And We provide a simple and fast image retrieval plugin:
+* [plugin/README.md](plugin/README.md)
 
 ## Api
 
