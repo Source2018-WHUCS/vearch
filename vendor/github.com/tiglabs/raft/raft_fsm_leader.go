@@ -1,3 +1,17 @@
+// Copyright 2015 The etcd Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package raft
 
 import (
@@ -181,6 +195,15 @@ func stepLeader(r *raftFsm, m *proto.Message) {
 		pr.pause()
 		proto.ReturnMessage(m)
 		return
+
+	case proto.RespCheckQuorum:
+		// TODO: remove this when stable
+		if logger.IsEnableDebug() {
+			logger.Debug("raft[%d] recv check quorum resp from %d, index=%d", r.id, m.From, m.Index)
+		}
+		r.readOnly.recvAck(m.Index, m.From, r.quorum())
+		proto.ReturnMessage(m)
+		return
 	}
 }
 
@@ -238,6 +261,15 @@ func stepElectionAck(r *raftFsm, m *proto.Message) {
 		proto.ReturnMessage(m)
 		return
 
+	case proto.RespCheckQuorum:
+		// TODO: remove this when stable
+		if logger.IsEnableDebug() {
+			logger.Debug("raft[%d] recv check quorum resp from %d, index=%d", r.id, m.From, m.Index)
+		}
+		r.readOnly.recvAck(m.Index, m.From, r.quorum())
+		proto.ReturnMessage(m)
+		return
+
 	case proto.ReqMsgVote:
 		nmsg := proto.GetMessage()
 		nmsg.Type = proto.RespMsgVote
@@ -288,6 +320,7 @@ func (r *raftFsm) tickHeartbeat() {
 				r.replicas[id].resume()
 			}
 		}
+		r.bcastReadOnly()
 	}
 }
 
@@ -331,6 +364,14 @@ func (r *raftFsm) maybeCommit() bool {
 	if r.state == stateLeader && r.replicas[r.config.NodeID] != nil {
 		r.replicas[r.config.NodeID].committed = r.raftLog.committed
 	}
+
+	if r.state == stateLeader && !r.readOnly.committed && isCommit {
+		if r.raftLog.zeroTermOnErrCompacted(r.raftLog.term(r.raftLog.committed)) == r.term {
+			r.readOnly.commit(r.raftLog.committed)
+		}
+		r.bcastReadOnly()
+	}
+
 	return isCommit
 }
 
@@ -425,4 +466,24 @@ func (r *raftFsm) appendEntry(es ...*proto.Entry) {
 	r.raftLog.append(es...)
 	r.replicas[r.config.NodeID].maybeUpdate(r.raftLog.lastIndex(), r.raftLog.committed)
 	r.maybeCommit()
+}
+
+func (r *raftFsm) bcastReadOnly() {
+	index := r.readOnly.lastPending()
+	if index == 0 {
+		return
+	}
+	if logger.IsEnableDebug() {
+		logger.Debug("raft[%d] bcast readonly index: %d", r.id, index)
+	}
+	for id := range r.replicas {
+		if id == r.config.NodeID {
+			continue
+		}
+		msg := proto.GetMessage()
+		msg.Type = proto.ReqCheckQuorum
+		msg.To = id
+		msg.Index = index
+		r.send(msg)
+	}
 }

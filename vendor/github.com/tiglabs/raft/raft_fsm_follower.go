@@ -1,3 +1,17 @@
+// Copyright 2015 The etcd Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package raft
 
 import (
@@ -48,6 +62,21 @@ func stepFollower(r *raftFsm, m *proto.Message) {
 		r.leader = m.From
 		nmsg := proto.GetMessage()
 		nmsg.Type = proto.RespMsgElectAck
+		nmsg.To = m.From
+		r.send(nmsg)
+		proto.ReturnMessage(m)
+		return
+
+	case proto.ReqCheckQuorum:
+		// TODO: remove this
+		if logger.IsEnableDebug() {
+			logger.Debug("raft[%d] recv check quorum from %d, index=%d", r.id, m.From, m.Index)
+		}
+		r.electionElapsed = 0
+		r.leader = m.From
+		nmsg := proto.GetMessage()
+		nmsg.Type = proto.RespCheckQuorum
+		nmsg.Index = m.Index
 		nmsg.To = m.From
 		r.send(nmsg)
 		proto.ReturnMessage(m)

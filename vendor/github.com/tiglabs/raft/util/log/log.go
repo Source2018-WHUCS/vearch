@@ -1,3 +1,16 @@
+// Copyright 2018 The TigLabs raft Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package log
 
 import (
@@ -132,18 +145,10 @@ func (lw *logWriter) rotateFile(logDir, logFile, module string, rotate bool) {
 
 	if err == nil && logFile == errLogFileName {
 		os.Stderr = file
-		var crashMsg string
-		if err := logCrash(file); err == nil {
-			crashMsg = "Log file set up capture system level crash information success.\n"
-		} else {
-			crashMsg = "Log file set up capture system level crash information fail:\n" + err.Error() + "\n"
-		}
-
 		if f, e := file.Stat(); e == nil && f.Size() == 0 {
 			// Write header.
 			var buf bytes.Buffer
 			fmt.Fprintf(&buf, "Log file created at: %s\n", time.Now().Format("2006/01/02 15:04:05"))
-			fmt.Fprintf(&buf, crashMsg)
 			fmt.Fprintf(&buf, "Log line format: yyyy-mm-dd hh:mm:ss.uuuuuu[DIWE] file:line: msg\n")
 			fmt.Fprintf(&buf, "####################################################################\n\n")
 			lw.out.Write(buf.Bytes())
@@ -191,10 +196,10 @@ var levels = []string{
 }
 
 type entity struct {
-	msg  string
-	now  time.Time
-	file string
-	line int
+	msg      string
+	now      time.Time
+	file     string
+	line     int
 }
 
 type Log struct {
@@ -207,7 +212,7 @@ type Log struct {
 	warn      *logWriter
 	info      *logWriter
 	debug     *logWriter
-	entityCh  chan *entity
+	entityCh     chan *entity
 }
 
 var glog *Log = NewDefaultLog()
@@ -339,7 +344,7 @@ func (l *Log) Output(calldepth int, s string, sync bool) {
 }
 
 func (l *Log) putMsg(msg string, file string, line int, now time.Time) {
-	l.entityCh <- &entity{msg: msg, file: file, line: line, now: now}
+	l.entityCh <- &entity{msg: msg, file:file, line:line, now:now}
 }
 
 func (l *Log) loopMsg() {
@@ -405,34 +410,34 @@ func (l *Log) checkLogRotation(logDir, module string) {
 	}
 }
 
-func (l *Log) Debug(format string, v ...interface{}) {
+func (l *Log)Debug(format string, v ...interface{}) {
 	if l.IsEnableDebug() {
 		l.Output(3, l.SetPrefix(fmt.Sprintf(format+"\r\n", v...), levels[DebugLevel]), false)
 	}
 }
 
-func (l *Log) Info(format string, v ...interface{}) {
+func (l *Log)Info(format string, v ...interface{}) {
 	if l.IsEnableInfo() {
 		l.Output(3, l.SetPrefix(fmt.Sprintf(format+"\r\n", v...), levels[InfoLevel]), false)
 	}
 }
 
-func (l *Log) Warn(format string, v ...interface{}) {
+func (l *Log)Warn(format string, v ...interface{}) {
 	if l.IsEnableWarn() {
 		l.Output(3, l.SetPrefix(fmt.Sprintf(format+"\r\n", v...), levels[WarnLevel]), false)
 	}
 }
 
-func (l *Log) Error(format string, v ...interface{}) {
+func (l *Log)Error(format string, v ...interface{}) {
 	l.Output(3, l.SetPrefix(fmt.Sprintf(format+"\r\n", v...), levels[ErrorLevel]), false)
 }
 
-func (l *Log) Fatal(format string, v ...interface{}) {
+func (l *Log)Fatal(format string, v ...interface{}) {
 	l.Output(3, l.SetPrefix(fmt.Sprintf(format+"\r\n", v...), levels[FatalLevel]), true)
 	os.Exit(1)
 }
 
-func (l *Log) Panic(format string, v ...interface{}) {
+func (l *Log)Panic(format string, v ...interface{}) {
 	s := fmt.Sprintf(format+"\r\n", v...)
 	l.Output(3, l.SetPrefix(s, levels[FatalLevel]), true)
 	panic(s)
@@ -441,6 +446,7 @@ func (l *Log) Panic(format string, v ...interface{}) {
 func Debug(format string, v ...interface{}) {
 	glog.Debug(format, v...)
 }
+
 
 func Info(format string, v ...interface{}) {
 	glog.Info(format, v...)

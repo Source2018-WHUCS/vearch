@@ -1,3 +1,17 @@
+// Copyright 2018 The TigLabs raft Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package proto
 
 import (
@@ -26,6 +40,8 @@ const (
 	LocalMsgProp
 	LeaseMsgOffline
 	LeaseMsgTimeout
+	ReqCheckQuorum
+	RespCheckQuorum
 )
 
 const (
@@ -137,6 +153,10 @@ func (t MsgType) String() string {
 		return "LeaseMsgOffline"
 	case 13:
 		return "LeaseMsgTimeout"
+	case 14:
+		return "ReqCheckQuorum"
+	case 15:
+		return "RespCheckQuorum"
 	}
 	return "unkown"
 }
@@ -183,7 +203,8 @@ func (cc *ConfChange) String() string {
 }
 
 func (m *Message) IsResponseMsg() bool {
-	return m.Type == RespMsgAppend || m.Type == RespMsgHeartBeat || m.Type == RespMsgVote || m.Type == RespMsgElectAck || m.Type == RespMsgSnapShot
+	return m.Type == RespMsgAppend || m.Type == RespMsgHeartBeat || m.Type == RespMsgVote ||
+		m.Type == RespMsgElectAck || m.Type == RespMsgSnapShot || m.Type == RespCheckQuorum
 }
 
 func (m *Message) IsElectionMsg() bool {

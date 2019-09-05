@@ -1,3 +1,17 @@
+// Copyright 2015 The etcd Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package raft
 
 import (
@@ -11,7 +25,7 @@ import (
 )
 
 type snapshotStatus struct {
-	deferError
+	respErr
 	stopCh chan struct{}
 }
 
@@ -24,7 +38,7 @@ func newSnapshotStatus() *snapshotStatus {
 }
 
 type snapshotRequest struct {
-	deferError
+	respErr
 	snapshotReader
 	header *proto.Message
 }
@@ -73,23 +87,23 @@ func (r *snapshotReader) Next() ([]byte, error) {
 	return buf, nil
 }
 
-func (s *raft) addSnapping(nodeId uint64, rs *snapshotStatus) {
+func (s *raft) addSnapping(nodeID uint64, rs *snapshotStatus) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if snap, ok := s.snapping[nodeId]; ok {
+	if snap, ok := s.snapping[nodeID]; ok {
 		close(snap.stopCh)
 	}
-	s.snapping[nodeId] = rs
+	s.snapping[nodeID] = rs
 }
 
-func (s *raft) removeSnapping(nodeId uint64) {
+func (s *raft) removeSnapping(nodeID uint64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if snap, ok := s.snapping[nodeId]; ok {
+	if snap, ok := s.snapping[nodeID]; ok {
 		close(snap.stopCh)
-		delete(s.snapping, nodeId)
+		delete(s.snapping, nodeID)
 	}
 }
 
@@ -146,7 +160,7 @@ func (s *raft) handleSnapshot(req *snapshotRequest) {
 
 	// validate snapshot
 	if req.header.Term < s.raftFsm.term {
-		err = fmt.Errorf("raft %v [term: %d] ignored a snapshot message with lower term from %v [term: %d].", s.raftFsm.id, s.raftFsm.term, req.header.From, req.header.Term)
+		err = fmt.Errorf("raft %v [term: %d] ignored a snapshot message with lower term from %v [term: %d]", s.raftFsm.id, s.raftFsm.term, req.header.From, req.header.Term)
 		return
 	}
 	if req.header.Term > s.raftFsm.term || s.raftFsm.state != stateFollower {
