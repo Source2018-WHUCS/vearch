@@ -84,7 +84,6 @@ GammaEngine::GammaEngine(const string &index_root_path)
   b_running_ = false;
   dump_docid_ = 0;
   bitmap_bytes_size_ = 0;
-  loaded_ = false;
 #ifdef PERFORMANCE_TESTING
   search_num_ = 0;
 #endif
@@ -610,13 +609,11 @@ Doc *GammaEngine::GetDoc(const std::string &id) {
 }
 
 int GammaEngine::BuildIndex() {
-  if (!loaded_) { // if engine is loaded, don't indexing
-    if (vec_manager_->Indexing() != 0) {
-      LOG(ERROR) << "Create index failed!";
-      return -1;
-    }
-    LOG(INFO) << "vector manager indexing success!";
+  if (vec_manager_->Indexing() != 0) {
+    LOG(ERROR) << "Create index failed!";
+    return -1;
   }
+  LOG(INFO) << "vector manager indexing success!";
 
   // WARNING: use max_docid_ instead of GetDocsNum()
   if (numeric_index_->Indexing(max_docid_) < 0) {
@@ -783,7 +780,6 @@ int GammaEngine::Load() {
   LOG(INFO) << "load all success! bitmap file=" << bitmap_file_name
             << ", folders=" << utils::join(folders, ',');
 
-  loaded_ = true;
   dump_docid_ = max_docid_;
 
   return ret;

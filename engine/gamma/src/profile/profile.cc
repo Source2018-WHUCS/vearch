@@ -348,7 +348,8 @@ int Profile::Add(const std::vector<Field *> &fields, int doc_id,
   }
 
   if (doc_id % 10000 == 0) {
-    LOG(INFO) << "Add item _id [" << key << "], num [" << doc_id << "]";
+    LOG(INFO) << "Add item _id [" << key << "], num [" << doc_id << "]"
+              << ", is_existed=" << is_existed;
   }
   return 0;
 }

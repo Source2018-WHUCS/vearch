@@ -745,8 +745,9 @@ struct GammaIndexScanner : IVFPQScannerT<idx_t, store_pairs, C, METRIC_TYPE>,
     return 0;
   }
 
-  inline size_t scan_codes(size_t ncode, const uint8_t **codes, const idx_t *ids,
-                           float *heap_sim, idx_t *heap_ids, size_t k) {
+  inline size_t scan_codes(size_t ncode, const uint8_t **codes,
+                           const idx_t *ids, float *heap_sim, idx_t *heap_ids,
+                           size_t k) {
     if (precompute_mode == 2) {
       this->scan_list_with_table(ncode, codes, ids, k, heap_sim, heap_ids);
     } else {
@@ -1035,7 +1036,12 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
 
   int Dump(const std::string &dir) override {
     if (!rt_invert_index_ptr_) {
+      LOG(INFO) << "realtime invert index ptr is null";
       return -1;
+    }
+    if (!this->is_trained) {
+      LOG(INFO) << "gamma index is not trained, skip dumping";
+      return 0;
     }
     string info_file = dir + "/gamma_index.info";
     faiss::IOWriter *f = new FileIOWriter(info_file.c_str());
@@ -1055,6 +1061,11 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
               << ", code_size=" << ivpq->code_size << ", pq: d=" << ivpq->pq.d
               << ", M=" << ivpq->pq.M << ", nbits=" << ivpq->pq.nbits;
 
+    if (indexed_vec_count_ <= 0) {
+      LOG(INFO) << "no vector is indexed, do not need dump";
+      return 0;
+    }
+
     return rt_invert_index_ptr_->Dump(dir, indexed_vec_count_ - 1);
   }
 
@@ -1064,6 +1075,11 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
     }
 
     string info_file = index_dirs[index_dirs.size() - 1] + "/gamma_index.info";
+    if (access(info_file.c_str(), F_OK) != 0) {
+      LOG(INFO) << info_file << " isn't existed, skip loading";
+      return 0; // it should train again after load
+    }
+
     faiss::IOReader *f = new FileIOReader(info_file.c_str());
     IndexIVFPQ *ivpq = static_cast<IndexIVFPQ *>(this);
     read_ivf_header(ivpq, f, nullptr); // not legacy
@@ -1076,6 +1092,12 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
     if (ivpq->by_residual)
       ivpq->precompute_table();
     delete f;
+
+    if (!this->is_trained) {
+      LOG(ERROR) << "unexpected, gamma index information is loaded, but it "
+                    "isn't trained";
+      return 0; // it should train again after load
+    }
 
     indexed_vec_count_ = rt_invert_index_ptr_->Load(index_dirs);
 

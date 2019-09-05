@@ -101,6 +101,10 @@ GammaIVFPQIndex::get_InvertedListScanner(bool store_pairs) const {
 }
 
 int GammaIVFPQIndex::Indexing() {
+  if (this->is_trained) {
+    LOG(INFO) << "gamma ivfpq index is already trained, skip indexing";
+    return 0;
+  }
   int vectors_count = raw_vec_->GetVectorNum();
   if (vectors_count < 65535) {
     LOG(ERROR) << "vector total count [" << vectors_count
