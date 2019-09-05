@@ -4,7 +4,7 @@ This folder include gamma-engine test cases, you need install GTest to run them.
 
 * test_files
 
-You need to prepare ***profile_100m.txt*** and ***feat_100m_512float.dat***, where ***profile_100m.txt*** is a profile file and ***feat_100m_512float.dat*** is a vector data file.
+You need to prepare ***[siftsmall_base.fvecs](ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz)*** as a vector data file.
 
 ```flow
 st=>start: Start
@@ -20,5 +20,5 @@ op8=>operation: Close engine
 
 st->op1->op2->op3->op4->op5->op6->op7->op8->e
 ```
-##test
+## test
 `./test_files profile_10k.txt siftsmall_base.fvecs`

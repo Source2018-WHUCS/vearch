@@ -108,7 +108,7 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
     if (ret != 0) {
       LOG(ERROR) << "Raw vector " << vec_name << " init error, code [" << ret
                  << "]!";
-      continue;
+      return -1;
     }
 
     raw_vectors_[vec_name] = vec;
@@ -134,7 +134,7 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
         model, dimension, docids_bitmap_, vec, ivfpq_param_);
     if (index == nullptr) {
       LOG(ERROR) << "create gamma index " << vec_name << " error!";
-      continue;
+      return -1;
     }
 
     vector_indexes_[vec_name] = index;

@@ -9,6 +9,7 @@ EXECUTE_PROCESS(COMMAND wget https://github.com/google/googletest/archive/releas
 EXECUTE_PROCESS(COMMAND tar xf release-1.8.1.tar.gz WORKING_DIRECTORY tests)
 EXECUTE_PROCESS(COMMAND mv googletest-release-1.8.1/googletest gtest WORKING_DIRECTORY tests)
 EXECUTE_PROCESS(COMMAND rm -rf googletest-release-1.8.1 WORKING_DIRECTORY tests)
+EXECUTE_PROCESS(COMMAND rm -rf release-1.8.1.tar.gz WORKING_DIRECTORY tests)
 EXECUTE_PROCESS(COMMAND cmake . WORKING_DIRECTORY tests/gtest)
 EXECUTE_PROCESS(COMMAND make WORKING_DIRECTORY tests/gtest)
 
