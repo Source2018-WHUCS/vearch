@@ -31,6 +31,7 @@ config/config.toml
 ps/engine/gammacb/build/*
 ps/engine/gammacb/lib/
 build/bin/
+build/lib
 build/gamma_build/
 
 #gamma
