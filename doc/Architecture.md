@@ -4,7 +4,7 @@ Distributed deep learning vector search system
 
 ## Architecture
 
-![arc](doc/img/Vearch_arch.jpg)
+![arc](doc/img/VearchArch.jpg)
 
 * Components
 
