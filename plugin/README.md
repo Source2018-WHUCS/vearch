@@ -16,19 +16,19 @@ bash run.sh
 
 ## Get Started
 
-Please see [Quickstart.md](docs/Quickstart.md)  for basic usage of Vearch Plugin.
+Please see [Quickstart.md](plugin/docs/Quickstart.md)  for basic usage of Vearch Plugin.
 
 ## Tutorial
-[Quickstart](docs/Quickstart.md)
+[Quickstart](plugin/docs/Quickstart.md)
 
-[VisualSearchAPI](docs/VisualSearchAPI.md)
+[VisualSearchAPI](plugin/docs/VisualSearchAPI.md)
 
 ## Search Result Demo
-![test](./images/COCO_val2014_000000123599.jpg)
+![plugin/images/COCO_val2014_000000123599.jpg](plugin/images/COCO_val2014_000000123599.jpg)
 
 the result like this:
 
-![result](./images/result.jpg)
+![plugin/images/result.jpg](plugin/images/result.jpg)
 
 
 
