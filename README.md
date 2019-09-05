@@ -31,8 +31,9 @@ Distributed deep learning vector search system
 ## Quick start
 
 * [doc/Deploy.md](doc/Deploy.md)
-And We provide a simple and fast image retrieval plugin:
-* [plugin/README.md](plugin/README.md)
+
+
+We provide a multi-functional image retrieval plugin, including object detection and feature extraction. With this plugin, you can easily find similar pictures in your photo library. For more information, please refer to [plugin/README.md](plugin/README.md)
 
 ## Api
 
