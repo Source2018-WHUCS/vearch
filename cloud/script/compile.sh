@@ -15,6 +15,8 @@ cd /app/cmake-3.12.2
 gmake
 gmake install
 
+cd /vearch/cloud/app/faiss
+./configure --without-cuda && make install
 
 cd /app
 # unzip go
