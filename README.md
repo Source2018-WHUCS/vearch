@@ -30,10 +30,10 @@ Distributed deep learning vector search system
 
 ## Quick start
 
-* [doc/Deploy.md](doc/Deploy.md)
+* Quickly own a distributed vector search system with Restful api, please see[doc/Deploy.md](doc/Deploy.md).
 
 
-We provide a multi-functional image retrieval plugin, including object detection and feature extraction. With this plugin, you can easily find similar pictures in your photo library. For more information, please refer to [plugin/README.md](plugin/README.md)
+* Quickly own a complete visual search system, which can support billion-scale images. The image retrieval plugin about object detection and feature extraction should be extra required, For more information, please refer to [plugin/README.md](plugin/README.md).
 
 ## Api
 
