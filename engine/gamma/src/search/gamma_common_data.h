@@ -28,8 +28,8 @@ enum class ResultCode : std::uint16_t {
   Undefined
 };
 
-enum RawVectorType { MemoryOnly };
-enum RetrievalModel { IVFPQ };
+enum RawVectorType { MemoryOnly, MemoryWithDisk };
+enum RetrievalModel { IVFPQ, GPU_IVFPQ, SPTAG, PACINS };
 
 struct VectorDocField {
   std::string name;

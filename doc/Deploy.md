@@ -1,39 +1,39 @@
-# vearch编译部署流程
+# Vearch Compile and Deploy
 
 [TOC]
 
-## 一、编译
+## Compile
 
-#### 1、依赖环境
+#### Dependent Environment 
 
-   1. Linux 系统(推荐CentOS 7.2以上)，支持cmake、make 命令
-   2. Go版本1.11.2以上
-   3. gcc版本5以上
+   1. CentOS, Ubuntu and Mac OS are all OK (recommend CentOS >= 7.2)，cmake required
+   2. Go >= 1.11.2 required
+   3. Gcc >= 5 required
    4. [Faiss](https://github.com/facebookresearch/faiss)
 
-#### 2、编译
-   * 下载源代码: git clone https://xxxxxx/vearch.git (后续使用$vearch 代表vearch目录绝对路径)
-   * 编译gamma
+#### Compile 
+   * Download the source code: git clone https://xxxxxx/vearch.git ($vearch denotes the absolute path of vearch code)
+   * Compile gamma
        1. `cd $vearch/engine/gamma/src`
        2. `mkdir build && cd build`
-       3. `export Faiss_HOME=faiss安装路径`
-       4. `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=gamma/ ..`
+       3. `export Faiss_HOME=the installed path of faiss`
+       4. `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$vearch/ps/engine/gammacb/lib  ..`
        5. `make && make install`
       
-   * 编译vearch
+   * Compile vearch
       1. `cd $vearch`
-      2. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$vearch/engine/gammacb/lib/lib`
-      3. `export Faiss_HOME=faiss安装路径`
+      2. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$vearch/ps/engine/gammacb/lib/lib`
+      3. `export FAISS_HOME=the installed path of faiss`
       4. `go build -a --tags=vector -o  baudengine`
-      生成`baudengine`文件表示编译成功
+      when `baudengine` file generated, it is ok.
        
-## 二、部署
-   #### 1、单机模式
-   * 生成配置文件conf.toml
+## Deploy
+   #### 1 Local Mode
+   * generate configuration file conf.toml
       
 ```
 [global]
-    # the name will validate join cluster by same name
+    # the name will validate join cluster by the same name
     name = "baudengine"
     # you data save to disk path ,If you are in a production environment, You'd better set absolute paths
     data = ["datas/"]
@@ -46,7 +46,7 @@
 
 # if you are master you'd better set all config for router and ps and router and ps use default config it so cool
 [[masters]]
-    # name machine name for cluster
+    # machine name for cluster
     name = "m1"
     # ip or domain
     address = "127.0.0.1"
@@ -80,16 +80,16 @@
     raft_replica_concurrency = 1
     raft_snap_concurrency = 1 
 ```
-   * 启动
+   * start
 
 ````
 ./baudengine -conf conf.toml
 ````
    
-   #### 2、集群模式
-   > vearch 有三个模块: `ps`(PartitionServer) , `master`, `router`, 运行 `./baudengine -f conf.toml ps/router/master` 启动指定模块
+   #### 2 Cluster Mode
+   > vearch has three module: `ps`(PartitionServer) , `master`, `router`, run `./baudengine -f conf.toml ps/router/master` start ps/router/master module
 
-   > 以5台机器为例: 2台作为master, 2台作为ps, 1台作为router
+   > Now we have five machine, two master, two ps and one router
 
 * master
     * 192.168.1.1
@@ -99,7 +99,7 @@
     * 192.168.1.4
 * router
     * 192.168.1.5
-* 生成配置文件conf.toml
+* generate configuration file conf.toml
 
 ````
 [global]
@@ -137,19 +137,19 @@
     raft_replica_concurrency = 1
     raft_snap_concurrency = 1
 ````
-* 在 192.168.1.1 , 192.168.1.2 运行master
+* on 192.168.1.1 , 192.168.1.2  run master
 
 ````
 ./baudengine -conf conf.toml master
 ````
 
-* 在 192.168.1.3 , 192.168.1.4 运行ps
+* on 192.168.1.3 , 192.168.1.4 run ps
 
 ````
 ./baudengine -conf conf.toml ps
 ````
 
-* 在192.168.1.5 运行router
+* on 192.168.1.5 run router
 
 ````
 ./baudengine -conf conf.toml router

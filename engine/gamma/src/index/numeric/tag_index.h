@@ -44,11 +44,12 @@ public:
              RangeQueryResultV1 &result) const override;
 
   void Add(const std::string &tags, int docID) override {
-    auto items = utils::Split(tags, kDelim_);
-    for (auto &item : items) {
-      Add(GetOrIncrTagID(item), docID);
+    if (not tags.empty()) {
+      auto items = utils::Split(tags, kDelim_);
+      for (auto &item : items) {
+        Add(GetOrIncrTagID(item), docID);
+      }
     }
-
     curr_doc_id_ = docID;
   }
 

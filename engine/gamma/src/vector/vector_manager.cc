@@ -95,6 +95,8 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
     RawVectorType store_type = default_store_type_;
     if (!strcasecmp("MemoryOnly", store_type_str.c_str())) {
       store_type = RawVectorType::MemoryOnly;
+    } else if (!strcasecmp("MemoryWithDisk", store_type_str.c_str())) {
+      store_type = RawVectorType::MemoryWithDisk;
     } else {
       LOG(WARNING) << "NO support for store type " << store_type_str
                    << ", default to " << default_store_type_;
@@ -117,6 +119,12 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
     RetrievalModel model = default_model_;
     if (!strcasecmp("IVFPQ", retrieval_type_str.c_str())) {
       model = RetrievalModel::IVFPQ;
+    } else if (!strcasecmp("GPU_IVFPQ", retrieval_type_str.c_str())) {
+      model = RetrievalModel::GPU_IVFPQ;
+    } else if (!strcasecmp("SPTAG", retrieval_type_str.c_str())) {
+      model = RetrievalModel::SPTAG;
+    } else if (!strcasecmp("PACINS", retrieval_type_str.c_str())) {
+      model = RetrievalModel::PACINS;
     } else {
       LOG(WARNING) << "NO support for retrieval type " << retrieval_type_str
                    << ", default to " << default_model_;
@@ -351,8 +359,7 @@ int VectorManager::Dump(const string &path, int dump_docid, int max_docid) {
     }
     LOG(INFO) << "vector " << vec_name << " dump success!";
 
-    int dump_num =
-        index->Dump(path, index->raw_vec_->GetLastVectorID(max_docid));
+    int dump_num = index->Dump(path);
     if (dump_num < 0) {
       LOG(ERROR) << "vector " << vec_name << " dump gamma index failed!";
       return -1;
@@ -391,7 +398,7 @@ int VectorManager::Load(const std::vector<std::string> &index_dirs) {
   }
   // load ivfpq parameters
   IVFPQParameters *ivfpq_param =
-      static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
+    static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
   fread((void *)&ivfpq_param->metric_type, sizeof(ivfpq_param->metric_type), 1,
         info_fp);
   fread((void *)&ivfpq_param->nprobe, sizeof(ivfpq_param->nprobe), 1, info_fp);
@@ -428,7 +435,7 @@ int VectorManager::Load(const std::vector<std::string> &index_dirs) {
     if (iter->second->Load(index_dirs) < 0) {
       LOG(ERROR) << "vector " << iter->first << " load gamma index failed!";
     }
-    LOG(ERROR) << "vector " << iter->first << " load gamma index success!";
+    LOG(INFO) << "vector " << iter->first << " load gamma index success!";
   }
   return 0;
 }

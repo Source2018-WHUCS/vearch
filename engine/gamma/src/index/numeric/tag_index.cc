@@ -58,8 +58,9 @@ int TagIndex::Search(const string &tags, const string & /* nouse */,
                      RangeQueryResultV1 &result) const {
   result.Clear();
 
-  // Timer t;
+  // utils::Timer t;
   // t.Start("visit");
+
   int count = -1;
 
   if (result.Flags() & 0x4) {
@@ -70,6 +71,10 @@ int TagIndex::Search(const string &tags, const string & /* nouse */,
 
   // t.Stop();
   // t.Output();
+
+  // vector<int> docs = result.ToDocs();
+  // std::copy(std::begin(docs), std::end(docs),
+  //          std::ostream_iterator<int>(std::cout, ","));
 
   return count;
 }

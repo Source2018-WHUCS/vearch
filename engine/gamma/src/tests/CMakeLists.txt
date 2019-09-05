@@ -5,25 +5,27 @@ ENABLE_TESTING()
 INCLUDE_DIRECTORIES(../)
 
 # gtest
-FIND_PACKAGE(GTest REQUIRED)
-INCLUDE_DIRECTORIES(${GTEST_INCLUDE_DIRS})
+EXECUTE_PROCESS(COMMAND wget https://github.com/google/googletest/archive/release-1.8.1.tar.gz WORKING_DIRECTORY tests)
+EXECUTE_PROCESS(COMMAND tar xf release-1.8.1.tar.gz WORKING_DIRECTORY tests)
+EXECUTE_PROCESS(COMMAND mv googletest-release-1.8.1/googletest gtest WORKING_DIRECTORY tests)
+EXECUTE_PROCESS(COMMAND rm -rf googletest-release-1.8.1 WORKING_DIRECTORY tests)
+EXECUTE_PROCESS(COMMAND cmake . WORKING_DIRECTORY tests/gtest)
+EXECUTE_PROCESS(COMMAND make WORKING_DIRECTORY tests/gtest)
 
-LINK_DIRECTORIES(../)
+INCLUDE_DIRECTORIES(tests/gtest/include)
+
+LINK_DIRECTORIES(
+    ../
+    gtest/
+)
 
 FOREACH(source ${srcs})
     GET_FILENAME_COMPONENT(name ${source} NAME_WE)
 
     # target
     ADD_EXECUTABLE(${name} ${source})
-    TARGET_LINK_LIBRARIES(${name} gamma ${GTEST_BOTH_LIBRARIES})
+    TARGET_LINK_LIBRARIES(${name} gamma gtest_main gtest)
 
     # Install
     INSTALL(TARGETS ${name} DESTINATION test)
-    
-    # ADD_TEST(NAME ${name} COMMAND ${name})
-    # ADD_CUSTOM_COMMAND(TARGET ${name}
-    #                    POST_BUILD 
-    #                    COMMAND ${name}
-    #                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    #                    COMMENT "Running ${name}" VERBATIM)
 ENDFOREACH(source)

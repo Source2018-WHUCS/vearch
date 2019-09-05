@@ -21,7 +21,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/util"
+	"github.com/tiglabs/baudengine/util"
 	"os"
 	"strings"
 	"time"

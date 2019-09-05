@@ -98,7 +98,6 @@ private:
   int bitmap_bytes_size_;
   const std::string date_time_format_;
 
-  bool loaded_;
 #ifdef PERFORMANCE_TESTING
   std::atomic<uint64_t> search_num_;
 #endif

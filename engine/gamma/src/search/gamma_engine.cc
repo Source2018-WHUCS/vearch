@@ -84,7 +84,6 @@ GammaEngine::GammaEngine(const string &index_root_path)
   b_running_ = false;
   dump_docid_ = 0;
   bitmap_bytes_size_ = 0;
-  loaded_ = false;
 #ifdef PERFORMANCE_TESTING
   search_num_ = 0;
 #endif
@@ -276,6 +275,8 @@ Response *GammaEngine::Search(const Request *request) {
     }
 
     int retval = numeric_index_->Search(filters, numeric_filter_result);
+    OLOG(&logger, DEBUG, "search numeric index, ret: " << retval);
+
     if (retval == 0) {
       string msg = "No result: numeric filter return 0 result";
       for (int i = 0; i < response_results->req_num; i++) {
@@ -608,13 +609,11 @@ Doc *GammaEngine::GetDoc(const std::string &id) {
 }
 
 int GammaEngine::BuildIndex() {
-  if (!loaded_) { // if engine is loaded, don't indexing
-    if (vec_manager_->Indexing() != 0) {
-      LOG(ERROR) << "Create index failed!";
-      return -1;
-    }
-    LOG(INFO) << "vector manager indexing success!";
+  if (vec_manager_->Indexing() != 0) {
+    LOG(ERROR) << "Create index failed!";
+    return -1;
   }
+  LOG(INFO) << "vector manager indexing success!";
 
   // WARNING: use max_docid_ instead of GetDocsNum()
   if (numeric_index_->Indexing(max_docid_) < 0) {
@@ -701,8 +700,7 @@ int GammaEngine::Dump() {
     return -1;
   }
 
-  fwrite((void *)(docids_bitmap_), sizeof(char), bitmap_bytes_size_,
-         fp_output);
+  fwrite((void *)(docids_bitmap_), sizeof(char), bitmap_bytes_size_, fp_output);
   fclose(fp_output);
   dump_docid_ = max_docid + 1;
 
@@ -782,7 +780,7 @@ int GammaEngine::Load() {
   LOG(INFO) << "load all success! bitmap file=" << bitmap_file_name
             << ", folders=" << utils::join(folders, ',');
 
-  loaded_ = true;
+  dump_docid_ = max_docid_;
 
   return ret;
 }
@@ -821,6 +819,7 @@ int GammaEngine::AddNumIndexFields() {
       break;
     case DataType::STRING:
       retval = AddNumIndexField<string>(it.first);
+      break;
     default:
       LOG(ERROR) << "Not support type " << it.second;
       break;

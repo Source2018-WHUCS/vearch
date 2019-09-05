@@ -186,7 +186,6 @@ template <typename T> int NumericIndex<T>::Build(const int num_docs) {
   bsl_idx_.size = size_;
 
   bsl_idx_.docIDs.resize(size_);
-  std::iota(bsl_idx_.docIDs.begin(), bsl_idx_.docIDs.end(), 0);
 
   // sort _docIDs by _raw, use get_value_(i) instead of _raw[i]
   std::sort(bsl_idx_.docIDs.begin(), bsl_idx_.docIDs.end(),
@@ -353,7 +352,7 @@ static void SetBitmap(const std::vector<int> &docIDs, Long begin, Long end,
   if (docIDs.empty())
     return;
 
-  // Timer t;
+  // utils::Timer t;
   // t.Start("SetBitmap");
 
   int min_doc = result.Min();
@@ -491,7 +490,7 @@ int NumericIndex<T>::Search(const SkipList<T, int> *rt_idx, const T lowerValue,
   int min_doc = std::numeric_limits<int>::max();
   int max_doc = 0;
 
-  // Timer t;
+  // utils::Timer t;
   // t.Start("visit");
 
   // docid list of different values (docid is disordered, docid is always
@@ -732,6 +731,7 @@ public:
   int Indexing(const int n_docs) {
     assert(n_docs > 0);
     for (auto &one : indexes_) {
+      // std::cout << "building " << one.first << "\n";
       if (one.second->Build(n_docs) < 0) {
         return -1;
       }
