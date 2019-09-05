@@ -20,3 +20,5 @@ op8=>operation: Close engine
 
 st->op1->op2->op3->op4->op5->op6->op7->op8->e
 ```
+##test
+`./test_files profile_10k.txt siftsmall_base.fvecs`

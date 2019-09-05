@@ -13,7 +13,13 @@
 #include <future>
 #include <sys/mman.h>
 
-namespace Test {
+/**
+ * To run this demo, please download the ANN_SIFT10K dataset from
+ *
+ *   ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz
+ *
+ * and unzip it.
+ **/
 
 struct Options {
   Options() {
@@ -29,18 +35,18 @@ struct Options {
     path = "files";
     string log_dir = "log";
     model_id = "model";
-    retrieval_type = "IVFPQ"; // GPU_IVFPQ
+    retrieval_type = "IVFPQ";
     store_type = "MemoryOnly";
     profiles.resize(max_doc_size * fields_vec.size());
     engine = nullptr;
   }
 
   int nprobe;
-  int doc_id;
-  int d;
-  int max_doc_size;
-  long add_doc_num;
-  int search_num;
+  size_t doc_id;
+  size_t d;
+  size_t max_doc_size;
+  size_t add_doc_num;
+  size_t search_num;
   std::vector<string> fields_vec;
   std::vector<enum DataType> fields_type;
   string path;
@@ -53,22 +59,25 @@ struct Options {
   std::vector<string> profiles;
   float *feature;
 
+  string profile_file;
+  string feature_file;
   char *docids_bitmap_;
   void *engine;
 };
 
 static struct Options opt;
 
-int AddDoc(void *engine, int doc_num, int interval = 0) {
+int AddDocToEngine(void *engine, int doc_num, int interval = 0) {
   for (int i = 0; i < doc_num; ++i) {
     double start = utils::getmillisecs();
     Field **fields = MakeFields(opt.fields_vec.size() + 1);
 
+    string url;
     for (size_t j = 0; j < opt.fields_vec.size(); ++j) {
       enum DataType data_type = opt.fields_type[j];
       ByteArray *name = StringToByteArray(opt.fields_vec[j]);
       ByteArray *value;
-
+      
       string &data =
           opt.profiles[(uint64_t)opt.doc_id * opt.fields_vec.size() + j];
       if (opt.fields_type[j] == INT) {
@@ -85,10 +94,9 @@ int AddDoc(void *engine, int doc_num, int interval = 0) {
         memcpy(value->value, &v, value->len);
       } else {
         value = StringToByteArray(data);
+        url = data;
       }
-      ByteArray *source =
-          StringToByteArray(string("jfs/t1/46413/10/6998/121644/"
-                                   "5d493cfaE53b7c078/c4e2526e8f8a698f.jpg"));
+      ByteArray *source = StringToByteArray(url);
       Field *field = MakeField(name, value, source, data_type);
       SetField(fields, j, field);
     }
@@ -96,8 +104,7 @@ int AddDoc(void *engine, int doc_num, int interval = 0) {
     ByteArray *value =
         FloatToByteArray(opt.feature + (uint64_t)opt.doc_id * opt.d, opt.d);
     ByteArray *name = StringToByteArray(opt.vector_name);
-    ByteArray *source = StringToByteArray(string(
-        "jfs/t1/46413/10/6998/121644/5d493cfaE53b7c078/c4e2526e8f8a698f.jpg"));
+    ByteArray *source = StringToByteArray(url);
     Field *field = MakeField(name, value, source, VECTOR);
     SetField(fields, opt.fields_vec.size(), field);
 
@@ -114,8 +121,8 @@ int AddDoc(void *engine, int doc_num, int interval = 0) {
   return 0;
 }
 
-int SearchThread(void *engine, int num) {
-  int idx = 0;
+int SearchThread(void *engine, size_t num) {
+  size_t idx = 0;
   double time = 0;
   int failed_count = 0;
   int req_num = 1000;
@@ -204,7 +211,7 @@ void UpdateThread(void *engine) {
       value = static_cast<ByteArray *>(malloc(sizeof(ByteArray)));
       value->value = static_cast<char *>(malloc(sizeof(int)));
       value->len = sizeof(int);
-      int v = atoi("88888");
+      int v = atoi("88");
       memcpy(value->value, &v, value->len);
     } else if (opt.fields_type[j] == LONG) {
       value = static_cast<ByteArray *>(malloc(sizeof(ByteArray)));
@@ -215,7 +222,7 @@ void UpdateThread(void *engine) {
     } else {
       value = StringToByteArray(data);
     }
-    ByteArray *source = StringToByteArray(string("cccccccccccccccc"));
+    ByteArray *source = StringToByteArray(string("abc"));
     Field *field = MakeField(name, value, source, data_type);
     SetField(fields, j, field);
   }
@@ -223,7 +230,7 @@ void UpdateThread(void *engine) {
   ByteArray *value =
       FloatToByteArray(opt.feature + (uint64_t)doc_id * opt.d, opt.d);
   ByteArray *name = StringToByteArray(opt.vector_name);
-  ByteArray *source = StringToByteArray(string("ccccccccccc"));
+  ByteArray *source = StringToByteArray(string("abc"));
   Field *field = MakeField(name, value, source, VECTOR);
   SetField(fields, opt.fields_vec.size(), field);
 
@@ -232,23 +239,28 @@ void UpdateThread(void *engine) {
   DestroyDoc(doc);
 }
 
-TEST(Search, Init) {
-  setvbuf(stdout, (char *)NULL, _IONBF, 0);
+int Init() {
+  opt.feature = fvecs_read(opt.feature_file.c_str(), &opt.d, &opt.add_doc_num);
+  std::cout << "n [" << opt.add_doc_num << "]" << std::endl;
+
+  opt.add_doc_num = opt.add_doc_num > opt.max_doc_size ? opt.max_doc_size : opt.add_doc_num;
+
   int bitmap_bytes_size = 0;
   int ret =
       bitmap::create(opt.docids_bitmap_, bitmap_bytes_size, opt.max_doc_size);
   if (ret != 0) {
     LOG(ERROR) << "Create bitmap failed!";
   }
-  ASSERT_NE(opt.docids_bitmap_, nullptr);
+  assert(opt.docids_bitmap_ != nullptr);
   Config *config = MakeConfig(StringToByteArray(opt.path), opt.max_doc_size);
   SetLogDictionary(StringToByteArray(opt.log_dir));
   opt.engine = Init(config);
   DestroyConfig(config);
-  EXPECT_NE(opt.engine, nullptr);
+  assert(opt.engine != nullptr);
+  return 0;
 }
 
-TEST(Search, CreateTable) {
+int CreateTable() {
   ByteArray *table_name = MakeByteArray("test", 4);
   FieldInfo **field_infos = MakeFieldInfos(opt.fields_vec.size());
 
@@ -269,18 +281,16 @@ TEST(Search, CreateTable) {
                            vectors_info, 1, kIVFPQParam);
   enum ResponseCode ret = CreateTable(opt.engine, table);
   DestroyTable(table);
-  EXPECT_EQ(ret, 0);
+  return ret;
 }
 
-TEST(Search, Add) {
-  string profile_file = "profile_100m.txt";
-  string feature_file = "feat_100m_512float.dat";
+int Add() {
+  size_t idx = 0;
 
-  int idx = 0;
   std::ifstream fin;
-  fin.open(profile_file.c_str());
+  fin.open(opt.profile_file.c_str());
   std::string str;
-  while (!fin.eof()) {
+  while (idx < opt.add_doc_num) {
     std::getline(fin, str);
     if (str == "")
       break;
@@ -295,67 +305,39 @@ TEST(Search, Add) {
     }
 
     ++idx;
-    if (idx >= opt.max_doc_size) {
-      break;
-    }
   }
-  if (opt.max_doc_size < idx) {
-    opt.max_doc_size = idx;
-  }
-  LOG(INFO) << opt.max_doc_size;
   fin.close();
 
-  int fd = open(feature_file.c_str(), O_RDONLY, 0);
-  opt.feature =
-      static_cast<float *>(mmap(NULL, opt.max_doc_size * sizeof(float) * opt.d,
-                                PROT_READ, MAP_SHARED, fd, 0));
-  close(fd);
+  // int fd = open(opt.feature_file.c_str(), O_RDONLY, 0);
+  // opt.feature =
+  //     static_cast<float *>(mmap(NULL, opt.max_doc_size * sizeof(float) * opt.d,
+  //                               PROT_READ, MAP_SHARED, fd, 0));
+  // close(fd);
 
-  int ret = AddDoc(opt.engine, opt.add_doc_num);
-  EXPECT_EQ(ret, 0);
+  int ret = AddDocToEngine(opt.engine, opt.add_doc_num);
+  return ret;
 }
 
-TEST(Search, BuildIndex) {
+int BuildEngineIndex() {
   std::thread t(BuildIndex, opt.engine);
   t.detach();
 
-  /*
-    int search_thread_num = 1;
-    std::thread t_searchs[search_thread_num];
-
-    std::function<int()> func_search =
-        std::bind(SearchThread, opt.engine, opt.search_num);
-    std::future<int> search_futures[search_thread_num];
-    std::packaged_task<int()> tasks[search_thread_num];
-
-    for (int i = 0; i < search_thread_num; ++i) {
-      tasks[i] = std::packaged_task<int()>(func_search);
-      search_futures[i] = tasks[i].get_future();
-      t_searchs[i] = std::thread(std::move(tasks[i]));
-    }
-
-    for (int i = 0; i < search_thread_num; ++i) {
-      search_futures[i].wait();
-      EXPECT_LE(search_futures[i].get(), 500);
-      t_searchs[i].join();
-    }
-    */
   while (GetIndexStatus(opt.engine) != INDEXED) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
   }
 
-  // string docid =
-  // "jfs/t17635/268/1735762492/316241/41ed9df9/5ad612cfN2a96dc78.jpg";
+  // string docid = "1.jpg";
   // ByteArray *value = StringToByteArray(docid);
   // Doc *doc = GetDocByID(opt.engine, value);
   // DelDoc(opt.engine, value);
   // doc = GetDocByID(opt.engine, value);
 
   LOG(INFO) << "Indexed!";
+  return 0;
 }
 
 
-TEST(Search, SearchThread) {
+int Search() {
   int search_thread_num = 1;
   std::thread t_searchs[search_thread_num];
 
@@ -373,54 +355,54 @@ TEST(Search, SearchThread) {
   std::this_thread::sleep_for(std::chrono::seconds(2));
 
   // std::function<int(void *)> add_func =
-  //     std::bind(AddDoc, std::placeholders::_1, 1 * 1, 1);
+  //     std::bind(AddDocToEngine, std::placeholders::_1, 1 * 1, 1);
   // std::thread add_thread(add_func, opt.engine);
 
   // get search results
   for (int i = 0; i < search_thread_num; ++i) {
     search_futures[i].wait();
-    EXPECT_LE(search_futures[i].get(), 500);
+    int error_num = search_futures[i].get();
+    if (error_num != 0) {
+      LOG(ERROR) << "error_num [" << error_num << "]";
+    }
     t_searchs[i].join();
   }
 
   // add_thread.join();
+  return 0;
 }
 
-TEST(Search, Dump) {
+int DumpEngine() {
   int ret = Dump(opt.engine);
-  EXPECT_EQ(ret, 0);
 
-  ret = AddDoc(opt.engine, opt.add_doc_num);
-  EXPECT_EQ(ret, 0);
+  // ret = AddDocToEngine(opt.engine, opt.add_doc_num);
 
-  std::this_thread::sleep_for(std::chrono::seconds(10));
+  // std::this_thread::sleep_for(std::chrono::seconds(10));
 
-  ret = Dump(opt.engine);
-  EXPECT_EQ(ret, 0);
+  // ret = Dump(opt.engine);
 
   Close(opt.engine);
   opt.engine = nullptr;
   delete opt.docids_bitmap_;
+  return ret;
 }
 
-TEST(Search, Load) {
+int LoadEngine() {
   int bitmap_bytes_size = 0;
   int ret =
       bitmap::create(opt.docids_bitmap_, bitmap_bytes_size, opt.max_doc_size);
   if (ret != 0) {
     LOG(ERROR) << "Create bitmap failed!";
   }
-  ASSERT_NE(opt.docids_bitmap_, nullptr);
   Config *config = MakeConfig(StringToByteArray(opt.path), opt.max_doc_size);
   opt.engine = Init(config);
   DestroyConfig(config);
-  ASSERT_NE(opt.engine, nullptr);
 
   ret = Load(opt.engine);
-  ASSERT_EQ(ret, 0);
+  return ret;
 }
 
-TEST(Search, BuildIndexAfterLoad) {
+int BuildIndexAfterLoad() {
   std::thread t(BuildIndex, opt.engine);
   t.detach();
   while (GetIndexStatus(opt.engine) != INDEXED) {
@@ -428,10 +410,11 @@ TEST(Search, BuildIndexAfterLoad) {
   }
 
   LOG(INFO) << "Indexed finished after load!";
+  return 0;
 }
 
 
-TEST(Search, SearchThreadAfterLoad) {
+int SearchThreadAfterLoad() {
   int search_thread_num = 1;
   std::thread t_searchs[search_thread_num];
 
@@ -449,36 +432,59 @@ TEST(Search, SearchThreadAfterLoad) {
   std::this_thread::sleep_for(std::chrono::seconds(2));
 
   std::function<int(void *)> add_func =
-      std::bind(AddDoc, std::placeholders::_1, 10000 * 1, 1);
+      std::bind(AddDocToEngine, std::placeholders::_1, 10000 * 1, 1);
   // std::thread add_thread(add_func, opt.engine);
 
   // get search results
   for (int i = 0; i < search_thread_num; ++i) {
     search_futures[i].wait();
-    EXPECT_LE(search_futures[i].get(), 500);
+    int error_num = search_futures[i].get();
+    if (error_num != 0) {
+      LOG(ERROR) << "error_num [" << error_num << "]";
+    }
     t_searchs[i].join();
   }
 
   // add_thread.join();
+  return 0;
 }
 
-  /*
-TEST(Search, DumpAfterLoad) {
+
+int DumpAfterLoad() {
   int ret = Dump(opt.engine);
-  EXPECT_EQ(ret, 0);
+  return ret;
 }
-*/
 
-TEST(Search, Close) {
+
+int CloseEngine() {
   Close(opt.engine);
   opt.engine = nullptr;
   delete opt.docids_bitmap_;
-  munmap(opt.feature, opt.add_doc_num * sizeof(float) * opt.d);
+  delete opt.feature;
+  // munmap(opt.feature, opt.add_doc_num * sizeof(float) * opt.d);
+  return 0;
 }
 
 int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+  setvbuf(stdout, (char *)NULL, _IONBF, 0);
+  if (argc != 3) {
+    std::cout << "Usage: [Program] [profile_file] [vectors_file]\n";
+    return 1;
+  }
+  opt.profile_file = argv[1];
+  opt.feature_file = argv[2];
+  std::cout << opt.profile_file.c_str() << " " << opt.feature_file.c_str() << std::endl;
+  Init();
+  CreateTable();
+  Add();
+  BuildEngineIndex();
+  Search();
+  DumpEngine();
+  LoadEngine();
+  // BuildIndexAfterLoad();
+  // SearchThreadAfterLoad();
+  // DumpAfterLoad();
+  CloseEngine();
 
-} // namespace Test
+  return 0;
+}

@@ -31,13 +31,13 @@ Profile::Profile(const int max_doc_size) {
   max_str_size_ = max_profile_size_ * 128;
   str_offset_ = 0;
 
-  if (!item_to_docid_.reserve(max_doc_size)) {
-    LOG(ERROR) << "item_to_docid reserve failed, max_doc_size [" << max_doc_size
-               << "]";
-  }
+  // TODO : there is a failure.
+  // if (!item_to_docid_.reserve(max_doc_size)) {
+  //   LOG(ERROR) << "item_to_docid reserve failed, max_doc_size [" << max_doc_size
+  //              << "]";
+  // }
 
   table_created_ = false;
-  name_ = "test";
   LOG(INFO) << "Profile created success!";
 }
 

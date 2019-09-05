@@ -106,9 +106,9 @@ int GammaIVFPQIndex::Indexing() {
     return 0;
   }
   int vectors_count = raw_vec_->GetVectorNum();
-  if (vectors_count < 65535) {
+  if (vectors_count < 8192) {
     LOG(ERROR) << "vector total count [" << vectors_count
-               << "] less then 65535, failed!";
+               << "] less then 8192, failed!";
     return -1;
   }
   train(vectors_count, raw_vec_->GetVectorHeader());

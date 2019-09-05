@@ -819,6 +819,7 @@ int GammaEngine::AddNumIndexFields() {
       break;
     case DataType::STRING:
       retval = AddNumIndexField<string>(it.first);
+      break;
     default:
       LOG(ERROR) << "Not support type " << it.second;
       break;

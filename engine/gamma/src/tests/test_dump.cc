@@ -12,6 +12,7 @@
 #include <functional>
 #include <future>
 #include <sys/mman.h>
+#include <gtest/gtest.h>
 
 namespace Test {
 
