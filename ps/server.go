@@ -134,7 +134,7 @@ func (s *Server) Start() error {
 		ExportToRpcAdminHandler(s)
 	}
 
-	log.Info("Baud server successful startup...")
+	log.Info("vearch server successful startup...")
 
 	s.wg.Wait()
 	return nil

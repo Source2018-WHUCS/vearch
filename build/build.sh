@@ -10,8 +10,13 @@ mkdir -p $GAMMAOUT
 # version value
 BUILD_VERSION="0.1"
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOT/ps/engine/gammacb/lib/lib/;
-export Faiss_HOME=$ROOT/cloud/app/faiss
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOT/ps/engine/gammacb/lib/lib/
+
+if [ ! -n "$FAISS_HOME" ]; then
+  export FAISS_HOME=$ROOT/ps/engine/gammacb/lib/faiss
+fi
+
 
 flags="-X 'main.BuildVersion=$BUILD_VERSION' -X 'main.CommitID=$(git rev-parse HEAD)' -X 'main.BuildTime=$(date +"%Y-%m-%d %H:%M.%S")'"
 
@@ -24,8 +29,8 @@ cmake -DPERFORMANCE_TESTING=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX
 make gamma -j  && make install
 cd ../
 
-echo "build baudengine"
-go build -a -tags="vector" -ldflags "$flags" -o $BUILDOUT/baudengine $ROOT/startup.go
+echo "build vearch"
+go build -a -tags="vector" -ldflags "$flags" -o $BUILDOUT/vearch $ROOT/startup.go
 
 
 echo "build deploy tool"

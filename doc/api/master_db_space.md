@@ -79,7 +79,7 @@ PUT 127.0.0.1:8817/db/_create
 ````
 {
     "code": 500,
-    "msg": "dbname baud1 is exists"
+    "msg": "dbname vearch is exists"
 }
 ````
 
@@ -163,3 +163,7 @@ PUT 127.0.0.1:8817/space/ansj/_create
 }
 ```
 
+
+#### Delete Space
+
+DELETE 127.0.0.1:8817/space/ansj/ansj_table

@@ -39,4 +39,4 @@ debug/
 build/
 .vscode/
 
-cloud/app/
+cloud/env/app

@@ -23,13 +23,13 @@ import "C"
 import (
 	"context"
 	"fmt"
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/ps/engine"
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/ps/engine/register"
-	"github.com/tiglabs/log"
 	"io/ioutil"
 	"sync"
 	"time"
@@ -104,6 +104,13 @@ func New(cfg register.EngineConfig) (engine.Engine, error) {
 	if log.IsDebugEnabled() {
 		go func() {
 			for {
+				ge.locker.Lock()
+				defer ge.locker.Unlock()
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
 				log.Debug("gamma use memory is:[%d]", C.GetMemoryBytes(ge.gamma))
 				time.Sleep(10 * time.Second)
 			}
@@ -123,6 +130,8 @@ type gammaEngine struct {
 	gamma  unsafe.Pointer
 	reader *readerImpl
 	writer *writerImpl
+
+	locker sync.Mutex
 
 	buildIndexOnce sync.Once
 }
@@ -207,6 +216,9 @@ func (ge *gammaEngine) BuildIndex() error {
 }
 
 func (ge *gammaEngine) Close() {
+	ge.locker.Lock()
+	defer ge.locker.Unlock()
+	ge.cancel()
 	C.Close(ge.gamma)
 }
 

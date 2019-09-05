@@ -47,8 +47,8 @@ var (
 )
 
 func init() {
-	flag.StringVar(&confPath, "conf", getDefaultConfigFile(), "baud config path")
-	flag.StringVar(&masterName, "master", "", "baud config for master name , is on local start two master must use it")
+	flag.StringVar(&confPath, "conf", getDefaultConfigFile(), "vearch config path")
+	flag.StringVar(&masterName, "master", "", "vearch config for master name , is on local start two master must use it")
 }
 
 const (
