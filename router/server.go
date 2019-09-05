@@ -111,7 +111,7 @@ func (server *Server) Shutdown() {
 	server.cancelFunc()
 	log.Info("router shutdown... start")
 	if server.httpServer != nil {
-		server.httpServer.Close()
+		server.httpServer.Shutdown()
 		server.httpServer = nil
 	}
 	log.Info("router shutdown... end")

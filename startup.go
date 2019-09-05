@@ -28,13 +28,13 @@ import (
 
 	"github.com/vearch/vearch/util/metrics/mserver"
 
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/master"
 	"github.com/vearch/vearch/ps"
 	"github.com/vearch/vearch/router"
 	tigos "github.com/vearch/vearch/util/runtime/os"
 	"github.com/vearch/vearch/util/signals"
-	"github.com/tiglabs/log"
 	"time"
 )
 
@@ -91,9 +91,18 @@ func main() {
 		}
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	if log.IsDebugEnabled() {
 		go func() {
 			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
 				var mem runtime.MemStats
 				runtime.ReadMemStats(&mem)
 				log.Debug(fmt.Sprint("mem.Alloc:", mem.Alloc, " mem.TotalAlloc:", mem.TotalAlloc, " mem.HeapAlloc:", mem.HeapAlloc, " mem.HeapSys:", mem.HeapSys, " routing :", runtime.NumGoroutine()))
@@ -104,9 +113,6 @@ func main() {
 	}
 
 	sigsHook := signals.NewSignalHook()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	var paths = make(map[string]bool)
 	var models []string
@@ -199,6 +205,8 @@ func main() {
 		paths[config.Conf().GetLogDir(config.Router)] = true
 		models = append(models, "router")
 		sigsHook.AddSignalHook(func() {
+			fmt.Println("stop router begin")
+			cancel()
 			server.Shutdown()
 		})
 		go func() {

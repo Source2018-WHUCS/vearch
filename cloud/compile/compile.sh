@@ -15,6 +15,6 @@ cd /env/app/go/src/github.com/vearch/vearch/build
 mkdir -p /vearch/build/lib/
 
 cp /env/app/faiss_install/lib/libfaiss.so /vearch/build/lib/
-cp /vearch/build/gamma_build/libgamma.so /vearch/build/lib/
+cp /vearch/build/gamma_build/libgamma.* /vearch/build/lib/
 
 rm -rf /vearch/build/gamma_build
