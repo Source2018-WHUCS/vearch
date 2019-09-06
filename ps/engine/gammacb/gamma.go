@@ -30,6 +30,7 @@ import (
 	"github.com/vearch/vearch/ps/engine"
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/ps/engine/register"
+	"github.com/vearch/vearch/util/atomic"
 	"io/ioutil"
 	"sync"
 	"time"
@@ -82,6 +83,7 @@ func New(cfg register.EngineConfig) (engine.Engine, error) {
 		space:        cfg.Space,
 		partitionID:  cfg.PartitionID,
 		gamma:        C.Init(gammaConfig),
+		counter:      atomic.NewAtomicInt64(0),
 	}
 	ge.reader = &readerImpl{engine: ge, path: cfg.Path}
 	ge.writer = &writerImpl{engine: ge, path: cfg.Path}
@@ -104,8 +106,6 @@ func New(cfg register.EngineConfig) (engine.Engine, error) {
 	if log.IsDebugEnabled() {
 		go func() {
 			for {
-				ge.locker.Lock()
-				defer ge.locker.Unlock()
 				select {
 				case <-ctx.Done():
 					return
@@ -131,9 +131,8 @@ type gammaEngine struct {
 	reader *readerImpl
 	writer *writerImpl
 
-	locker sync.Mutex
-
 	buildIndexOnce sync.Once
+	counter        *atomic.AtomicInt64
 }
 
 func (ge *gammaEngine) GetSpace() *entity.Space {
@@ -192,6 +191,8 @@ func (ge *gammaEngine) Optimize() error {
 func (ge *gammaEngine) BuildIndex() error {
 	indexLocker.Lock()
 	defer indexLocker.Unlock()
+	ge.counter.Incr()
+	defer ge.counter.Decr()
 
 	//UNINDEXED = 0, INDEXING, INDEXED
 	go func() {
@@ -216,10 +217,21 @@ func (ge *gammaEngine) BuildIndex() error {
 }
 
 func (ge *gammaEngine) Close() {
-	ge.locker.Lock()
-	defer ge.locker.Unlock()
+	ge.gamma = nil
 	ge.cancel()
-	C.Close(ge.gamma)
+	go func() {
+		i := 0
+		for {
+			time.Sleep(3 * time.Second)
+			i++
+			if ge.counter.Get() > 0 {
+				log.Info("wait stop gamma engine times:[%d]", i)
+				continue
+			}
+			C.Close(ge.gamma)
+		}
+	}()
+
 }
 
 func (ge *gammaEngine) autoCreateIndex() {

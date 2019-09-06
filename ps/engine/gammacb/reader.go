@@ -55,6 +55,9 @@ func (ri *readerImpl) RTReadDoc(ctx context.Context, docID string) *response.Doc
 }
 
 func (ri *readerImpl) GetDoc(ctx context.Context, docID string) *response.DocResult {
+	ri.engine.counter.Incr()
+	defer ri.engine.counter.Decr()
+
 	cID := byteArrayStr(docID)
 	defer C.DestroyByteArray(cID)
 	doc := C.GetDocByID(ri.engine.gamma, cID)
@@ -78,6 +81,9 @@ func (ri *readerImpl) GetDocs(ctx context.Context, docIDs []string) []*response.
 }
 
 func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchRequest) response.SearchResponses {
+	ri.engine.counter.Incr()
+	defer ri.engine.counter.Decr()
+
 	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
 
 	req := C.MakeRequest(C.int(*request.Size),
@@ -121,6 +127,9 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 }
 
 func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest) *response.SearchResponse {
+	ri.engine.counter.Incr()
+	defer ri.engine.counter.Decr()
+
 	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
 
 	req := C.MakeRequest(C.int(*request.Size),
@@ -223,6 +232,9 @@ func (ri *readerImpl) ReadSN(ctx context.Context) (int64, error) {
 }
 
 func (ri *readerImpl) DocCount(ctx context.Context) (uint64, error) {
+	ri.engine.counter.Incr()
+	defer ri.engine.counter.Decr()
+
 	num := C.GetDocsNum(ri.engine.gamma)
 	return uint64(num), nil
 }

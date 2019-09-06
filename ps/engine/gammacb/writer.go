@@ -69,6 +69,9 @@ func (wi *writerImpl) Write(ctx context.Context, doc *pspb.DocCmd) *response.Doc
 }
 
 func (wi *writerImpl) Create(ctx context.Context, docCmd *pspb.DocCmd) *response.DocResult {
+	wi.engine.counter.Incr()
+	defer wi.engine.counter.Decr()
+
 	cDoc, err := DocCmd2Document(docCmd)
 	if err != nil {
 		return response.NewErrDocResult(docCmd.DocId, err)
@@ -83,6 +86,9 @@ func (wi *writerImpl) Create(ctx context.Context, docCmd *pspb.DocCmd) *response
 }
 
 func (wi *writerImpl) Update(ctx context.Context, docCmd *pspb.DocCmd) *response.DocResult {
+	wi.engine.counter.Incr()
+	defer wi.engine.counter.Decr()
+
 	cDoc, err := DocCmd2Document(docCmd)
 	if err != nil {
 		return response.NewErrDocResult(docCmd.DocId, err)
@@ -99,6 +105,8 @@ func (wi *writerImpl) Update(ctx context.Context, docCmd *pspb.DocCmd) *response
 }
 
 func (wi *writerImpl) Delete(ctx context.Context, docCmd *pspb.DocCmd) *response.DocResult {
+	wi.engine.counter.Incr()
+	defer wi.engine.counter.Decr()
 
 	if docCmd.Version == 0 {
 		return response.NewErrDocResult(docCmd.DocId, pkg.ErrDocDelVersionNotSpecified)
@@ -135,6 +143,9 @@ func (wi *writerImpl) Delete(ctx context.Context, docCmd *pspb.DocCmd) *response
 }
 
 func (wi *writerImpl) Flush(ctx context.Context, sn int64) error {
+	wi.engine.counter.Incr()
+	defer wi.engine.counter.Decr()
+
 	if code := C.Dump(wi.engine.gamma); code != 0 {
 		return fmt.Errorf("dump index err response code :[%d]", code)
 	}
@@ -150,6 +161,8 @@ func (wi *writerImpl) Flush(ctx context.Context, sn int64) error {
 }
 
 func (wi *writerImpl) Commit(ctx context.Context, snx int64) (chan error, error) {
+	wi.engine.counter.Incr()
+	defer wi.engine.counter.Decr()
 
 	flushC := make(chan error, 1)
 
