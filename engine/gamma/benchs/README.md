@@ -1,7 +1,7 @@
 
 # Benchmarks
 
-This README.md shows the experiments we do and the results we get. Here we do two series of experiments. First, we experiment on a single node to show the recalls of the modified IVFPQ model which is based on faiss. Second, we do experiments with vectorbase cluster.
+This README.md shows the experiments we do and the results we get. Here we do two series of experiments. First, we experiment on a single node to show the recalls of the modified IVFPQ model which is based on faiss. Second, we do experiments with Vearch cluster.
 
 We evaluate methods with the recall at k performance measure, which is the proportion of results that contain the ground truth nearest neighbor when returning the top k candidates (for k ∈{1,10,100}). And we use Euclidean neighbors as ground truth.
 
@@ -35,7 +35,7 @@ We use recall at 1 to show the result.
 
 ### Result
 
-![nprobe](/doc/img/gamma/benchs/nprobe.png)
+![nprobe](/doc/img/benchs/nprobe.png)
 
 As we can see, when nprobe exceeds 25, there is no obvious change of recalls. Also, when nprobe get larger,only QPS of vgg10M get smaller, QPS of vgg1M and QPS of sift1M  basically have no changes.
 
@@ -45,7 +45,7 @@ We do experiment on VGG10M. The number of centroid ∈{64,128,256,512,1024,2048,
 
 ### Result
 
-![ncentroids](/doc/img/gamma/benchs/ncentroids.png)
+![ncentroids](/doc/img/benchs/ncentroids.png)
 
 As we can see, there is no obvious change of recalls when the number of centroid get larger. But the QPS become higher and higher as the number of centroid grows.
 
@@ -55,13 +55,13 @@ We do experiment on VGG10M. The number of byte ∈{4,8,16,32,64}. We set ncentro
 
 ### Result
 
-![nbytes](/doc/img/gamma/benchs/nbytes.png)
+![nbytes](/doc/img/benchs/nbytes.png)
 
 As we can see, when the number of byte grows, the recall get higher and higher, but the QPS drops obviously.
 
 ## Experiments with faiss
 
-We do experiments on SIFT1M, VGG1M and VGG10M to compare the recalls with faiss. We use some algorithm implemented with faiss and we use vectorbase to represent our algorithm. For ivf model such as ivfpq or ivfhnsw, we set the number of centroid as 256. But for imi model like imipq, imihnsw, we set  number of centroid as 2^(2*10). And here we basically set nprobe as 20 except imi model which we set nprobe as 2048. Considering the dimension, we set the number of byte for sift1M as 32, but for vgg as 64. At last, for hnsw model such as hnsw, ivfhnsw, imihnsw, we set efSearch as 64 and efConstruction as default. 
+We do experiments on SIFT1M, VGG1M and VGG10M to compare the recalls with faiss. We use some algorithm implemented with faiss and we use Vearch to represent our algorithm. For ivf model such as ivfpq or ivfhnsw, we set the number of centroid as 256. But for imi model like imipq, imihnsw, we set  number of centroid as 2^(2*10). And here we basically set nprobe as 20 except imi model which we set nprobe as 2048. Considering the dimension, for pq models, we set the number of byte for sift1M as 32, but for vgg as 64. At last, for hnsw model such as hnsw, ivfhnsw, imihnsw, we set the number of links per vector as 32 and set efSearch as 64 and efConstruction as default. 
 
 ### Result
 
@@ -76,7 +76,7 @@ recalls of SIFT1M:
 |    hnsw    |  0.9792  |  0.9867   |   0.9867   |
 |  ivfhnsw   |  0.9798  |  0.9865   |   0.9865   |
 |  imihnsw   |  0.9796  |  0.9865   |   0.9865   |
-| vectorbase |  0.8649  |  0.9721   |   0.9722   |
+|   Vearch   |  0.8649  |  0.9721   |   0.9722   |
 
 recalls of VGG1M :
 
@@ -89,7 +89,7 @@ recalls of VGG1M :
 |    hnsw    |  0.9496  |  0.9550   |   0.9551   |
 |  ivfhnsw   |  0.9494  |  0.9552   |   0.9553   |
 |  imihnsw   |  0.9514  |  0.9561   |   0.9561   |
-| vectorbase |  0.9536  |  0.9582   |   0.9585   |
+|   Vearch   |  0.9536  |  0.9582   |   0.9585   |
 
 recalls of VGG10M :
 
@@ -102,14 +102,14 @@ recalls of VGG10M :
 |    hnsw    |  0.8877  |  0.9069   |   0.9074   |
 |  ivfhnsw   |  0.8866  |  0.9059   |   0.9061   |
 |  imihnsw   |  0.8877  |  0.9076   |   0.9081   |
-| vectorbase |  0.9272  |  0.9464   |   0.9468   |
+|   Vearch   |  0.9272  |  0.9464   |   0.9468   |
 
 ## Cluster experiments
 
-First, we do experiments by searching on cluster only with vgg features. Then, we experiment with the vgg features and filter the search using an integer field to compare the time consumed and QPS with the vgg features only. In the following section, we use searching with filter or without filter to specify the experiment method mentioned earlier. For different size of experiment data, we use different vectorbase cluster. We use 3 masters, 3 routers and 5 partition services for VGG100M. For VGG500M, we use the same size of master and router with VGG100M but 24 partition services. We use 3 masters, 6 routers and 48 partition services to deal with the VGG1B.
+First, we do experiments by searching on cluster only with vgg features. Then, we experiment with the vgg features and filter the search using an integer field to compare the time consumed and QPS with the vgg features only. In the following section, we use searching with filter or without filter to specify the experiment method mentioned earlier. For different size of experiment data, we use different Vearch cluster. We use 3 masters, 3 routers and 5 partition services for VGG100M. For VGG500M, we use the same size of master and router with VGG100M but 24 partition services. We use 3 masters, 6 routers and 48 partition services to deal with the VGG1B.
 
 ### Result
 
-![cluster](/doc/img/gamma/benchs/cluster.png)
+![cluster](/doc/img/benchs/cluster.png)
 
 The growth shape of QPS is more like inverted J-shaped curve which means the growth of QPS basically have no obvious change when average latency exceed one certain number. 
