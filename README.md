@@ -30,12 +30,12 @@ Distributed deep learning vector search system
 
 ## Quick start
 
-* Quickly own a distributed vector search system with Restful api, please see [doc/Deploy.md](doc/Deploy.md).
+* Quickly build a distributed vector search system with Restful api, please see [doc/Deploy.md](doc/Deploy.md).
 
 
-* Quickly own a complete visual search system, which can support billion-scale images. The image retrieval plugin about object detection and feature extraction should be extra required, For more information, please refer to [plugin/README.md](plugin/README.md).
+* Quickly build a complete visual search system, which can support billion-scale images. The image retrieval plugin about object detection and feature extraction should be extra required, For more information, please refer to [plugin/README.md](plugin/README.md).
 
-## Api
+## API
 
 ### VisualSearchAPI
 * [doc/APIVisualSearch.md](doc/APIVisualSearch.md)
