@@ -27,7 +27,7 @@ import (
 
 const (
 	TruncateTicket = 5 * time.Minute
-	TruncateCounts = 200000
+	TruncateCounts = 20000000
 
 	FlushTicket  = 1 * time.Second
 	FrozenTicket = 5 * time.Minute
