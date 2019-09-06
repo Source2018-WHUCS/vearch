@@ -67,7 +67,6 @@ bool RTInvertBucketData::Init(const size_t &buckets_num,
   memset(_dump_latest_pos, 0, buckets_num * sizeof(int));
 
   total_mem_bytes += buckets_num * sizeof(int) * 2;
-  LOG(INFO) << "===init total_mem_bytes is " << total_mem_bytes << "===";
   return true;
 }
 
@@ -444,9 +443,6 @@ int RealTimeMemData::Load(const std::vector<std::string> &index_dirs) {
   _total_mem_bytes = _buckets_num * sizeof(int) * 3;
   for (size_t i = 0; i < _buckets_num; i++) {
     size_t total_keys = total_bucket_ids[i] * 2;
-    if (total_keys > _bucket_keys) {
-      total_keys = _bucket_keys; // TODO: use limited bucket keys
-    }
     load_bucket_ids[i] = new long[total_keys];
     _total_mem_bytes += total_keys * sizeof(long);
     load_bucket_codes[i] = new uint8_t[total_keys * _code_bytes_per_vec];
