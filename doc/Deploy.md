@@ -12,44 +12,46 @@
    4. [Faiss](https://github.com/facebookresearch/faiss)
 
 #### Compile 
-   * Download the source code: git clone https://xxxxxx/vearch.git ($vearch denotes the absolute path of vearch code)
+   * Enter the `GOPATH` directory, `cd $GOPATH/src` `mkdir -p github/vearch` `cd github/vearch`
+   * Download the source code: `git clone https://xxxxxx/vearch.git` ($vearch denotes the absolute path of vearch code)
    * Compile gamma
-       1. `cd $vearch/engine/gamma/src`
+       1. `cd $vearch/engine/gamma`
        2. `mkdir build && cd build`
-       3. `export Faiss_HOME=the installed path of faiss`
+       3. `export FAISS_HOME=the installed path of faiss`
        4. `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$vearch/ps/engine/gammacb/lib  ..`
        5. `make && make install`
       
    * Compile vearch
       1. `cd $vearch`
-      2. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$vearch/ps/engine/gammacb/lib/lib`
-      3. `export FAISS_HOME=the installed path of faiss`
-      4. `go build -a --tags=vector -o  baudengine`
-      when `baudengine` file generated, it is ok.
+      2. `export FAISS_HOME=the installed path of faiss`
+      3. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$vearch/ps/engine/gammacb/lib/lib:$FAISS_HOME/lib`
+      4. `go build -o vearch`
+      when `vearch` file generated, it is ok.
       
       
 ## Docker
 
 #### Build compile Environment 
-* go to $Vearch/cloud dir
+* go to $vearch/cloud dir
 * run `./compile_env.sh` you will got a image named `vearch_env`
 #### Compile Vearch
-* go to $Vearch/cloud dir
-* run `./compile.sh` you will compile Vearch in `$Vearch/build/bin` , `$Vearch/build/lib`
+* go to $vearch/cloud dir
+* run `./compile.sh` you will compile Vearch in `$vearch/build/bin` , `$vearch/build/lib`
 #### Make Vearch Image
-* go to $Vearch/cloud dir
+* go to $vearch/cloud dir
 * run `./build.sh` you will got a image named `vearch` good luck
 #### How to use it 
-> you can use `docker run -it -v config.toml:/vearch/config.toml vearch all` to start vearch by local model thie last param has four type[`ps`, `router` ,`master`, `all`] all means tree type to start
+> you can use `docker run -it -v config.toml:/vearch/config.toml vearch all` to start vearch by local model the last param has four type[`ps`, `router` ,`master`, `all`] all means tree type to start
        
 ## Deploy
-   #### 1 Local Mode
-   * generate configuration file conf.toml
+   Before run vearch, you shuld set `LD_LIBRARY_PATH`, Ensure that system can find faiss and gamma dynamic libraries (like $vearch/ps/engine/gammacb/lib/lib and $FAISS_HOME/lib directory files) .
+   #### 1 Local Model
+   * generate config file conf.toml
       
 ```
 [global]
-    # the name will validate join cluster by the same name
-    name = "baudengine"
+    # the name will validate join cluster by same name
+    name = "vearch"
     # you data save to disk path ,If you are in a production environment, You'd better set absolute paths
     data = ["datas/"]
     # log path , If you are in a production environment, You'd better set absolute paths
@@ -57,11 +59,12 @@
     # default log type for any model
     level = "debug"
     # master <-> ps <-> router will use this key to send or receive data
-    signkey = "baudengine"
+    signkey = "vearch"
+    skip_auth = true
 
 # if you are master you'd better set all config for router and ps and router and ps use default config it so cool
 [[masters]]
-    # machine name for cluster
+    # name machine name for cluster
     name = "m1"
     # ip or domain
     address = "127.0.0.1"
@@ -98,11 +101,11 @@
    * start
 
 ````
-./baudengine -conf conf.toml
+./vearch -conf conf.toml
 ````
    
-   #### 2 Cluster Mode
-   > vearch has three module: `ps`(PartitionServer) , `master`, `router`, run `./baudengine -f conf.toml ps/router/master` start ps/router/master module
+   #### 2 Cluster Model
+   > vearch has three module: `ps`(PartitionServer) , `master`, `router`, run `./vearch -f conf.toml ps/router/master` start ps/router/master module
 
    > Now we have five machine, two master, two ps and one router
 
@@ -114,15 +117,15 @@
     * 192.168.1.4
 * router
     * 192.168.1.5
-* generate configuration file conf.toml
+* generate config file conf.toml
 
 ````
 [global]
-    name = "baudengine"
+    name = "vearch"
     data = ["datas/"]
     log = "logs/"
     level = "debug"
-    signkey = "baudengine"
+    signkey = "vearch"
     skip_auth = true
 
 # if you are master you'd better set all config for router and ps and router and ps use default config it so cool
@@ -155,18 +158,17 @@
 * on 192.168.1.1 , 192.168.1.2  run master
 
 ````
-./baudengine -conf conf.toml master
+./vearch -conf conf.toml master
 ````
 
 * on 192.168.1.3 , 192.168.1.4 run ps
 
 ````
-./baudengine -conf conf.toml ps
+./vearch -conf conf.toml ps
 ````
 
 * on 192.168.1.5 run router
 
 ````
-./baudengine -conf conf.toml router
+./vearch -conf conf.toml router
 ````
-
