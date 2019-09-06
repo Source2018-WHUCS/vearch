@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-mkdir /env/app/
+mkdir env/app/
 
 yum update
 yum install -y wget gcc gcc-c++ make automake git blas-devel lapack-devel
