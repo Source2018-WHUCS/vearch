@@ -1,7 +1,7 @@
 
 # Benchmarks
 
-This README.md shows the experiments we do and the results we get. Here we do two series of experiments. First, we experiment on a single node to show the recalls of the modified IVFPQ model which is based on faiss. Second, we do experiments with vectorbase cluster.
+This README.md shows the experiments we do and the results we get. Here we do two series of experiments. First, we experiment on a single node to show the recalls of the modified IVFPQ model which is based on faiss. Second, we do experiments with Vearch cluster.
 
 We evaluate methods with the recall at k performance measure, which is the proportion of results that contain the ground truth nearest neighbor when returning the top k candidates (for k ∈{1,10,100}). And we use Euclidean neighbors as ground truth.
 
@@ -61,7 +61,22 @@ As we can see, when the number of byte grows, the recall get higher and higher, 
 
 ## Experiments with faiss
 
-We do experiments on SIFT1M, VGG1M and VGG10M to compare the recalls with faiss. We use some algorithm implemented with faiss and we use vectorbase to represent our algorithm. For ivf model such as ivfpq or ivfhnsw, we set the number of centroid as 256. But for imi model like imipq, imihnsw, we set  number of centroid as 2^(2*10). And here we basically set nprobe as 20 except imi model which we set nprobe as 2048. Considering the dimension, we set the number of byte for sift1M as 32, but for vgg as 64. At last, for hnsw model such as hnsw, ivfhnsw, imihnsw, we set efSearch as 64 and efConstruction as default. 
+We do experiments on SIFT1M, VGG1M and VGG10M to compare the recalls with faiss. We use some algorithm implemented with faiss and we use Vearch to represent our algorithm. 
+
+### Models
+
+Here we show the parameters we set for used models. When the parameters in the table are empty, there are no corresponding parameters in the models. And the parameters of links, efSearch and efConstruction are defined in faiss of hnsw.
+
+|  model  | ncentroids | nprobe | bytes of SIFT | bytes of VGG | links | efSearch | efConstruction |
+| :-----: | :--------: | :----: | :-----------: | :----------: | :---: | :------: | :------------: |
+|   pq    |            |        |      32       |      64      |       |          |                |
+|  ivfpq  |    256     |   20   |      32       |      64      |       |          |                |
+|  imipq  |  2^(2*10)  |  2048  |      32       |      64      |       |          |                |
+| opq+pq  |            |        |      32       |      64      |       |          |                |
+|  hnsw   |            |        |               |              |  32   |    64    |       40       |
+| ivfhnsw |    256     |   20   |               |              |  32   |    64    |       40       |
+| imihnsw |  2^(2*10)  |  2048  |               |              |  32   |    64    |       40       |
+| Vearch  |    256     |   20   |      32       |      64      |       |          |                |
 
 ### Result
 
@@ -76,7 +91,7 @@ recalls of SIFT1M:
 |    hnsw    |  0.9792  |  0.9867   |   0.9867   |
 |  ivfhnsw   |  0.9798  |  0.9865   |   0.9865   |
 |  imihnsw   |  0.9796  |  0.9865   |   0.9865   |
-| vectorbase |  0.8649  |  0.9721   |   0.9722   |
+|   Vearch   |  0.8649  |  0.9721   |   0.9722   |
 
 recalls of VGG1M :
 
@@ -89,7 +104,7 @@ recalls of VGG1M :
 |    hnsw    |  0.9496  |  0.9550   |   0.9551   |
 |  ivfhnsw   |  0.9494  |  0.9552   |   0.9553   |
 |  imihnsw   |  0.9514  |  0.9561   |   0.9561   |
-| vectorbase |  0.9536  |  0.9582   |   0.9585   |
+|   Vearch   |  0.9536  |  0.9582   |   0.9585   |
 
 recalls of VGG10M :
 
@@ -102,11 +117,11 @@ recalls of VGG10M :
 |    hnsw    |  0.8877  |  0.9069   |   0.9074   |
 |  ivfhnsw   |  0.8866  |  0.9059   |   0.9061   |
 |  imihnsw   |  0.8877  |  0.9076   |   0.9081   |
-| vectorbase |  0.9272  |  0.9464   |   0.9468   |
+|   Vearch   |  0.9272  |  0.9464   |   0.9468   |
 
 ## Cluster experiments
 
-First, we do experiments by searching on cluster only with vgg features. Then, we experiment with the vgg features and filter the search using an integer field to compare the time consumed and QPS with the vgg features only. In the following section, we use searching with filter or without filter to specify the experiment method mentioned earlier. For different size of experiment data, we use different vectorbase cluster. We use 3 masters, 3 routers and 5 partition services for VGG100M. For VGG500M, we use the same size of master and router with VGG100M but 24 partition services. We use 3 masters, 6 routers and 48 partition services to deal with the VGG1B.
+First, we do experiments by searching on cluster only with vgg features. Then, we experiment with the vgg features and filter the search using an integer field to compare the time consumed and QPS with the vgg features only. In the following section, we use searching with filter or without filter to specify the experiment method mentioned earlier. For different size of experiment data, we use different Vearch cluster. We use 3 masters, 3 routers and 5 partition services for VGG100M. For VGG500M, we use the same size of master and router with VGG100M but 24 partition services. We use 3 masters, 6 routers and 48 partition services to deal with the VGG1B.
 
 ### Result
 
