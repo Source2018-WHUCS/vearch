@@ -3,7 +3,7 @@
 path=`pwd`
 
 # install pytorch and torchvision
-conda install pytorch torchvision cudatoolkit=9.2 -c pytorch
+conda install pytorch==1.1.0 torchvision 
 
 # download mmdetection
 cd model
