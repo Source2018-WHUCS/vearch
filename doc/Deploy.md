@@ -26,6 +26,21 @@
       3. `export FAISS_HOME=the installed path of faiss`
       4. `go build -a --tags=vector -o  baudengine`
       when `baudengine` file generated, it is ok.
+      
+      
+## Docker
+
+#### Build compile Environment 
+* go to $Vearch/cloud dir
+* run `./compile_env.sh` you will got a image named `vearch_env`
+#### Compile Vearch
+* go to $Vearch/cloud dir
+* run `./compile.sh` you will compile Vearch in `$Vearch/build/bin` , `$Vearch/build/lib`
+#### Make Vearch Image
+* go to $Vearch/cloud dir
+* run `./build.sh` you will got a image named `vearch` good luck
+#### How to use it 
+> you can use `docker run -it -v config.toml:/vearch/config.toml vearch all` to start vearch by local model thie last param has four type[`ps`, `router` ,`master`, `all`] all means tree type to start
        
 ## Deploy
    #### 1 Local Mode
