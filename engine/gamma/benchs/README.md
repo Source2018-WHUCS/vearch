@@ -35,7 +35,7 @@ We use recall at 1 to show the result.
 
 ### Result
 
-![nprobe](/doc/img/benchs/nprobe.png)
+![nprobe](/doc/img/gamma/benchs/nprobe.png)
 
 As we can see, when nprobe exceeds 25, there is no obvious change of recalls. Also, when nprobe get larger,only QPS of vgg10M get smaller, QPS of vgg1M and QPS of sift1M  basically have no changes.
 
@@ -45,7 +45,7 @@ We do experiment on VGG10M. The number of centroid ∈{64,128,256,512,1024,2048,
 
 ### Result
 
-![ncentroids](/doc/img/benchs/ncentroids.png)
+![ncentroids](/doc/img/gamma/benchs/ncentroids.png)
 
 As we can see, there is no obvious change of recalls when the number of centroid get larger. But the QPS become higher and higher as the number of centroid grows.
 
@@ -55,13 +55,28 @@ We do experiment on VGG10M. The number of byte ∈{4,8,16,32,64}. We set ncentro
 
 ### Result
 
-![nbytes](/doc/img/benchs/nbytes.png)
+![nbytes](/doc/img/gamma/benchs/nbytes.png)
 
 As we can see, when the number of byte grows, the recall get higher and higher, but the QPS drops obviously.
 
 ## Experiments with faiss
 
-We do experiments on SIFT1M, VGG1M and VGG10M to compare the recalls with faiss. We use some algorithm implemented with faiss and we use Vearch to represent our algorithm. For ivf model such as ivfpq or ivfhnsw, we set the number of centroid as 256. But for imi model like imipq, imihnsw, we set  number of centroid as 2^(2*10). And here we basically set nprobe as 20 except imi model which we set nprobe as 2048. Considering the dimension, for pq models, we set the number of byte for sift1M as 32, but for vgg as 64. At last, for hnsw model such as hnsw, ivfhnsw, imihnsw, we set the number of links per vector as 32 and set efSearch as 64 and efConstruction as default. 
+We do experiments on SIFT1M, VGG1M and VGG10M to compare the recalls with faiss. We use some algorithm implemented with faiss and we use Vearch to represent our algorithm. 
+
+### Models
+
+Here we show the parameters we set for used models. When the parameters in the table are empty, there are no corresponding parameters in the models. And the parameters of links, efSearch and efConstruction are defined in faiss of hnsw.
+
+|  model  | ncentroids | nprobe | bytes of SIFT | bytes of VGG | links | efSearch | efConstruction |
+| :-----: | :--------: | :----: | :-----------: | :----------: | :---: | :------: | :------------: |
+|   pq    |            |        |      32       |      64      |       |          |                |
+|  ivfpq  |    256     |   20   |      32       |      64      |       |          |                |
+|  imipq  |  2^(2*10)  |  2048  |      32       |      64      |       |          |                |
+| opq+pq  |            |        |      32       |      64      |       |          |                |
+|  hnsw   |            |        |               |              |  32   |    64    |       40       |
+| ivfhnsw |    256     |   20   |               |              |  32   |    64    |       40       |
+| imihnsw |  2^(2*10)  |  2048  |               |              |  32   |    64    |       40       |
+| Vearch  |    256     |   20   |      32       |      64      |       |          |                |
 
 ### Result
 
@@ -110,6 +125,6 @@ First, we do experiments by searching on cluster only with vgg features. Then, w
 
 ### Result
 
-![cluster](/doc/img/benchs/cluster.png)
+![cluster](/doc/img/gamma/benchs/cluster.png)
 
 The growth shape of QPS is more like inverted J-shaped curve which means the growth of QPS basically have no obvious change when average latency exceed one certain number. 
