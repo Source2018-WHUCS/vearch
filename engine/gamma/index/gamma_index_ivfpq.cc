@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  *
  * Modified by The Gamma Authors.
+ * Modified work copyright 2019 The Gamma Authors.
  *
  */
 
@@ -260,7 +261,8 @@ void GammaIVFPQIndex::search_preassigned(
 
   float *recall_distances =
       utils::NewArray<float>(n * recall_num, "recall_distances");
-  idx_t *recall_labels = utils::NewArray<idx_t>(n * recall_num, "recall_labels");
+  idx_t *recall_labels =
+      utils::NewArray<idx_t>(n * recall_num, "recall_labels");
   faiss::ScopeDeleter<float> del1(recall_distances);
   faiss::ScopeDeleter<idx_t> del2(recall_labels);
 
@@ -381,7 +383,8 @@ void GammaIVFPQIndex::search_preassigned(
             continue;
           }
           const uint8_t **codes = bucket_codes[key].data();
-          const idx_t *vids =reinterpret_cast<idx_t *> (bucket_vids[key].data());
+          const idx_t *vids =
+              reinterpret_cast<idx_t *>(bucket_vids[key].data());
 
           scanner->set_list(key, coarse_dis_i);
 
@@ -985,13 +988,11 @@ int GammaIVFPQIndex::Search(const VectorQuery *query,
   } else {
     metric_type = faiss::METRIC_L2;
   }
-  idx_t * idx = reinterpret_cast<idx_t*>(result.docids);
+  idx_t *idx = reinterpret_cast<idx_t *>(result.docids);
   if (condition->use_direct_search) {
-    SearchDirectly(n, x, condition, result.dists, idx,
-                   result.total.data());
+    SearchDirectly(n, x, condition, result.dists, idx, result.total.data());
   } else {
-    SearchIVFPQ(n, x, condition, result.dists, idx,
-                result.total.data());
+    SearchIVFPQ(n, x, condition, result.dists, idx, result.total.data());
   }
 
   for (int i = 0; i < n; i++) {
@@ -1073,7 +1074,7 @@ const idx_t *RTInvertedLists::get_ids(size_t list_no) const {
                                               ivt_codes_list);
   if (!ret)
     return nullptr;
-  idx_t * ivt_lists = reinterpret_cast<idx_t *>(ivt_list);
+  idx_t *ivt_lists = reinterpret_cast<idx_t *>(ivt_list);
   return ivt_lists;
 }
 

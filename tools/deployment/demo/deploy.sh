@@ -1,1 +1,1 @@
- /export/chubao/bin/batch_deployment -dir=/export/chubao/machine/zhengshi /export/chubao/bin/baudengine $1
+ /export/vearch/bin/batch_deployment -dir=/export/vearch/machine/zhengshi /export/vearch/bin/baudengine $1

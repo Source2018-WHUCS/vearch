@@ -25,4 +25,4 @@ function stop
     fi
 }
 stop $1
-#ps -ef|grep chubao|grep -v grep|awk '{print $2}'|xargs kill -9
+#ps -ef|grep vearch|grep -v grep|awk '{print $2}'|xargs kill -9

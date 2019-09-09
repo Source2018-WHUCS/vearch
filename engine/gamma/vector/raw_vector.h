@@ -1,5 +1,5 @@
 /**
- * Copyright (c) The Gamma Authors.
+ * Copyright 2019 The Gamma Authors.
  *
  * This source code is licensed under the Apache License, Version 2.0 license
  * found in the LICENSE file in the root directory of this source tree.
@@ -75,20 +75,22 @@ public:
    * source(string)
    * @return 0 if successed
    */
-  virtual int Add(int docid, Field *&field) {return -1;};
+  virtual int Add(int docid, Field *&field) { return -1; };
 
   /** dump vectors and sources to disk file
    *
    * @param path the disk directory path
    * @return 0 if successed
    */
-  virtual int Dump(const std::string &path, int dump_docid, int max_docid) {return -1;};
+  virtual int Dump(const std::string &path, int dump_docid, int max_docid) {
+    return -1;
+  };
   /** load vectors and sources from disk file
    *
    * @param path the disk directory path
    * @return 0 if successed
    */
-  virtual int Load(const std::vector<std::string> &path) {return -1;};
+  virtual int Load(const std::vector<std::string> &path) { return -1; };
 
   long GetTotalMemBytes() { return total_mem_bytes_; };
 
@@ -96,12 +98,14 @@ public:
   int GetMaxVectorSize() const { return max_vector_size_; }
   int GetFirstVectorID(int docid) {
     int *vid_list = docid2vid_[docid];
-    if (vid_list[0] <= 0) return -1;
+    if (vid_list[0] <= 0)
+      return -1;
     return vid_list[1];
   }
   int GetLastVectorID(int docid) {
     int *vid_list = docid2vid_[docid];
-    if (vid_list[0] <= 0) return -1;
+    if (vid_list[0] <= 0)
+      return -1;
     return vid_list[vid_list[0]];
   }
 

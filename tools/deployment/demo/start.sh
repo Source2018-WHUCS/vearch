@@ -17,7 +17,7 @@ function start
     stype=$1
     info=$(getServiceStatusInfo "${stype}.pid" "${stype}")
     if [ -z "$info" ]; then
-         nohup $BasePath/baudengine -conf $BasePath/config.toml $1 > $BasePath/chubao-${stype}-startup.log 2>&1 &
+         nohup $BasePath/baudengine -conf $BasePath/config.toml $1 > $BasePath/vearch-${stype}-startup.log 2>&1 &
          pid=$!
          echo $pid > $BasePath/${stype}.pid
          echo "[INFO] ${stype} started... pid:${pid}"

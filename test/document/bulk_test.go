@@ -1,4 +1,4 @@
-// Copyright 2018 The ChuBao Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"github.com/olivere/elastic"
 	"github.com/spf13/cast"
+	"github.com/tiglabs/log"
 	pkg "github.com/vearch/vearch/proto"
 	. "github.com/vearch/vearch/test"
 	"github.com/vearch/vearch/test/testutil"
 	"github.com/vearch/vearch/util/cbjson"
 	tigos "github.com/vearch/vearch/util/runtime/os"
-	"github.com/tiglabs/log"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -119,7 +119,6 @@ func TestBulk(t *testing.T) {
 	if total != 1000 {
 		t.Fatal(total, err)
 	}
-
 
 }
 
@@ -235,7 +234,7 @@ func write(p int32, bulkSvc *elastic.BulkService) (int64, error) {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	response, err := bulkSvc.Do(ctx)
 	if err != nil {
-		fmt.Errorf("[%v] Push msg into chubao is failed. err:%v\n", p, err)
+		fmt.Errorf("[%v] Push msg into vearch is failed. err:%v\n", p, err)
 		return 0, err
 	}
 

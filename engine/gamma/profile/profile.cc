@@ -1,5 +1,5 @@
 /**
- * Copyright (c) The Gamma Authors.
+ * Copyright 2019 The Gamma Authors.
  *
  * This source code is licensed under the Apache License, Version 2.0 license
  * found in the LICENSE file in the root directory of this source tree.
@@ -33,7 +33,8 @@ Profile::Profile(const int max_doc_size) {
 
   // TODO : there is a failure.
   // if (!item_to_docid_.reserve(max_doc_size)) {
-  //   LOG(ERROR) << "item_to_docid reserve failed, max_doc_size [" << max_doc_size
+  //   LOG(ERROR) << "item_to_docid reserve failed, max_doc_size [" <<
+  //   max_doc_size
   //              << "]";
   // }
 
@@ -381,10 +382,8 @@ int Profile::Dump(const string &path, int max_docid, int dump_docid) {
   }
 
   LOG(INFO) << "head_length = " << head_length
-            << " item_length = " << item_length_
-            << " start [" << dump_docid
-            << "] num [" << max_docid - dump_docid + 1
-            << "]";
+            << " item_length = " << item_length_ << " start [" << dump_docid
+            << "] num [" << max_docid - dump_docid + 1 << "]";
 
   fwrite((void *)(mem_ + (uint64_t)dump_docid * item_length_), sizeof(char),
          (uint64_t)(max_docid - dump_docid + 1) * item_length_, fp_output);

@@ -1,5 +1,5 @@
 // Copyright 2014 beego Author. All Rights Reserved.
-// Modified work copyright (C) 2018 The ChuBao Authors.
+// Modified work copyright (C) 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

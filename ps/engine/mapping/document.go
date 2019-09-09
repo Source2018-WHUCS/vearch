@@ -1,5 +1,5 @@
 //  Copyright (c) 2014 Couchbase, Inc.
-// Modified work copyright (C) 2018 The ChuBao Authors.
+// Modified work copyright (C) 2018 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

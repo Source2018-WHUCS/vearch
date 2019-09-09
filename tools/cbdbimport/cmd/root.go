@@ -30,7 +30,7 @@ var datafile string
 var rootCmd = &cobra.Command{
 	Use:   "cbdbexport",
 	Short: "A brief description of your application",
-	Long: `Export data from cbdb in JSON format.`,
+	Long:  `Export data from cbdb in JSON format.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {

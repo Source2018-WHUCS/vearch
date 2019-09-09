@@ -1,5 +1,5 @@
 /**
- * Copyright (c) The Gamma Authors.
+ * Copyright 2019 The Gamma Authors.
  *
  * This source code is licensed under the Apache License, Version 2.0 license
  * found in the LICENSE file in the root directory of this source tree.
@@ -398,7 +398,7 @@ int VectorManager::Load(const std::vector<std::string> &index_dirs) {
   }
   // load ivfpq parameters
   IVFPQParameters *ivfpq_param =
-    static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
+      static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
   fread((void *)&ivfpq_param->metric_type, sizeof(ivfpq_param->metric_type), 1,
         info_fp);
   fread((void *)&ivfpq_param->nprobe, sizeof(ivfpq_param->nprobe), 1, info_fp);

@@ -1,4 +1,4 @@
-// Copyright 2018 The ChuBao Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -262,8 +262,8 @@ func (config *Config) GetEmbed() (*embed.Config, error) {
 
 type RouterCfg struct {
 	Base
-	Port       uint16 `toml:"port,omitempty" json:"port"`
-	PprofPort  uint16 `toml:"pprof_port,omitempty" json:"pprof_port"`
+	Port      uint16 `toml:"port,omitempty" json:"port"`
+	PprofPort uint16 `toml:"pprof_port,omitempty" json:"pprof_port"`
 }
 type PSCfg struct {
 	Base

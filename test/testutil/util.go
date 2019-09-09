@@ -1,4 +1,4 @@
-// Copyright 2018 The ChuBao Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,6 @@ import (
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
-
-
 
 func Json2map(result []byte) map[string]interface{} {
 	ms := make(map[string]interface{})
