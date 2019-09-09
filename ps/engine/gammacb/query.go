@@ -66,7 +66,7 @@ func (query *VectorQuery) ToC() (*C.struct_VectorQuery, error) {
 		query.MinScore = util.PFloat64(0)
 	}
 	if query.MaxScore == nil {
-		query.MaxScore = util.PFloat64(math.MaxFloat64)
+		query.MaxScore = util.PFloat64(math.MaxFloat32)
 	}
 
 	if query.Value != nil {
