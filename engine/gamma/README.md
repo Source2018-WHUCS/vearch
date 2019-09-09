@@ -14,7 +14,7 @@ As for the part of similarity search of vectors in Gamma, it is mainly implement
 
 Currently we support gamma both on Linux and OSX of x86_64 machines. We have tested on Centos, Ubuntu and Mac os. Gcc >= 5 required on Mac os.
 
-## References
+## Reference
 Please cite this paper when referencing Gamma.
 Jie Li, Haifeng Liu, Chuanghua Gui, Jianyu chen, Zhenyun Ni, Ning Wang, Yuan Chen. [The Design and Implementation of a Real Time Visual Search System on JD E-commerce Platform](https://arxiv.org/abs/1908.07389). In the 19th International ACM Middleware Conference, December 10–14, 2018, Rennes, France.
  
