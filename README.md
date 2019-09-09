@@ -1,7 +1,5 @@
 # Vearch
-<div align="center">
-  <img src="doc/img/vearch_logo.png">
-</div>
+![doc/img/vearch_logo](doc/img/vearch_logo.png)
 Vearch is a scalable system for deep learning vector search, and particularly it can works as an open source visual search engine.
 
 ## Architecture
