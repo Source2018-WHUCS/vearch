@@ -1,4 +1,4 @@
-// Copyright 2018 The ChuBao Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,23 +15,23 @@
 package document
 
 import (
-	. "github.com/vearch/vearch/test"
 	"fmt"
+	"github.com/tiglabs/log"
+	. "github.com/vearch/vearch/test"
 	"github.com/vearch/vearch/util/assert"
 	"github.com/vearch/vearch/util/cbjson"
-	"github.com/tiglabs/log"
 	"net/http"
 	"testing"
 )
 
 func TestGuiXuLogbookRangeTime(t *testing.T) {
 
-	if 1==1{
+	if 1 == 1 {
 		fmt.Println("this case only set frozen 5 second")
 		return
 	}
 
-	client,dbName, spaceName := InitGuiXuLogbookBegin()
+	client, dbName, spaceName := InitGuiXuLogbookBegin()
 
 	data := `
 	{
@@ -55,14 +55,14 @@ func TestGuiXuLogbookRangeTime(t *testing.T) {
 	}
 	allTotal, _ := allMap.GetJsonMap("hits").GetJsonValIntE("total")
 
-	assert.Equal(t, 2090 , allTotal, "not same")
+	assert.Equal(t, 2090, allTotal, "not same")
 
 	space, err := client.SpaceGet(dbName, spaceName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, 1 , len(space.WorkedPartitions), "not same")
+	assert.Equal(t, 1, len(space.WorkedPartitions), "not same")
 
-	assert.Equal(t, 5 , len(space.Partitions), "partitions ")
+	assert.Equal(t, 5, len(space.Partitions), "partitions ")
 }

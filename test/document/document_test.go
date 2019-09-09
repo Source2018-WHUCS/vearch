@@ -1,4 +1,4 @@
-// Copyright 2018 The ChuBao Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
 package document
 
 import (
-	"github.com/vearch/vearch/ps/engine/mapping"
+	"github.com/tiglabs/caprice/logger"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/proto/response"
+	"github.com/vearch/vearch/ps/engine/mapping"
 	. "github.com/vearch/vearch/test"
 	"github.com/vearch/vearch/util/assert"
-	"github.com/tiglabs/caprice/logger"
 	"testing"
 )
 
@@ -83,14 +83,13 @@ func TestDynamicSchema(t *testing.T) {
 	client := InitSimpleBeginByPartitionNum(dbName, spaceName, 20)
 
 	value := map[string]interface{}{
-		"Name":    "ansj",
-		"Content": "12312312312",
-		"int":123,
-		"float":1.2345,
-		"bool":true,
-		"stringArr":[]string{"a","b","c"},
-		"intArr":[]int64{1,2,3,4,5,5},
-
+		"Name":      "ansj",
+		"Content":   "12312312312",
+		"int":       123,
+		"float":     1.2345,
+		"bool":      true,
+		"stringArr": []string{"a", "b", "c"},
+		"intArr":    []int64{1, 2, 3, 4, 5, 5},
 	}
 
 	docId := "testIDTestDeleteAndGetDocument"
@@ -117,26 +116,25 @@ func TestDynamicSchema(t *testing.T) {
 	}
 
 	fm := documentMapping.Properties["Content"]
-	assert.Equal(t, fm.Field.FieldType() , pspb.FieldType_TEXT , "err")
+	assert.Equal(t, fm.Field.FieldType(), pspb.FieldType_TEXT, "err")
 
 	fm = documentMapping.Properties["Name"]
-	assert.Equal(t, fm.Field.FieldType() , pspb.FieldType_TEXT , "err")
+	assert.Equal(t, fm.Field.FieldType(), pspb.FieldType_TEXT, "err")
 
 	fm = documentMapping.Properties["int"]
-	assert.Equal(t, fm.Field.FieldType() , pspb.FieldType_FLOAT, "err")
+	assert.Equal(t, fm.Field.FieldType(), pspb.FieldType_FLOAT, "err")
 
 	fm = documentMapping.Properties["float"]
-	assert.Equal(t, fm.Field.FieldType() , pspb.FieldType_FLOAT, "err")
+	assert.Equal(t, fm.Field.FieldType(), pspb.FieldType_FLOAT, "err")
 
 	fm = documentMapping.Properties["bool"]
-	assert.Equal(t, fm.Field.FieldType() , pspb.FieldType_BOOL, "err")
+	assert.Equal(t, fm.Field.FieldType(), pspb.FieldType_BOOL, "err")
 
 	fm = documentMapping.Properties["stringArr"]
-	assert.Equal(t, fm.Field.FieldType() , pspb.FieldType_TEXT, "err")
+	assert.Equal(t, fm.Field.FieldType(), pspb.FieldType_TEXT, "err")
 
 	fm = documentMapping.Properties["intArr"]
-	assert.Equal(t, fm.Field.FieldType() , pspb.FieldType_FLOAT, "err")
-
+	assert.Equal(t, fm.Field.FieldType(), pspb.FieldType_FLOAT, "err")
 
 }
 
@@ -145,7 +143,7 @@ func TestDynamicSchemaStringArr(t *testing.T) {
 
 	client := InitSimpleBeginByPartitionNum(dbName, spaceName, 20)
 
-	value := map[string]interface{}{"whiteList":[]string{"bjwanchuan","zhengjia105","renke8","bjzyhan","cdluxy","hewu7","cdtc","cdtangxiejun"}}
+	value := map[string]interface{}{"whiteList": []string{"bjwanchuan", "zhengjia105", "renke8", "bjzyhan", "cdluxy", "hewu7", "cdtc", "cdtangxiejun"}}
 
 	docId := "TestDynamicSchemaStringArr"
 
@@ -171,9 +169,6 @@ func TestDynamicSchemaStringArr(t *testing.T) {
 	}
 
 	fm := documentMapping.Properties["whiteList"]
-	assert.Equal(t, fm.Field.FieldType() , pspb.FieldType_TEXT , "err")
+	assert.Equal(t, fm.Field.FieldType(), pspb.FieldType_TEXT, "err")
 
 }
-
-
-

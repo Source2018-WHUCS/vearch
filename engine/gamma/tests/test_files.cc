@@ -1,5 +1,5 @@
 /**
- * Copyright (c) The Gamma Authors.
+ * Copyright 2019 The Gamma Authors.
  *
  * This source code is licensed under the Apache License, Version 2.0 license
  * found in the LICENSE file in the root directory of this source tree.
@@ -77,7 +77,7 @@ int AddDocToEngine(void *engine, int doc_num, int interval = 0) {
       enum DataType data_type = opt.fields_type[j];
       ByteArray *name = StringToByteArray(opt.fields_vec[j]);
       ByteArray *value;
-      
+
       string &data =
           opt.profiles[(uint64_t)opt.doc_id * opt.fields_vec.size() + j];
       if (opt.fields_type[j] == INT) {
@@ -130,11 +130,12 @@ int SearchThread(void *engine, size_t num) {
   while (idx < num) {
     double start = utils::getmillisecs();
     VectorQuery **vector_querys = MakeVectorQuerys(1);
-    ByteArray *value = FloatToByteArray(opt.feature + (uint64_t)idx * opt.d, opt.d * req_num);
-    VectorQuery *vector_query = MakeVectorQuery(StringToByteArray(opt.vector_name),
-                                                value, 0, 10000, 0.1, 0);
+    ByteArray *value =
+        FloatToByteArray(opt.feature + (uint64_t)idx * opt.d, opt.d * req_num);
+    VectorQuery *vector_query = MakeVectorQuery(
+        StringToByteArray(opt.vector_name), value, 0, 10000, 0.1, 0);
     SetVectorQuery(vector_querys, 0, vector_query);
-    
+
     // string c1_lower = opt.profiles[idx * (opt.fields_vec.size()) + 4];
     // string c1_upper = opt.profiles[idx * (opt.fields_vec.size()) + 4];
     // LOG(INFO) << "idx=" << idx << ", cid3=" << c1_lower;
@@ -145,9 +146,10 @@ int SearchThread(void *engine, size_t num) {
     //                     StringToByteArray(c1_upper), false, true);
     // SetRangeFilter(range_filters, 0, range_filter);
     // Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0,
-    //                                range_filters, 1, nullptr, 0, req_num, 0, nullptr);
-    Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr,
-                                   0, nullptr, 0, req_num, 0, nullptr);
+    //                                range_filters, 1, nullptr, 0, req_num, 0,
+    //                                nullptr);
+    Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0,
+                                   nullptr, 0, req_num, 0, nullptr);
 
     Response *response = Search(engine, request);
     for (int i = 0; i < response->req_num; ++i) {
@@ -158,7 +160,8 @@ int SearchThread(void *engine, size_t num) {
         continue;
       }
       msg += string("total [") + std::to_string(results->total) + "], ";
-      msg += string("result_num [") + std::to_string(results->result_num) + "], ";
+      msg +=
+          string("result_num [") + std::to_string(results->result_num) + "], ";
       for (int j = 0; j < results->result_num; ++j) {
         ResultItem *result_item = GetResultItem(results, j);
         msg += string("score [") + std::to_string(result_item->score) + "], ";
@@ -243,7 +246,8 @@ int Init() {
   opt.feature = fvecs_read(opt.feature_file.c_str(), &opt.d, &opt.add_doc_num);
   std::cout << "n [" << opt.add_doc_num << "]" << std::endl;
 
-  opt.add_doc_num = opt.add_doc_num > opt.max_doc_size ? opt.max_doc_size : opt.add_doc_num;
+  opt.add_doc_num =
+      opt.add_doc_num > opt.max_doc_size ? opt.max_doc_size : opt.add_doc_num;
 
   int bitmap_bytes_size = 0;
   int ret =
@@ -310,7 +314,8 @@ int Add() {
 
   // int fd = open(opt.feature_file.c_str(), O_RDONLY, 0);
   // opt.feature =
-  //     static_cast<float *>(mmap(NULL, opt.max_doc_size * sizeof(float) * opt.d,
+  //     static_cast<float *>(mmap(NULL, opt.max_doc_size * sizeof(float) *
+  //     opt.d,
   //                               PROT_READ, MAP_SHARED, fd, 0));
   // close(fd);
 
@@ -335,7 +340,6 @@ int BuildEngineIndex() {
   LOG(INFO) << "Indexed!";
   return 0;
 }
-
 
 int Search() {
   int search_thread_num = 1;
@@ -413,7 +417,6 @@ int BuildIndexAfterLoad() {
   return 0;
 }
 
-
 int SearchThreadAfterLoad() {
   int search_thread_num = 1;
   std::thread t_searchs[search_thread_num];
@@ -449,12 +452,10 @@ int SearchThreadAfterLoad() {
   return 0;
 }
 
-
 int DumpAfterLoad() {
   int ret = Dump(opt.engine);
   return ret;
 }
-
 
 int CloseEngine() {
   Close(opt.engine);
@@ -473,7 +474,8 @@ int main(int argc, char **argv) {
   }
   opt.profile_file = argv[1];
   opt.feature_file = argv[2];
-  std::cout << opt.profile_file.c_str() << " " << opt.feature_file.c_str() << std::endl;
+  std::cout << opt.profile_file.c_str() << " " << opt.feature_file.c_str()
+            << std::endl;
   Init();
   CreateTable();
   Add();

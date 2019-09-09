@@ -1,4 +1,4 @@
-// Copyright 2018 The ChuBao Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ import (
 
 	"bytes"
 	"github.com/spf13/cast"
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/util/server/rpc/handler"
-	"github.com/tiglabs/log"
 )
 
 type ClientType int

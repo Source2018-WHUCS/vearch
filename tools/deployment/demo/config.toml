@@ -3,10 +3,10 @@
     name = "cbdb"
     # you data save to disk path ,If you are in a production environment, You'd better set absolute paths
     data = [
-            "/export/chubaodb-ps/datas/",
+            "/export/vearchdb-ps/datas/",
         ]  
     # log path , If you are in a production environment, You'd better set absolute paths
-    log = "/export/chubaodb-ps/logs/"
+    log = "/export/vearchdb-ps/logs/"
     # default log type for any model
     level = "debug"
     # master <-> ps <-> router will use this key to send or receive data
@@ -31,7 +31,7 @@
     # The URLs needed to be a comma-separated list.
     # advertise_client_urls AND listen_client_urls
     etcd_client_port = 2370
-    data = ["/export/chubaodb-master/datas/"]
+    data = ["/export/vearchdb-master/datas/"]
 [[masters]]
     #name machine name for cluster
     name = "master2"
@@ -48,7 +48,7 @@
     # The URLs needed to be a comma-separated list.
     # advertise_client_urls AND listen_client_urls
     etcd_client_port = 2370
-    data = ["/export/chubaodb-master/datas/"]
+    data = ["/export/vearchdb-master/datas/"]
 [[masters]]
     #name machine name for cluster
     name = "master3"
@@ -65,7 +65,7 @@
     # The URLs needed to be a comma-separated list.
     # advertise_client_urls AND listen_client_urls
     etcd_client_port = 2370
-    data = ["/export/chubaodb-master/datas/"]
+    data = ["/export/vearchdb-master/datas/"]
 [router]
     # port for server
     port = 9001

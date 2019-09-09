@@ -1,4 +1,4 @@
-// Copyright 2018 The ChuBao Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,8 +29,8 @@ import (
 
 	"github.com/spaolacci/murmur3"
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/proto/entity"
 	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/proto/entity"
 	"runtime/debug"
 )
 
@@ -122,7 +122,7 @@ func (this *spaceSender) GetDocs(ids []string) response.DocResults {
 			if err != nil {
 				if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_EXIST {
 					this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
-					resp, err = this.partitionId(paritionID).getDocs(idArr);
+					resp, err = this.partitionId(paritionID).getDocs(idArr)
 					if err != nil {
 						resp = response.NewErrDocResults(idArr, err)
 					}

@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  *
  * Modified by The Gamma Authors.
+ * Modified work copyright 2019 The Gamma Authors.
  *
  */
 

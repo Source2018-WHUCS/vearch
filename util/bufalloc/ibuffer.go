@@ -1,5 +1,5 @@
 // Copyright 2009 The Go Authors. All rights reserved.
-// Modified work copyright (C) 2018 The ChuBao Authors.
+// Modified work copyright (C) 2019 The Vearch Authors.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 package bufalloc

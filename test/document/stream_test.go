@@ -1,4 +1,4 @@
-// Copyright 2018 The ChuBao Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 package document
 
 import (
-	. "github.com/vearch/vearch/test"
 	"bufio"
 	"fmt"
+	. "github.com/vearch/vearch/test"
 	"net/http"
 	"testing"
 )
@@ -59,4 +59,3 @@ func TestLogbookStream(t *testing.T) {
 
 	fmt.Println(count)
 }
-
