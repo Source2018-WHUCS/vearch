@@ -72,13 +72,18 @@ func (wi *writerImpl) Create(ctx context.Context, docCmd *pspb.DocCmd) *response
 	wi.engine.counter.Incr()
 	defer wi.engine.counter.Decr()
 
+	gamma := wi.engine.gamma
+	if gamma == nil {
+		return response.NewErrDocResult(docCmd.DocId, pkg.ErrPartitionClosed)
+	}
+
 	cDoc, err := DocCmd2Document(docCmd)
 	if err != nil {
 		return response.NewErrDocResult(docCmd.DocId, err)
 	}
 	defer C.DestroyFields(cDoc.fields, cDoc.fields_num)
 
-	if resp := C.AddDoc(wi.engine.gamma, (*C.struct_Doc)(unsafe.Pointer(cDoc))); resp != 0 {
+	if resp := C.AddDoc(gamma, (*C.struct_Doc)(unsafe.Pointer(cDoc))); resp != 0 {
 		return response.NewErrDocResult(docCmd.DocId, fmt.Errorf("gamma create doc err code:[%d]", int(resp)))
 	}
 
@@ -89,6 +94,11 @@ func (wi *writerImpl) Update(ctx context.Context, docCmd *pspb.DocCmd) *response
 	wi.engine.counter.Incr()
 	defer wi.engine.counter.Decr()
 
+	gamma := wi.engine.gamma
+	if gamma == nil {
+		return response.NewErrDocResult(docCmd.DocId, pkg.ErrPartitionClosed)
+	}
+
 	cDoc, err := DocCmd2Document(docCmd)
 	if err != nil {
 		return response.NewErrDocResult(docCmd.DocId, err)
@@ -97,7 +107,7 @@ func (wi *writerImpl) Update(ctx context.Context, docCmd *pspb.DocCmd) *response
 		C.DestroyFields(cDoc.fields, cDoc.fields_num)
 	}()
 
-	if resp := C.AddOrUpdateDoc(wi.engine.gamma, (*C.struct_Doc)(unsafe.Pointer(cDoc))); resp != 0 {
+	if resp := C.AddOrUpdateDoc(gamma, (*C.struct_Doc)(unsafe.Pointer(cDoc))); resp != 0 {
 		return response.NewErrDocResult(docCmd.DocId, fmt.Errorf("gamma create doc err code:[%d]", int(resp)))
 	}
 
@@ -108,12 +118,17 @@ func (wi *writerImpl) Delete(ctx context.Context, docCmd *pspb.DocCmd) *response
 	wi.engine.counter.Incr()
 	defer wi.engine.counter.Decr()
 
+	gamma := wi.engine.gamma
+	if gamma == nil {
+		return response.NewErrDocResult(docCmd.DocId, pkg.ErrPartitionClosed)
+	}
+
 	if docCmd.Version == 0 {
 		return response.NewErrDocResult(docCmd.DocId, pkg.ErrDocDelVersionNotSpecified)
 	}
 
 	if docCmd.Version < 0 {
-		if code := C.DelDoc(wi.engine.gamma, byteArrayStr(docCmd.DocId)); code != 0 {
+		if code := C.DelDoc(gamma, byteArrayStr(docCmd.DocId)); code != 0 {
 			return response.NewErrDocResult(docCmd.DocId, fmt.Errorf("delete document err"))
 		}
 	}
@@ -146,7 +161,12 @@ func (wi *writerImpl) Flush(ctx context.Context, sn int64) error {
 	wi.engine.counter.Incr()
 	defer wi.engine.counter.Decr()
 
-	if code := C.Dump(wi.engine.gamma); code != 0 {
+	gamma := wi.engine.gamma
+	if gamma == nil {
+		return pkg.ErrPartitionClosed
+	}
+
+	if code := C.Dump(gamma); code != 0 {
 		return fmt.Errorf("dump index err response code :[%d]", code)
 	}
 	wi.lock.Lock()
@@ -163,6 +183,11 @@ func (wi *writerImpl) Flush(ctx context.Context, sn int64) error {
 func (wi *writerImpl) Commit(ctx context.Context, snx int64) (chan error, error) {
 	wi.engine.counter.Incr()
 	defer wi.engine.counter.Decr()
+
+	gamma := wi.engine.gamma
+	if gamma == nil {
+		return nil, pkg.ErrPartitionClosed
+	}
 
 	flushC := make(chan error, 1)
 
@@ -190,8 +215,7 @@ func (wi *writerImpl) Commit(ctx context.Context, snx int64) (chan error, error)
 
 		log.Info("begin dump data for gamma")
 
-
-		if code := C.Dump(wi.engine.gamma); code != 0 {
+		if code := C.Dump(gamma); code != 0 {
 			fc <- baudlog.LogErrAndReturn(fmt.Errorf("dump index err response code :[%d]", code))
 		} else {
 			fileName := filepath.Join(wi.path, indexSn)

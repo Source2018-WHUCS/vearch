@@ -24,12 +24,13 @@ import "C"
 import (
 	"context"
 	"fmt"
+	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine"
 	"github.com/vearch/vearch/util/baudlog"
 	"github.com/vearch/vearch/util/ioutil2"
-	"github.com/tiglabs/log"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -130,6 +131,11 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 	ri.engine.counter.Incr()
 	defer ri.engine.counter.Decr()
 
+	gamma := ri.engine.gamma
+	if gamma == nil {
+		return response.NewSearchResponseErr(baudlog.LogErrAndReturn(pkg.ErrPartitionClosed))
+	}
+
 	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
 
 	req := C.MakeRequest(C.int(*request.Size),
@@ -161,7 +167,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 		log.Debug("send request:[%v]", req)
 	}
 	start := time.Now()
-	reps := C.Search(ri.engine.gamma, req)
+	reps := C.Search(gamma, req)
 	end := time.Now().Sub(start)
 	defer C.DestroyResponse(reps)
 
@@ -235,7 +241,12 @@ func (ri *readerImpl) DocCount(ctx context.Context) (uint64, error) {
 	ri.engine.counter.Incr()
 	defer ri.engine.counter.Decr()
 
-	num := C.GetDocsNum(ri.engine.gamma)
+	gamma := ri.engine.gamma
+	if gamma == nil {
+		return 0, baudlog.LogErrAndReturn(pkg.ErrPartitionClosed)
+	}
+
+	num := C.GetDocsNum(gamma)
 	return uint64(num), nil
 }
 

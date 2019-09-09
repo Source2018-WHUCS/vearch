@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/config"
+	pkg "github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/ps/engine"
@@ -193,16 +194,27 @@ func (ge *gammaEngine) BuildIndex() error {
 	defer indexLocker.Unlock()
 	ge.counter.Incr()
 	defer ge.counter.Decr()
+	gamma := ge.gamma
+	if gamma == nil {
+		return pkg.ErrPartitionClosed
+	}
 
 	//UNINDEXED = 0, INDEXING, INDEXED
 	go func() {
-		rc := C.BuildIndex(ge.gamma)
+		rc := C.BuildIndex(gamma)
 		if rc != 0 {
 			log.Error("build index:[%d] err response code:[%d]", ge.partitionID, rc)
 		}
 	}()
 	for {
-		s := C.GetIndexStatus(ge.gamma)
+		select {
+		case <- ge.ctx.Done():
+			log.Error("partition:[%d] has closed so skip wait",ge.partitionID)
+			return pkg.ErrPartitionClosed
+		default:
+		}
+		
+		s := C.GetIndexStatus(gamma)
 		log.Info("index:[%d] status is %d", ge.partitionID, int(s))
 
 		if int(s) == 2 {
