@@ -15,7 +15,7 @@
 package document
 
 import (
-	"github.com/tiglabs/caprice/logger"
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine/mapping"
@@ -63,7 +63,7 @@ func TestDeleteAndGetDocument(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		logger.Info(string(response.Resp))
+		log.Info(string(response.Resp))
 		doc, err = client.DocumentGet(docId)
 		if err != nil {
 			t.Fatal(err)
@@ -72,7 +72,7 @@ func TestDeleteAndGetDocument(t *testing.T) {
 			t.Fatal("del doc but found it err")
 		}
 
-		logger.Info("ok not found it")
+		log.Info("ok not found it")
 	}
 
 }
