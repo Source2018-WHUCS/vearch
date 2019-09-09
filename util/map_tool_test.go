@@ -1,4 +1,4 @@
-// Copyright 2018 The Vearch Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,14 +35,13 @@ func TestMergeMap(t *testing.T) {
 	subDist["a2"] = "a2"
 	subSrc["a2"] = "src_a2"
 
-	MergeMap(dest,src)
+	MergeMap(dest, src)
 
-	assert.DeepEqual(t, dest["xxx"],123)
-	assert.DeepEqual(t, dest["a2"],src["a2"])
-	assert.DeepEqual(t, dest["sub"].(map[string]interface{})["a2"],src["sub"].(map[string]interface{})["a2"])
+	assert.DeepEqual(t, dest["xxx"], 123)
+	assert.DeepEqual(t, dest["a2"], src["a2"])
+	assert.DeepEqual(t, dest["sub"].(map[string]interface{})["a2"], src["sub"].(map[string]interface{})["a2"])
 
 }
-
 
 func TestMergeMapDiffType(t *testing.T) {
 	dist := make(map[string]interface{})
@@ -59,13 +58,11 @@ func TestMergeMapDiffType(t *testing.T) {
 	subDist["a2"] = "a2"
 	subSrc["a2"] = "src_a2"
 
+	MergeMap(dist, src)
 
-	MergeMap(dist,src)
-
-	assert.DeepEqual(t, dist["sub"],src["sub"])
+	assert.DeepEqual(t, dist["sub"], src["sub"])
 
 }
-
 
 func TestMergeMapOtherType(t *testing.T) {
 	dist := make(map[string]interface{})
@@ -84,13 +81,11 @@ func TestMergeMapOtherType(t *testing.T) {
 	subDist["a2"] = "a2"
 	subSrc["a2"] = "src_a2"
 
+	MergeMap(dist, src)
 
-	MergeMap(dist,src)
-
-	assert.DeepEqual(t, dist["sub"],src["sub"])
+	assert.DeepEqual(t, dist["sub"], src["sub"])
 
 }
-
 
 func TestMergeMapOtherType2(t *testing.T) {
 	dist := make(map[string]interface{})
@@ -108,9 +103,8 @@ func TestMergeMapOtherType2(t *testing.T) {
 	subDist["a2"] = "a2"
 	subSrc["a2"] = "src_a2"
 
+	MergeMap(dist, src)
 
-	MergeMap(dist,src)
-
-	assert.DeepEqual(t, dist["sub"],src["sub"])
+	assert.DeepEqual(t, dist["sub"], src["sub"])
 
 }

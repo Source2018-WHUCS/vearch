@@ -1,4 +1,4 @@
-// Copyright 2018 The Vearch Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -357,7 +357,6 @@ func TestBufferGrowth(t *testing.T) {
 	}
 	buffPool.putBuffer(b)
 }
-
 
 func BenchmarkRWWithoutGrow(b *testing.B) {
 	b.Run("Write", func(b *testing.B) {

@@ -1,4 +1,4 @@
-// Copyright 2018 The Vearch Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,13 +26,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/spf13/cast"
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/ps/engine/register"
 	"github.com/vearch/vearch/ps/engine/sortorder"
 	"github.com/vearch/vearch/util/bytes"
-	"github.com/tiglabs/log"
 	"reflect"
 	"strings"
 	"time"

@@ -1,4 +1,4 @@
-// Copyright 2018 The Vearch Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -208,12 +208,12 @@ func (ge *gammaEngine) BuildIndex() error {
 	}()
 	for {
 		select {
-		case <- ge.ctx.Done():
-			log.Error("partition:[%d] has closed so skip wait",ge.partitionID)
+		case <-ge.ctx.Done():
+			log.Error("partition:[%d] has closed so skip wait", ge.partitionID)
 			return pkg.ErrPartitionClosed
 		default:
 		}
-		
+
 		s := C.GetIndexStatus(gamma)
 		log.Info("index:[%d] status is %d", ge.partitionID, int(s))
 

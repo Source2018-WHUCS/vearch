@@ -71,12 +71,12 @@ type Space struct {
 	Properties   json.RawMessage `json:"properties"`
 	Engine       *Engine         `json:"engine"`
 
-	DynamicSchema         DynamicType     `json:"dynamic_schema,omitempty"`    // has three types true , false , strict
-	DefaultField          string          `json:"default_field"`               //default _all
-	StoreDynamic          bool            `json:"store_dynamic"`               //default false
-	StoreSource           *bool           `json:"store_source"`                //default true
-	DocValuesDynamic      *bool           `json:"docvalues_dynamic,omitempty"` //default true
-	Models                json.RawMessage `json:"models,omitempty"`            //json model config for python plugin
+	DynamicSchema    DynamicType     `json:"dynamic_schema,omitempty"`    // has three types true , false , strict
+	DefaultField     string          `json:"default_field"`               //default _all
+	StoreDynamic     bool            `json:"store_dynamic"`               //default false
+	StoreSource      *bool           `json:"store_source"`                //default true
+	DocValuesDynamic *bool           `json:"docvalues_dynamic,omitempty"` //default true
+	Models           json.RawMessage `json:"models,omitempty"`            //json model config for python plugin
 
 	WorkedPartitions []*Partition `json:"worked_partitions"` // partitionids not sorted
 }

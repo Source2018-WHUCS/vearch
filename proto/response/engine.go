@@ -1,4 +1,4 @@
-// Copyright 2018 The Vearch Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,14 +15,13 @@
 package response
 
 import (
-    "github.com/vearch/vearch/proto"
-    "github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/proto/pspb"
 )
 
 func NewEngineErr(err error) *pspb.EngineFailure {
-    return &pspb.EngineFailure{
-        Status: int64(pkg.ErrCode(err)),
-        Reason: err.Error(),
-    }
+	return &pspb.EngineFailure{
+		Status: int64(pkg.ErrCode(err)),
+		Reason: err.Error(),
+	}
 }
-

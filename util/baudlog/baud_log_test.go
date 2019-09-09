@@ -1,4 +1,4 @@
-// Copyright 2018 The Vearch Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 package baudlog
 
 import (
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/util/assert"
 	"testing"
-	"github.com/tiglabs/log"
 	"time"
 )
 
@@ -33,5 +33,5 @@ func TestBaudLog(t *testing.T) {
 	log.Debug("hello %s", "debug")
 	log.Warn("hello %s", "warn")
 	log.Error("hello %s", "error")
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Second)
 }

@@ -1,4 +1,4 @@
-// Copyright 2018 The Vearch Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 package sortorder
-
 
 type SortField struct {
 	Field        string
@@ -48,7 +47,6 @@ func (s *SortField) Compare(i, j SortValue) int {
 	}
 	return c
 }
-
 
 func (s *SortField) SortField() string {
 	return s.Field

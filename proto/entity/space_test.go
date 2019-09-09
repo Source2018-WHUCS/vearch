@@ -1,4 +1,4 @@
-// Copyright 2018 The Vearch Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ func TestSpace(t *testing.T) {
 
 }
 
-func TestSpaceString(t *testing.T)  {
+func TestSpaceString(t *testing.T) {
 	space := &entity.Space{}
 	str := `{"engine": "caprice"}`
 	if err := json.Unmarshal([]byte(str), &space); err != nil {
@@ -47,7 +47,7 @@ func TestSpaceString(t *testing.T)  {
 	assert.Equal(t, space.Engine.Name, "caprice", "unmarshal string to engine err")
 }
 
-func TestEngineSpaceString(t *testing.T)  {
+func TestEngineSpaceString(t *testing.T) {
 	space := &entity.Space{}
 	str := `{"engine": {"nprobe":10, "name":"gamma", "max_size":10000,"index_size":1000}}`
 	if err := json.Unmarshal([]byte(str), &space); err != nil {

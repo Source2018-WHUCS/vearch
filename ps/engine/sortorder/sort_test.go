@@ -1,4 +1,4 @@
-// Copyright 2018 The Vearch Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,13 +41,13 @@ func TestInfinitySortValue(t *testing.T) {
 	if e.Compare(f) != 0 {
 		t.Fatal("InfinitySortValue compare failed")
 	}
-	svs := []SortValue{&InfinitySortValue{Typ:ValueType_Int},&InfinitySortValue{Typ:ValueType_Int, Negative: true},
-		&InfinitySortValue{Typ:ValueType_Int},&InfinitySortValue{Typ:ValueType_Int, Negative: true},
-		&InfinitySortValue{Typ:ValueType_Float},&InfinitySortValue{Typ:ValueType_Float, Negative: true},
-		&InfinitySortValue{Typ:ValueType_String}}
-	expect := []string{`9223372036854776000`,`-9223372036854776000`,
-		`9223372036854776000`,`-9223372036854776000`,
-		`"Infinity"`,`"-Infinity"`,`null`}
+	svs := []SortValue{&InfinitySortValue{Typ: ValueType_Int}, &InfinitySortValue{Typ: ValueType_Int, Negative: true},
+		&InfinitySortValue{Typ: ValueType_Int}, &InfinitySortValue{Typ: ValueType_Int, Negative: true},
+		&InfinitySortValue{Typ: ValueType_Float}, &InfinitySortValue{Typ: ValueType_Float, Negative: true},
+		&InfinitySortValue{Typ: ValueType_String}}
+	expect := []string{`9223372036854776000`, `-9223372036854776000`,
+		`9223372036854776000`, `-9223372036854776000`,
+		`"Infinity"`, `"-Infinity"`, `null`}
 
 	for i, sv := range svs {
 		data, err := json.Marshal(sv.Value())
@@ -96,9 +96,6 @@ func TestNumberSortValue(t *testing.T) {
 	if c.Compare(y) <= 0 {
 		t.Fatal("int compare faield")
 	}
-
-
-
 
 	s1 := &FloatSortValue{Val: 0.7126753330230713}
 	s2 := &FloatSortValue{Val: 1.000000238418579}

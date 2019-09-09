@@ -1,5 +1,5 @@
 //  Copyright (c) 2014 Couchbase, Inc.
-// Modified work copyright (C) 2018 The Vearch Authors.
+// Modified work copyright (C) 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import (
 )
 
 type DocumentMapping struct {
-	Properties      map[string]*DocumentMapping `json:"properties,omitempty"`
-	Field           *FieldMapping               `json:"field,omitempty"`
+	Properties map[string]*DocumentMapping `json:"properties,omitempty"`
+	Field      *FieldMapping               `json:"field,omitempty"`
 }
 
 func NewDocumentMapping() *DocumentMapping {
@@ -36,8 +36,6 @@ func (dm *DocumentMapping) addSubDocumentMapping(property string, sdm *DocumentM
 	}
 	dm.Properties[property] = sdm
 }
-
-
 
 func (dm *DocumentMapping) UnmarshalJSON(data []byte) error {
 
@@ -69,4 +67,3 @@ func (dm *DocumentMapping) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
-

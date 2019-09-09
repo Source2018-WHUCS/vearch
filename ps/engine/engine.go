@@ -1,4 +1,4 @@
-// Copyright 2018 The Vearch Authors.
+// Copyright 2019 The Vearch Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@ package engine
 
 import (
 	"context"
-	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
+	"github.com/vearch/vearch/ps/engine/mapping"
 	"io"
 
 	"github.com/vearch/vearch/proto/pspb"
@@ -42,7 +42,6 @@ type Iterator interface {
 
 // Reader is the read interface to an engine's data.
 type Reader interface {
-
 	GetDoc(ctx context.Context, docID string) *response.DocResult
 
 	GetDocs(ctx context.Context, docIDs []string) []*response.DocResult
@@ -85,7 +84,6 @@ type Writer interface {
 
 	// commit is renew a memory block, return a chan to client, client get the chan to wait the old memory flush to segment
 	Commit(ctx context.Context, sn int64) (chan error, error)
-
 }
 
 // Engine is the interface that wraps the core operations of a document store.
