@@ -21,7 +21,7 @@ port = 4101
 # your GPU Memory
 batch_size = 16
 # The name of model for web platform, Currently only one model is supported
-detect_model = "fastrcnn"
+detect_model = "yolo3"
 extract_model = "vgg16"
 # Define gpu parameters,
 gpu = "0"

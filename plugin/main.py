@@ -29,7 +29,7 @@ import traceback
 import concurrent.futures
 from multiprocessing import Queue, Process
 from asyncio.futures import wrap_future
-from sklearn.preprocessing import normalize
+# from sklearn.preprocessing import normalize
 from concurrent.futures import ThreadPoolExecutor
 
 import tornado
@@ -238,6 +238,9 @@ class ExtractProcess(Process):
         t = threading.Thread(target=watch_thread_queue, args=(self.watch_queue, self.input_queue))
         t.start()
 
+    def normlize(self, mat):
+        return mat/np.linalg.norm(mat, axis=1)[:,np.newaxis]
+
     def exect(self, imgs):
         # print(len(imgs), self.watch_queue.qsize())
         # imgs = np.array(imgs, dtype=np.float64)
@@ -247,7 +250,8 @@ class ExtractProcess(Process):
         # print(imgs.shape, imgs)
         feats_list = self.model.forward(imgs)
         # feats_list = self.model.torch2list(feats_torch)
-        result = normalize(feats_list, norm='l2', axis=1)
+        # result = normalize(feats_list, norm='l2', axis=1)
+        result = self.normlize(feats_list)
         return result.tolist()
 
     def get_batch(self):
@@ -323,9 +327,10 @@ class PackageProcess(Process):
                 data["feature"] = {"source": imageurl, "feature": feat}
             else:
                 size = data.pop("size", 10)
+                min_score = data.pop("score", 0)
                 filters = data.pop("filter", None)
                 ip = f"{config.ip_insert}/{db_name}/{space_name}/_search?size={size}"
-                data = {"query": {"sum": [{"feature": feat, "field": "feature"}],"filter":filters}}
+                data = {"query": {"sum": [{"feature": feat, "field": "feature", "min_score": min_score, "max_score": 1.0}],"filter":filters}}
             executor.submit(deal, uuid, ip, data)
 
 
@@ -359,11 +364,7 @@ def set_result_thread(result_queue, futures_dict):
         uuid, flag, result = result_queue.get()
         if uuid in futures_dict:
             if not flag:
-                result = json.dumps(
-                    {"status": 550, "error":
-                     {"index": "", "index_uuid": "", "shard": "0", "type": "", "reason": result}
-                     }
-                )
+                result = json.dumps({"status": 550, "error":{"index": "", "index_uuid": "", "shard": "0", "type": "", "reason": result}})
                 # result = json.dumps(
                 # {"_index": db_name,"_type":tb_name,"status":550,
                 # "error":{"index":"","index_uuid":"","shard":"0","type":"","reason":result}})
@@ -548,6 +549,7 @@ class TableHandler(tornado.web.RequestHandler):
 
         def pkg_result(response_body):
             # print(response_body)
+            assert "_id" in response_body, response_body
             _id = response_body["_id"]
             if response_body["status"] == 201:
                 result["ids"].append({_id: "successful"})
@@ -574,26 +576,26 @@ class TableHandler(tornado.web.RequestHandler):
         return result
 
 
-# def parse_argument():
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("--debug", action="store_true", help="debug model")
-#     parser.add_argument("--port", type=str, default=4101, help="Port the server run on")
-#     parser.add_argument("--gpu", type=str, default="0", help="Which GPU the server run on")
-#     parser.add_argument("--feature_model", type=str, default="vgg16", help="Which feature model you need")
-#     parser.add_argument("--detect_model", type=str, default="keras_yoyo", help="Which detect model you need")
-#     args = parser.parse_args()
-#     return args
+def parse_argument():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", action="store_true", help="debug model")
+    parser.add_argument("--port", type=str, default=4101, help="Port the server run on")
+    parser.add_argument("--gpu", type=str, default="0", help="Which GPU the server run on")
+    # parser.add_argument("--feature_model", type=str, default="vgg16", help="Which feature model you need")
+    # parser.add_argument("--detect_model", type=str, default="keras_yoyo", help="Which detect model you need")
+    args = parser.parse_args()
+    return args
 
 
 def main():
-    # args = parse_argument()
-    # port = args.port
-    # gpu = args.gpu
+    args = parse_argument()
+    port = args.port
+    gpu = args.gpu
     # model_name = args.feature_model
     # model_module = get_model("model.image_retrieval." + model_name)
     # detect_model = args.detect_model
-    gpu = config.gpu
-    port = config.port
+    # gpu = config.gpu
+    # port = config.port
     detect_model = config.detect_model
     extract_model = config.extract_model
 

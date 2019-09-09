@@ -421,19 +421,12 @@ Search using an image stored in images folders or image URI on Internet
 curl -XPOST -H "content-type:application/json" -d '{
     "imageurl": "images/test/COCO_val2014_000000123599.jpg",
     "detection": true,
+    "score": 0.5,
     "filter": [
-        {
-            "range": {
-                "score": {
-                    "gte": 0.5,
-                    "lte": 1
-                }
-            }
-        },
         {
             "term": {
                 "label": {
-                    "value": "tops"
+                    "value": "zebra"
                 }
             }
         }

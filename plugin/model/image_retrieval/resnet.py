@@ -32,9 +32,10 @@ class BaseModel(object):
                     ])
 
     def load_model(self):
-        self.model = models.resnet50(pretrained=True)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = models.resnet50(pretrained=True).to(self.device)
         self.model = self.model.eval()
-        self.model.cuda()
+        # self.model.cuda()
 
     def preprocess_input(self, image):
         image = Image.fromarray(image)
@@ -49,7 +50,7 @@ class BaseModel(object):
 
     def forward(self, x):
         x = torch.stack(x)
-        x = x.cuda()
+        x = x.to(self.device)
         x = self.model.conv1(x)
         x = self.model.bn1(x)
         x = self.model.relu(x)

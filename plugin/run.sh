@@ -3,19 +3,15 @@
 path=`pwd`
 
 # install pytorch and torchvision
-conda install pytorch==1.1.0 torchvision 
-
-# download mmdetection
-cd model
-git clone https://github.com/open-mmlab/mmdetection.git
-cd mmdetection
-python setup.py develop
-
+pip install torchvision
+pip install torch
 
 # download weight
 cd $path
 cd model/image_detect
-sh weight.sh
+if [ ! -f yolov3.weights ];then
+    sh weight.sh
+fi
 
 # install package
 isexist(){
@@ -37,7 +33,7 @@ isexist "requests" "requests"  2>/dev/null || error_exit  "install requests fail
 isexist "tornado" "tornado==6.0.2"  2>/dev/null || error_exit  "install tornado==6.0.2 failed"
 isexist "shortuuid" "shortuuid"   2>/dev/null || error_exit  "install shortuuid failed"
 isexist "cv2" "opencv-python"  2>/dev/null || error_exit "install opencv-python failed"
-isexist "sklearn" "sklearn"  2>/dev/null || error_exit  "install sklearn failed"
 
 echo "Begin torndao service!!!"
-python main.py
+cd $path
+python main.py --port=4101 --gpu=0

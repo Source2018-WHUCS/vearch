@@ -6,7 +6,7 @@ Vearch Plugin is aimed to build a simple and fast image retrieval system. Throug
 
 ## Runtime Environment
 
-python >= 3.6;  cuda >= 9.2;  [mmdetection](https://github.com/open-mmlab/mmdetection)
+python >= 3.6;  cuda >= 9.2;
 
 ## Installation
 

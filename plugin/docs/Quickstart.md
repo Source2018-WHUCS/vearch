@@ -11,10 +11,10 @@ Vearch is aimed to build a simple and fast image retrieval system. Through this 
 
 ## Before you begin
 
-1. installed  [mmdetection](https://github.com/open-mmlab/mmdetection) .
-2. Download the [weight](https://s3.ap-northeast-2.amazonaws.com/open-mmlab/mmdetection/models/faster_rcnn_r50_fpn_1x_20181010-3d1b3351.pth) of object detect model.
+1. Deploy Vearch system referred to [Deploy.md](doc/Deploy.md).
+2. Download the [weight](https://pjreddie.com/media/files/yolov3.weights) of object detect model in model/image_detect folder.
 
- And you can download  [coco data](https://pjreddie.com/media/files/val2014.zip) for testing, or  use the images in images folder we choose from [coco data](https://pjreddie.com/media/files/val2014.zip)  . 
+ And you can download  [coco data](https://pjreddie.com/media/files/val2014.zip) for testing, or  use the images in images folder we choose from [coco data](https://pjreddie.com/media/files/val2014.zip).
 
 
 ## Deploy your own plugin service
@@ -231,19 +231,12 @@ Search using an image stored in images folders or image URI on Internet. Use the
 curl -XPOST -H "content-type:application/json" -d '{
     "imageurl": "images/test/COCO_val2014_000000123599.jpg",
     "detection": true,
+    "score": 0.5,
     "filter": [
-        {
-            "range": {
-                "score": {
-                    "gte": 0.5,
-                    "lte": 1
-                }
-            }
-        },
         {
             "term": {
                 "label": {
-                    "value": "tops"
+                    "value": "zebra"
                 }
             }
         }
