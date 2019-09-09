@@ -54,7 +54,7 @@ type Engine struct {
 
 func NewDefaultEngine() *Engine {
 	return &Engine{
-		Name: Caprice,
+		Name: Gamma,
 	}
 }
 
