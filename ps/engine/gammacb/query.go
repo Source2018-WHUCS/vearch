@@ -30,6 +30,7 @@ import (
 	"github.com/vearch/vearch/util"
 	"github.com/vearch/vearch/util/bytes"
 	"github.com/vearch/vearch/util/cbjson"
+	"math"
 	"strings"
 	"time"
 )
@@ -62,10 +63,10 @@ func (query *VectorQuery) ToC() (*C.struct_VectorQuery, error) {
 	}
 
 	if query.MinScore == nil {
-		query.MinScore = util.PFloat64(-1)
+		query.MinScore = util.PFloat64(0)
 	}
 	if query.MaxScore == nil {
-		query.MaxScore = util.PFloat64(-1)
+		query.MaxScore = util.PFloat64(math.MaxFloat64)
 	}
 
 	if query.Value != nil {
