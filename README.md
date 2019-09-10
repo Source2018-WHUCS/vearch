@@ -35,7 +35,7 @@ Vearch is a scalable system for deep learning vector search, and particularly it
 * Quickly build a distributed vector search system with Restful api, please see [doc/Deploy.md](doc/Deploy.md).
 
 
-* Quickly build a complete visual search system, which can support billion-scale images. The image retrieval plugin about object detection and feature extraction should be extra required, For more information, please refer to [plugin/README.md](plugin/README.md).
+* Quickly build a complete visual search system, which can support billion-scale images. The image retrieval plugin about object detection and feature extraction should be extra required, For more information, please refer to [doc/Quickstart.md](doc/Quickstart.md).
 
 ## API
 

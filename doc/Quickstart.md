@@ -4,10 +4,6 @@ Vearch is aimed to build a simple and fast image retrieval system. Through this 
 
 
 
-[TOC]
-
-
-
 
 ## Before you begin
 
