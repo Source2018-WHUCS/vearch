@@ -512,7 +512,7 @@ A successful response looks like this:
 
 search result look like this
 
-![images/COCO_val2014_000000123599.jpg](plugin/images/COCO_val2014_000000123599.jpg)
+![doc/img/plugin/COCO_val2014_000000123599.jpg](doc/img/plugin/COCO_val2014_000000123599.jpg)
 
-![images/result.jpg](plugin/images/result.jpg)
+![doc/img/plugin/result.jpg](doc/img/plugin/result.jpg)
 
