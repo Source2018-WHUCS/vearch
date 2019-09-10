@@ -14,15 +14,6 @@ python >= 3.6;  cuda >= 9.2;
 bash run.sh
 ```
 
-## Get Started
-
-Please see [Quickstart.md](plugin/docs/Quickstart.md)  for basic usage of Vearch Plugin.
-
-## Tutorial
-[Quickstart](plugin/docs/Quickstart.md)
-
-[VisualSearchAPI](plugin/docs/VisualSearchAPI.md)
-
 ## Search Result Demo
 ![plugin/images/COCO_val2014_000000123599.jpg](plugin/images/COCO_val2014_000000123599.jpg)
 
