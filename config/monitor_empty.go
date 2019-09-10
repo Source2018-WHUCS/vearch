@@ -7,6 +7,6 @@ import (
 	"github.com/vearch/vearch/util/monitoring"
 )
 
-func newMonitor(conf *Config , key string) monitoring.Monitor {
-	return monitoring.ConsoleMonitor{}.New(key)
+func newMonitor(conf *Config, key string) monitoring.Monitor {
+	return monitoring.EmptyMonitor{}.New(key)
 }
