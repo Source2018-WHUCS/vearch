@@ -1,7 +1,5 @@
 # Vearch Compile and Deploy
 
-[TOC]
-
 ## Compile
 
 #### Dependent Environment 
@@ -172,3 +170,5 @@
 ````
 ./vearch -conf conf.toml router
 ````
+
+## On Kubernetes
