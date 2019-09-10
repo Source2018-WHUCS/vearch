@@ -1,8 +1,0 @@
-DbName="test_db"
-SpaceName="test_space"
-RootName="root"
-RootPassword="secret"
-UserName= "cb"
-UserPassword="1234"
-MasterAddr ="127.0.0.1:8817"
-RouterAddr ="127.0.0.1:9001"

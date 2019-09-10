@@ -12,23 +12,27 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-package testutil
+package monitoring
 
 import (
-	"encoding/json"
-	"math/rand"
 	"time"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
+var _ Monitor = &EmptyMonitor{}
+
+type EmptyMonitor struct {
+	key string
 }
 
-func Json2map(result []byte) map[string]interface{} {
-	ms := make(map[string]interface{})
-	err := json.Unmarshal(result, &ms)
-	if err != nil {
-		panic(err)
-	}
-	return ms
+func (EmptyMonitor) New(key string) Monitor {
+	return &EmptyMonitor{key: key}
+}
+
+func (cm *EmptyMonitor) Alive() {
+}
+
+func (cm *EmptyMonitor) Alarm(detail string) {
+}
+
+func (cm *EmptyMonitor) FunctionTP(startTime time.Time, hasErr bool) {
 }
