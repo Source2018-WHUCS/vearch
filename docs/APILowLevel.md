@@ -51,7 +51,7 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
 * * nsubvector : 
 * * nbits_per_idx : 
 * keyword
-* * array : 
+* * array : whether the tag is multi-valued， `true` or `false` default is false
 * * index : is support index filter default `false`
 
 
