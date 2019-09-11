@@ -15,7 +15,6 @@
 package util
 
 import (
-	"github.com/tiglabs/log"
 	"reflect"
 	"unsafe"
 )
@@ -37,131 +36,6 @@ func StringToSlice(s string) (b []byte) {
 	pbytes.Len = pstring.Len
 	pbytes.Cap = pstring.Len
 	return
-}
-
-type sizeStruct struct {
-	pointMap map[interface{}]bool
-	num      int
-	deep     int
-}
-
-func SizeOf(data interface{}) int {
-	var ss = &sizeStruct{make(map[interface{}]bool), 0, 0}
-	num := ss.sizeof(reflect.ValueOf(data))
-	return num
-}
-
-func SizeStructAndType(data interface{}) int {
-	var ss = &sizeStruct{make(map[interface{}]bool), 0, 0}
-	num := ss.sizeof(reflect.ValueOf(data))
-	return num + ss.num
-}
-
-func (s *sizeStruct) sizeof(v reflect.Value) int {
-	s.deep++
-	if s.deep > 1000000 {
-		log.Error("struts has more elements  so skip sizeOf")
-		return 0 //
-	}
-
-	switch v.Kind() {
-	case reflect.Map:
-		sum := 0
-		keys := v.MapKeys()
-		for i := 0; i < len(keys); i++ {
-			mapkey := keys[i]
-			num := s.sizeof(mapkey)
-			if num < 0 {
-				return -1
-			}
-			sum += num
-			num = s.sizeof(v.MapIndex(mapkey))
-			if num < 0 {
-				return -1
-			}
-			sum += num
-		}
-		s.num += int(v.Type().Size())
-		return sum
-	case reflect.Slice:
-		sum := 0
-		for i, n := 0, v.Len(); i < n; i++ {
-			num := s.sizeof(v.Index(i))
-			if num < 0 {
-				return -1
-			}
-			sum += num
-		}
-		s.num += int(v.Type().Size())
-		return sum
-
-	case reflect.Array:
-		sum := 0
-		for i, n := 0, v.Len(); i < n; i++ {
-			num := s.sizeof(v.Index(i))
-			if num < 0 {
-				return -1
-			}
-			sum += num
-		}
-		return sum
-
-	case reflect.String:
-		sum := 0
-		for i, n := 0, v.Len(); i < n; i++ {
-			num := s.sizeof(v.Index(i))
-			if num < 0 {
-				return -1
-			}
-			sum += num
-		}
-		s.num += int(v.Type().Size())
-		return sum
-
-	case reflect.Ptr, reflect.Interface:
-		s.num += int(v.Type().Size())
-		if v.IsNil() {
-			return 0
-		}
-
-		if _, ok := s.pointMap[v]; ok {
-			return 0
-		} else {
-			s.pointMap[v] = true
-		}
-		return s.sizeof(v.Elem())
-	case reflect.Struct:
-		sum := 0
-		for i, n := 0, v.NumField(); i < n; i++ {
-			if v.Type().Field(i).Tag.Get("ss") == "-" {
-				continue
-			}
-			num := s.sizeof(v.Field(i))
-			if num < 0 {
-				return -1
-			}
-			sum += num
-		}
-		return sum
-
-	case reflect.Func, reflect.Chan:
-		s.num += int(v.Type().Size())
-		if v.IsNil() {
-			return 0
-		}
-		return 0 //Temporary non handling func,chan.
-	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128,
-		reflect.Int:
-		return int(v.Type().Size())
-	case reflect.Bool:
-		return int(v.Type().Size())
-	default:
-		//fmt.Println("t.Kind() no found:", v.Kind())
-	}
-
-	return -1
 }
 
 //将对象转为指针
