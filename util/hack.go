@@ -39,26 +39,25 @@ func StringToSlice(s string) (b []byte) {
 	return
 }
 
-//copy from https://github.com/Re-volution/sizestruct
-type sStruct struct {
-	npm   map[interface{}]bool
-	exNum int
-	deep  int
+type sizeStruct struct {
+	pointMap map[interface{}]bool
+	num      int
+	deep     int
 }
 
 func SizeOf(data interface{}) int {
-	var npm = &sStruct{make(map[interface{}]bool), 0, 0}
-	num := npm.sizeof(reflect.ValueOf(data))
-	return num //+ npm.exNum
+	var ss = &sizeStruct{make(map[interface{}]bool), 0, 0}
+	num := ss.sizeof(reflect.ValueOf(data))
+	return num
 }
 
 func SizeStructAndType(data interface{}) int {
-	var npm = &sStruct{make(map[interface{}]bool), 0, 0}
-	num := npm.sizeof(reflect.ValueOf(data))
-	return num + npm.exNum
+	var ss = &sizeStruct{make(map[interface{}]bool), 0, 0}
+	num := ss.sizeof(reflect.ValueOf(data))
+	return num + ss.num
 }
 
-func (s *sStruct) sizeof(v reflect.Value) int {
+func (s *sizeStruct) sizeof(v reflect.Value) int {
 	s.deep++
 	if s.deep > 1000000 {
 		log.Error("struts has more elements  so skip sizeOf")
@@ -82,7 +81,7 @@ func (s *sStruct) sizeof(v reflect.Value) int {
 			}
 			sum += num
 		}
-		s.exNum += int(v.Type().Size())
+		s.num += int(v.Type().Size())
 		return sum
 	case reflect.Slice:
 		sum := 0
@@ -93,7 +92,7 @@ func (s *sStruct) sizeof(v reflect.Value) int {
 			}
 			sum += num
 		}
-		s.exNum += int(v.Type().Size())
+		s.num += int(v.Type().Size())
 		return sum
 
 	case reflect.Array:
@@ -116,19 +115,19 @@ func (s *sStruct) sizeof(v reflect.Value) int {
 			}
 			sum += num
 		}
-		s.exNum += int(v.Type().Size())
+		s.num += int(v.Type().Size())
 		return sum
 
 	case reflect.Ptr, reflect.Interface:
-		s.exNum += int(v.Type().Size())
+		s.num += int(v.Type().Size())
 		if v.IsNil() {
 			return 0
 		}
 
-		if _, ok := s.npm[v]; ok {
+		if _, ok := s.pointMap[v]; ok {
 			return 0
 		} else {
-			s.npm[v] = true
+			s.pointMap[v] = true
 		}
 		return s.sizeof(v.Elem())
 	case reflect.Struct:
@@ -146,7 +145,7 @@ func (s *sStruct) sizeof(v reflect.Value) int {
 		return sum
 
 	case reflect.Func, reflect.Chan:
-		s.exNum += int(v.Type().Size())
+		s.num += int(v.Type().Size())
 		if v.IsNil() {
 			return 0
 		}
@@ -169,7 +168,6 @@ func (s *sStruct) sizeof(v reflect.Value) int {
 func PStr(v string) *string {
 	return &v
 }
-
 
 func PInt(v int) *int {
 	return &v
@@ -277,4 +275,3 @@ func P2Bool(v *bool) bool {
 	}
 	return *v
 }
-
