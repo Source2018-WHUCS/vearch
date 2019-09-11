@@ -27,8 +27,7 @@ func StructToString(prefix string, u interface{}) (str string) {
 	v := reflect.ValueOf(u)
 	returnStr := ""
 	for i := 0; i < v.NumField(); i++ {
-		if v.Field(i).CanInterface() { //判断是否为可导出字段
-			//判断是否是嵌套结构
+		if v.Field(i).CanInterface() {
 			switch v.Field(i).Type().Kind() {
 			case reflect.Struct:
 				returnStr = returnStr + StructToString(prefix+"."+t.Field(i).Name+"", v.Field(i).Interface())
@@ -58,8 +57,7 @@ func PtrToString(prefix string, i interface{}) (str string) {
 	v := reflect.ValueOf(i)
 	returnStr := ""
 	for i := 0; i < v.Elem().NumField(); i++ {
-		if v.Elem().Field(i).CanInterface() { //判断是否为可导出字段
-			//判断是否是嵌套结构
+		if v.Elem().Field(i).CanInterface() {
 			switch v.Elem().Field(i).Type().Kind() {
 			case reflect.Struct:
 				returnStr = returnStr + StructToString(prefix+"."+t.Elem().Field(i).Name+"", v.Elem().Field(i).Interface())
