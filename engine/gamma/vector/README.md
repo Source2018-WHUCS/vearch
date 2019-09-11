@@ -25,20 +25,3 @@ name| usage
 .fet|storage of all vectors
 .src|storage of all sources of vector
 
-#### fet file structure
-
-* nprobe: gamma IVF PQ's default nprobe
-* vec\_type: raw vector type, 0 for memory raw vector
-* dimension: vector dimension
-* ntotal: vector total number
-* vector\_mem: all raw vectors
-
-![file_struct](docs/img/gamma/vector/fet_file_structure.png)
-
-#### src file structure
-
-* ntotal: source total number
-* source\_pos: the begining addresses of each source
-* source\_mem: all sources
-
-![file_struct](docs/img/gamma/vector/src_file_structure.png)

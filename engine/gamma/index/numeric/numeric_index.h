@@ -23,6 +23,7 @@
 #include <iterator>
 #include <limits>
 #include <map>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -186,6 +187,7 @@ template <typename T> int NumericIndex<T>::Build(const int num_docs) {
   bsl_idx_.size = size_;
 
   bsl_idx_.docIDs.resize(size_);
+  std::iota(bsl_idx_.docIDs.begin(), bsl_idx_.docIDs.end(), 0);
 
   // sort _docIDs by _raw, use get_value_(i) instead of _raw[i]
   std::sort(bsl_idx_.docIDs.begin(), bsl_idx_.docIDs.end(),
@@ -441,10 +443,10 @@ int NumericIndex<T>::Search(const T lowerValue, const T upperValue,
   // WARNING: ensure a search request always retriving from the same time index
   int count = 0;
 
-  if (result.Flags() & 0x1) {
+  if ((result.Flags() & 0x1) && (bsl_idx_.size > 0)) {
     count += Search(&bsl_idx_, lowerValue, upperValue, result);
   }
-  if (result.Flags() & 0x2) {
+  if ((result.Flags() & 0x2) && (rt_size > 0)) {
     count += Search(&rt_idx_, lowerValue, upperValue, result);
   }
 

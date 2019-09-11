@@ -1,11 +1,19 @@
 /**
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * This faiss source code is licensed under the MIT license.
+ * https://github.com/facebookresearch/faiss/blob/master/LICENSE
  *
- * Modified by The Gamma Authors.
- * Modified work copyright 2019 The Gamma Authors.
+ *
+ * The works below are modified based on faiss:
+ * 1. Replace the static batch indexing with real time indexing
+ * 2. Add the fine-grained sort after PQ coarse sort
+ * 3. Add the numeric field and bitmap filters in the process of searching
+ *
+ * Modified works copyright 2019 The Gamma Authors.
+ *
+ * The modified codes are licensed under the Apache License, Version 2.0 license
+ * found in the LICENSE file in the root directory of this source tree.
  *
  */
 

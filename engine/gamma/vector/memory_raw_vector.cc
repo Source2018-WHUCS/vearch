@@ -148,6 +148,7 @@ int MemoryRawVector::Dump(const string &path, int dump_docid, int max_docid) {
     return -1;
   }
   if (src_fp == nullptr) {
+    fclose(fet_fp);
     LOG(ERROR) << "open source file error, file path=" << src_file_path;
     return -1;
   }

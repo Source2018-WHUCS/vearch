@@ -95,8 +95,6 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
     RawVectorType store_type = default_store_type_;
     if (!strcasecmp("MemoryOnly", store_type_str.c_str())) {
       store_type = RawVectorType::MemoryOnly;
-    } else if (!strcasecmp("MemoryWithDisk", store_type_str.c_str())) {
-      store_type = RawVectorType::MemoryWithDisk;
     } else {
       LOG(WARNING) << "NO support for store type " << store_type_str
                    << ", default to " << default_store_type_;
@@ -119,12 +117,6 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
     RetrievalModel model = default_model_;
     if (!strcasecmp("IVFPQ", retrieval_type_str.c_str())) {
       model = RetrievalModel::IVFPQ;
-    } else if (!strcasecmp("GPU_IVFPQ", retrieval_type_str.c_str())) {
-      model = RetrievalModel::GPU_IVFPQ;
-    } else if (!strcasecmp("SPTAG", retrieval_type_str.c_str())) {
-      model = RetrievalModel::SPTAG;
-    } else if (!strcasecmp("PACINS", retrieval_type_str.c_str())) {
-      model = RetrievalModel::PACINS;
     } else {
       LOG(WARNING) << "NO support for retrieval type " << retrieval_type_str
                    << ", default to " << default_model_;
@@ -149,7 +141,7 @@ int VectorManager::AddToStore(int docid, std::vector<Field *> &fields) {
         std::string(fields[i]->name->value, fields[i]->name->len);
     if (raw_vectors_.find(name) == raw_vectors_.end()) {
       LOG(ERROR) << "Cannot find raw vector [" << name << "]";
-      continue;
+      return -1;
     }
     raw_vectors_[name]->Add(docid, fields[i]);
   }
@@ -199,12 +191,13 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
     if (iter == vector_indexes_.end()) {
       LOG(ERROR) << "Query name " << name
                  << " not exist in created vector table";
-      continue;
+      return -1;
     }
 
     n = query.vec_query[i]->value->len / (sizeof(float) * iter->second->d_);
     if (!all_vector_results[i].init(n, query.condition->topn)) {
-      continue;
+      LOG(ERROR) << "Query name " << name << "init vector result error";
+      return -1;
     }
 
     GammaSearchCondition condition(query.condition);
@@ -223,7 +216,10 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
       double score = 0;
       bool has_common_docid = true;
       if (!results[i].init(query.condition->topn, vec_names, query.vec_num)) {
-        continue;
+        LOG(ERROR) << "init gamma result(sort by docid) error, topn="
+                   << query.condition->topn
+                   << ", vector number=" << query.vec_num;
+        return -1;
       }
       while (start_docid < INT_MAX) {
         for (int j = 0; j < query.vec_num; j++) {
@@ -274,7 +270,9 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
     for (int i = 0; i < n; i++) {
       // double score = 0;
       if (!results[i].init(query.condition->topn, vec_names, query.vec_num)) {
-        continue;
+        LOG(ERROR) << "init gamma result error, topn=" << query.condition->topn
+                   << ", vector number=" << query.vec_num;
+        return -1;
       }
       results[i].total = all_vector_results[0].total[i] > 0
                              ? all_vector_results[0].total[i]

@@ -67,6 +67,7 @@ bool RTInvertBucketData::Init(const size_t &buckets_num,
   memset(_dump_latest_pos, 0, buckets_num * sizeof(int));
 
   total_mem_bytes += buckets_num * sizeof(int) * 2;
+  LOG(INFO) << "===init total_mem_bytes is " << total_mem_bytes << "===";
   return true;
 }
 
@@ -443,6 +444,9 @@ int RealTimeMemData::Load(const std::vector<std::string> &index_dirs) {
   _total_mem_bytes = _buckets_num * sizeof(int) * 3;
   for (size_t i = 0; i < _buckets_num; i++) {
     size_t total_keys = total_bucket_ids[i] * 2;
+    // if (total_keys > _bucket_keys) {
+    //   total_keys = _bucket_keys;
+    // }
     load_bucket_ids[i] = new long[total_keys];
     _total_mem_bytes += total_keys * sizeof(long);
     load_bucket_codes[i] = new uint8_t[total_keys * _code_bytes_per_vec];
@@ -489,6 +493,23 @@ int RealTimeMemData::Load(const std::vector<std::string> &index_dirs) {
     LOG(INFO) << "bucket id=" << i
               << ", _dump_latest_pos=" << _cur_invert_ptr->_dump_latest_pos[i];
 #endif
+  }
+
+  // create _vid_bucket_no_pos
+  _vid_bucket_no_pos.resize(_max_vec_size, -1);
+  int bucket_size = 0;
+  long vid = -1;
+  for (size_t bucket_id = 0; bucket_id < _buckets_num; bucket_id++) {
+    bucket_size = _cur_invert_ptr->_retrieve_idx_pos[bucket_id];
+    for (int retrive_pos = 0; retrive_pos < bucket_size; retrive_pos++) {
+      vid = _cur_invert_ptr->_idx_array[bucket_id][retrive_pos];
+      if (vid >= _max_vec_size || vid < 0) {
+        LOG(INFO) << "invalid vid=" << vid
+                  << ", max vector size=" << _max_vec_size;
+        return -1;
+      }
+      _vid_bucket_no_pos[vid] = bucket_id << 32 | retrive_pos;
+    }
   }
   return total_ids;
 }
