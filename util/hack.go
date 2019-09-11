@@ -38,11 +38,10 @@ func StringToSlice(s string) (b []byte) {
 	return
 }
 
-//将对象转为指针
+// change object to pointer
 func PStr(v string) *string {
 	return &v
 }
-
 
 func PInt(v int) *int {
 	return &v
@@ -150,4 +149,3 @@ func P2Bool(v *bool) bool {
 	}
 	return *v
 }
-
