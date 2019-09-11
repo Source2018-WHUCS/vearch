@@ -21,114 +21,6 @@
 			"revisionTime": "2018-03-21T16:47:47Z"
 		},
 		{
-			"checksumSHA1": "XX5+Amhdr+mxVY7iDzanrQrcNyI=",
-			"path": "github.com/blevesearch/bleve/analysis",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "IefDmVwLU3UiILeN35DA25gPFnc=",
-			"path": "github.com/blevesearch/bleve/analysis/analyzer/standard",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "AdhWAC/hkZLFXUcihmzhMspNk3w=",
-			"path": "github.com/blevesearch/bleve/analysis/lang/en",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "3VIPkl12t1ko4y6DkbPcz+MtQjY=",
-			"path": "github.com/blevesearch/bleve/analysis/token/lowercase",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "QOw3ypU4VTmFT8XYS/52P3RILZw=",
-			"path": "github.com/blevesearch/bleve/analysis/token/porter",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "8wCAW8E4SO7gGxt0tsr4NZ4APIg=",
-			"path": "github.com/blevesearch/bleve/analysis/token/stop",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "q7C04nlJLxKmemXLop0oyJhfi5M=",
-			"path": "github.com/blevesearch/bleve/analysis/tokenizer/unicode",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "+vKBTffiCd1lsVOahRE1H3/eIuo=",
-			"path": "github.com/blevesearch/bleve/document",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "K5yLNWr/QBAdU+iHNBGBtJslFyI=",
-			"path": "github.com/blevesearch/bleve/geo",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "Zh923j4YhlH3NH2cH72k7lZJWQ8=",
-			"path": "github.com/blevesearch/bleve/index",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "3ttI5qH9k/gOBaW8FJFVmOh5oIA=",
-			"path": "github.com/blevesearch/bleve/index/store",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "oDKgtLk+nYJEkW1ra+vFCuKvjxg=",
-			"path": "github.com/blevesearch/bleve/numeric",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "Qj1wH6TzvIl4OAiPQaFDpkWvwLM=",
-			"path": "github.com/blevesearch/bleve/registry",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "3N+Ecv9CLy8REcwA7UN/hK+sWMM=",
-			"path": "github.com/blevesearch/bleve/search",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "J/bdoPp+OZ6vSqsXF10484C7asc=",
-			"path": "github.com/blevesearch/bleve/search/highlight",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "lycEaUs7grxzfMYWTt+p/IniQsE=",
-			"path": "github.com/blevesearch/bleve/size",
-			"revision": "a7b50b3b0dbd617250d03a57e29274cc321f90c4",
-			"revisionTime": "2019-04-09T05:53:14Z"
-		},
-		{
-			"checksumSHA1": "F6iBQThfd04TIlxT49zaPRGvlqE=",
-			"path": "github.com/blevesearch/go-porterstemmer",
-			"revision": "23a2c8e5cf1f380f27722c6d2ae8896431dc7d0e",
-			"revisionTime": "2014-12-30T01:30:33Z"
-		},
-		{
-			"checksumSHA1": "mgj+zuxi8AgQsRmBY8LR2ys4gaM=",
-			"path": "github.com/blevesearch/segment",
-			"revision": "762005e7a34fd909a84586299f1dd457371d36ee",
-			"revisionTime": "2016-09-15T18:50:41Z"
-		},
-		{
 			"checksumSHA1": "/WlB45K2WnWXkwmX1M/1uJhBuzs=",
 			"path": "github.com/cenk/backoff",
 			"revision": "1e4cf3da559842a91afcb6ea6141451e6c30c618",
@@ -241,12 +133,6 @@
 			"path": "github.com/gin-gonic/gin/render",
 			"revision": "29a145c85dc0fafc3dd0ada62d856c4d95240010",
 			"revisionTime": "2019-01-09T01:32:44Z"
-		},
-		{
-			"checksumSHA1": "8M/GlM986QSn9urcuFsQMvUFgSI=",
-			"path": "github.com/go-sql-driver/mysql",
-			"revision": "fd197cdcfae0c686792ef5399f223f5b66a30b6b",
-			"revisionTime": "2018-10-31T14:07:16Z"
 		},
 		{
 			"checksumSHA1": "rasgUuf7DVFShc3hKeh9wjWBWO0=",
@@ -511,30 +397,6 @@
 			"revisionTime": "2018-05-06T03:17:01Z"
 		},
 		{
-			"checksumSHA1": "hat0u1ZzWR1gSp0x50cFVVMP2eo=",
-			"path": "github.com/mailru/easyjson",
-			"revision": "1de009706dbeb9d05f18586f0735fcdb7c524481",
-			"revisionTime": "2019-03-12T14:32:42Z"
-		},
-		{
-			"checksumSHA1": "T8soMJArSZrYnhmdpAnq1bVxQ6Q=",
-			"path": "github.com/mailru/easyjson/buffer",
-			"revision": "1de009706dbeb9d05f18586f0735fcdb7c524481",
-			"revisionTime": "2019-03-12T14:32:42Z"
-		},
-		{
-			"checksumSHA1": "rp8DNZ88OdWs7zU+5zkoYP51MZM=",
-			"path": "github.com/mailru/easyjson/jlexer",
-			"revision": "1de009706dbeb9d05f18586f0735fcdb7c524481",
-			"revisionTime": "2019-03-12T14:32:42Z"
-		},
-		{
-			"checksumSHA1": "4BAeeJ7JywEQyR6GqRrxfSfN2/Q=",
-			"path": "github.com/mailru/easyjson/jwriter",
-			"revision": "1de009706dbeb9d05f18586f0735fcdb7c524481",
-			"revisionTime": "2019-03-12T14:32:42Z"
-		},
-		{
 			"checksumSHA1": "XEV3BI3nHA/rNa/tIgB7fVCrDww=",
 			"origin": "github.com/fatih/color/vendor/github.com/mattn/go-colorable",
 			"path": "github.com/mattn/go-colorable",
@@ -576,24 +438,6 @@
 			"path": "github.com/modern-go/reflect2",
 			"revision": "94122c33edd36123c84d5368cfb2b69df93a0ec8",
 			"revisionTime": "2018-07-18T01:23:57Z"
-		},
-		{
-			"checksumSHA1": "d9UVWieXRdQWAsf0Qw/2GbC/XeI=",
-			"path": "github.com/olivere/elastic",
-			"revision": "f82cf7c66881f3f18d0354a68086e9aa2f9a48d1",
-			"revisionTime": "2019-02-04T16:05:16Z"
-		},
-		{
-			"checksumSHA1": "v/phfIsGFjsgpJqe4BEKbGmMYAY=",
-			"path": "github.com/olivere/elastic/config",
-			"revision": "f82cf7c66881f3f18d0354a68086e9aa2f9a48d1",
-			"revisionTime": "2019-02-04T16:05:16Z"
-		},
-		{
-			"checksumSHA1": "AmcqvKDAUGvVsrf8NDCQ/B8cMj4=",
-			"path": "github.com/olivere/elastic/uritemplates",
-			"revision": "f82cf7c66881f3f18d0354a68086e9aa2f9a48d1",
-			"revisionTime": "2019-02-04T16:05:16Z"
 		},
 		{
 			"checksumSHA1": "1JLbBBy0amIitG9BZpDz0YL3BB0=",
