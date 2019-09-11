@@ -18,15 +18,15 @@ import (
 	"context"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/util/vearchlog"
 	"github.com/vearch/vearch/util/monitoring"
+	"github.com/vearch/vearch/util/vearchlog"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/config"
-	"github.com/tiglabs/log"
 	"go.etcd.io/etcd/embed"
 )
 

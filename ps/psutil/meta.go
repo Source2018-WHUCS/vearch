@@ -26,8 +26,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vearch/vearch/proto/entity"
 	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/proto/entity"
 )
 
 const MetaFile = "server_meta.txt"
@@ -109,7 +109,7 @@ func createMeta(client *client.Client, cluster, metaPath string) entity.NodeID {
 func GetAllPartitions(datas []string) []entity.PartitionID {
 	ids := make(map[string]struct{}, 64)
 
-	for _ , data := range datas{
+	for _, data := range datas {
 		if dir, err := ioutil.ReadDir(filepath.Join(data, "meta")); err == nil {
 			for _, fi := range dir {
 				if fi.IsDir() {

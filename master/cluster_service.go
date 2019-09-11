@@ -21,21 +21,21 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/vearch/vearch/ps/engine/mapping"
-	"github.com/vearch/vearch/util/vearchlog"
 	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/metrics/mserver"
 	"github.com/vearch/vearch/util/uuid"
+	"github.com/vearch/vearch/util/vearchlog"
 	"math"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/spf13/cast"
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/util"
-	"github.com/tiglabs/log"
 	"go.etcd.io/etcd/clientv3/concurrency"
 )
 
@@ -156,7 +156,7 @@ func (this *masterService) deleteDBService(ctx context.Context, dbstr string) (e
 		return err
 	}
 	//it will local cluster ,to create space
-	mutex := this.Master().NewLock(ctx, entity.PrefixLockCluster, time.Second*300);
+	mutex := this.Master().NewLock(ctx, entity.PrefixLockCluster, time.Second*300)
 	defer func() {
 		if err := mutex.Unlock(); err != nil {
 			log.Error("unlock space err ")

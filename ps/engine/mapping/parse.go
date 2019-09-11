@@ -19,10 +19,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/proto/pspb"
-	"github.com/vearch/vearch/util"
 	"github.com/tiglabs/log"
 	"github.com/valyala/fastjson"
+	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/util"
 	"math"
 	"strings"
 )

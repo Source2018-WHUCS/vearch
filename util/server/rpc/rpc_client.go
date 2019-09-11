@@ -21,9 +21,9 @@ import (
 	"strings"
 
 	"github.com/smallnest/rpcx/client"
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/util/atomic"
 	"github.com/vearch/vearch/util/server/rpc/handler"
-	"github.com/tiglabs/log"
 )
 
 type RpcClient struct {

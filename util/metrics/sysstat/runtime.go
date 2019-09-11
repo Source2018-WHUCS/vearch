@@ -27,10 +27,10 @@ import (
 	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/process"
 
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/util/metrics"
 	"github.com/vearch/vearch/util/metrics/metric"
 	"github.com/vearch/vearch/util/routine"
-	"github.com/tiglabs/log"
 )
 
 const (

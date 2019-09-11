@@ -131,8 +131,6 @@ func FloatArray(fa []float32) (code string, err error) {
 	return buf.String(), nil
 }
 
-
-
 // Returns a slice of the bytes of the provided float64 slice.
 // This allows highly performant access to large float64 slices for such things
 // as computing hashes or simply writing the bytes to a file.
@@ -146,7 +144,7 @@ func UnsafeFloat32SliceAsByteSlice(floats []float32) []byte {
 	buf := (*pi)[:]                           // Creates slice to our array of 1 byte
 	address := unsafe.Pointer(&buf)           // Capture the address to the slice structure
 	lenAddr := uintptr(address) + uintptr(8)  // Capture the address where the length and cap size is stored
-	capAddr := uintptr(address) + uintptr(16)  // WARNING: This is fragile, depending on a go-internal structure.
+	capAddr := uintptr(address) + uintptr(16) // WARNING: This is fragile, depending on a go-internal structure.
 	lenPtr := (*int)(unsafe.Pointer(lenAddr)) // Create pointers to the length and cap size
 	capPtr := (*int)(unsafe.Pointer(capAddr)) //
 	*lenPtr = lf                              // Assign the actual slice size and cap

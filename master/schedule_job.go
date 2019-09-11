@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/jasonlvhit/gocron"
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
-	"github.com/tiglabs/log"
 	"go.etcd.io/etcd/clientv3/concurrency"
 )
 
@@ -106,7 +106,7 @@ var skipJob = fmt.Errorf("skip job")
 
 func cleanTask(masterServer *Server) {
 
-	if masterServer.monitor !=  nil {
+	if masterServer.monitor != nil {
 		masterServer.monitor.Alive() //add alive monitor
 	}
 

@@ -27,7 +27,6 @@ func TestVearchLog(t *testing.T) {
 
 	assert.True(t, log.IsDebugEnabled())
 
-
 	log.Info("hello %s", "info")
 	log.Debug("hello %s", "debug")
 	log.Warn("hello %s", "warn")

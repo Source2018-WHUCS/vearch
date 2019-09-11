@@ -24,14 +24,14 @@ import (
 
 	"github.com/vearch/vearch/util/metrics/mserver"
 
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/router/document"
 	"github.com/vearch/vearch/util"
-	"github.com/vearch/vearch/util/vearchlog"
 	_ "github.com/vearch/vearch/util/init"
 	"github.com/vearch/vearch/util/netutil"
-	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/vearchlog"
 )
 
 const (

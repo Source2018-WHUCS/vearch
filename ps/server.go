@@ -21,23 +21,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vearch/vearch/util/vearchlog"
 	"github.com/vearch/vearch/util/metrics/mserver"
+	"github.com/vearch/vearch/util/vearchlog"
 
 	"github.com/vearch/vearch/ps/storage/raftstore"
 
 	"github.com/vearch/vearch/proto/entity"
 
+	"github.com/tiglabs/log"
+	"github.com/tiglabs/raft"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/ps/psutil"
 	"github.com/vearch/vearch/util/atomic"
+	_ "github.com/vearch/vearch/util/init"
 	"github.com/vearch/vearch/util/routine"
 	rpc "github.com/vearch/vearch/util/server/rpc"
-	"github.com/tiglabs/log"
 	"runtime/debug"
-	"github.com/tiglabs/raft"
-	_ "github.com/vearch/vearch/util/init"
 )
 
 // Server partition server

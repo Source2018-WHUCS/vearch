@@ -16,8 +16,8 @@ package handler
 
 import (
 	"context"
-	"github.com/vearch/vearch/util/monitoring"
 	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/monitoring"
 	"time"
 )
 

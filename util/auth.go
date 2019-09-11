@@ -15,38 +15,37 @@
 package util
 
 import (
-    "encoding/base64"
-    "strings"
+	"encoding/base64"
+	"strings"
 
-    "github.com/tiglabs/log"
+	"github.com/tiglabs/log"
 )
 
 const (
-    HeaderAuthBasic = "Basic "
+	HeaderAuthBasic = "Basic "
 )
 
-func AuthDecrypt(headerData string) (userName, password string, err error){
-    var dataByte []byte
-    basicToken := strings.TrimPrefix(headerData, HeaderAuthBasic)
-    dataByte, err = base64.URLEncoding.DecodeString(basicToken)
-    if err != nil {
-        log.Error("can not decode auth original data. err:%v", err)
-        return "", "", err
-    }
-    dataStr := string(dataByte)
-    dataSegments := strings.Split(dataStr, ":")
-    if dataSegments == nil || len(dataSegments) != 2 {
-        log.Error("split auth data string error")
-        return "", "", err
-    }
+func AuthDecrypt(headerData string) (userName, password string, err error) {
+	var dataByte []byte
+	basicToken := strings.TrimPrefix(headerData, HeaderAuthBasic)
+	dataByte, err = base64.URLEncoding.DecodeString(basicToken)
+	if err != nil {
+		log.Error("can not decode auth original data. err:%v", err)
+		return "", "", err
+	}
+	dataStr := string(dataByte)
+	dataSegments := strings.Split(dataStr, ":")
+	if dataSegments == nil || len(dataSegments) != 2 {
+		log.Error("split auth data string error")
+		return "", "", err
+	}
 
-    return dataSegments[0], dataSegments[1], nil
+	return dataSegments[0], dataSegments[1], nil
 }
 
 func AuthEncrypt(userName, password string) string {
-    dataStr := strings.Join([]string{userName, password}, ":")
-    basicToken := base64.URLEncoding.EncodeToString([]byte(dataStr))
-    headerData := strings.Join([]string{HeaderAuthBasic, basicToken}, "")
-    return headerData
+	dataStr := strings.Join([]string{userName, password}, ":")
+	basicToken := base64.URLEncoding.EncodeToString([]byte(dataStr))
+	headerData := strings.Join([]string{HeaderAuthBasic, basicToken}, "")
+	return headerData
 }
-

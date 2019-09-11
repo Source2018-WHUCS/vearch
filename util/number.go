@@ -15,8 +15,8 @@
 package util
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 	"math"
 	"unicode"
 )
@@ -125,7 +125,6 @@ func Normalization(feature []float32) error {
 
 	return nil
 }
-
 
 func IsNum(s string) bool {
 	if len(s) == 0 {
