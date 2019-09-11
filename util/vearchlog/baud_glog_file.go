@@ -16,7 +16,7 @@
 
 // File I/O for logs.
 
-package baudlog
+package vearchlog
 
 import (
 	"errors"

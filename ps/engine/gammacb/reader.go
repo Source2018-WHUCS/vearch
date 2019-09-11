@@ -29,7 +29,7 @@ import (
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine"
-	"github.com/vearch/vearch/util/baudlog"
+	"github.com/vearch/vearch/util/vearchlog"
 	"github.com/vearch/vearch/util/ioutil2"
 	"io/ioutil"
 	"os"
@@ -96,7 +96,7 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 
 	defer C.DestroyRequest(req)
 	if err := builder.parseQuery(request.Query, req); err != nil {
-		return response.SearchResponses{response.NewSearchResponseErr(baudlog.LogErrAndReturn(fmt.Errorf("parse query has err:[%s] query:[%s]", err.Error(), string(request.Query))))}
+		return response.SearchResponses{response.NewSearchResponseErr(vearchlog.LogErrAndReturn(fmt.Errorf("parse query has err:[%s] query:[%s]", err.Error(), string(request.Query))))}
 	}
 
 	if len(request.Fields) == 0 {
@@ -133,7 +133,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 
 	gamma := ri.engine.gamma
 	if gamma == nil {
-		return response.NewSearchResponseErr(baudlog.LogErrAndReturn(pkg.ErrPartitionClosed))
+		return response.NewSearchResponseErr(vearchlog.LogErrAndReturn(pkg.ErrPartitionClosed))
 	}
 
 	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
@@ -147,7 +147,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 
 	defer C.DestroyRequest(req)
 	if err := builder.parseQuery(request.Query, req); err != nil {
-		return response.NewSearchResponseErr(baudlog.LogErrAndReturn(fmt.Errorf("parse query has err:[%s] query:[%s]", err.Error(), string(request.Query))))
+		return response.NewSearchResponseErr(vearchlog.LogErrAndReturn(fmt.Errorf("parse query has err:[%s] query:[%s]", err.Error(), string(request.Query))))
 	}
 
 	if len(request.Fields) == 0 {
@@ -183,7 +183,7 @@ func (ri *readerImpl) singleSearchResult(reps *C.struct_Response, index int) *re
 	rep := C.GetSearchResult(reps, C.int(index))
 	if rep.result_code > 0 {
 		msg := string(CbArr2ByteArray(rep.msg)) + ", code:[%d]"
-		return response.NewSearchResponseErr(baudlog.LogErrAndReturn(fmt.Errorf(msg, rep.result_code)))
+		return response.NewSearchResponseErr(vearchlog.LogErrAndReturn(fmt.Errorf(msg, rep.result_code)))
 	}
 
 	hits := make(response.Hits, 0, int(rep.result_num))
@@ -243,7 +243,7 @@ func (ri *readerImpl) DocCount(ctx context.Context) (uint64, error) {
 
 	gamma := ri.engine.gamma
 	if gamma == nil {
-		return 0, baudlog.LogErrAndReturn(pkg.ErrPartitionClosed)
+		return 0, vearchlog.LogErrAndReturn(pkg.ErrPartitionClosed)
 	}
 
 	num := C.GetDocsNum(gamma)

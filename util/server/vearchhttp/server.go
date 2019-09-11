@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-package baudhttp
+package vearchhttp
 
 import (
 	"context"
@@ -31,19 +31,19 @@ const (
 	Start      = "__start_time"
 )
 
-type BaudHandler struct {
+type BaseHandler struct {
 	timeout int64 //default timeout Second
 }
 
-func NewBaudHandler(timeout int64) *BaudHandler {
-	return &BaudHandler{timeout: timeout}
+func NewBaseHandler(timeout int64) *BaseHandler {
+	return &BaseHandler{timeout: timeout}
 }
 
-func (bh *BaudHandler) Timeout() int64 {
+func (bh *BaseHandler) Timeout() int64 {
 	return bh.timeout
 }
 
-func (b *BaudHandler) PaincHandler(c *gin.Context) {
+func (b *BaseHandler) PaincHandler(c *gin.Context) {
 	defer func() {
 		if cancel, exists := c.Get(CancelFunc); exists {
 			cancel.(context.CancelFunc)()
@@ -67,7 +67,7 @@ func (b *BaudHandler) PaincHandler(c *gin.Context) {
 	}()
 }
 
-func (b *BaudHandler) TimeOutHandler(c *gin.Context) {
+func (b *BaseHandler) TimeOutHandler(c *gin.Context) {
 	param := c.Query(Timeout)
 
 	// add start time for monitoring
@@ -96,7 +96,7 @@ func (b *BaudHandler) TimeOutHandler(c *gin.Context) {
 	c.Set(Ctx, ctx)
 }
 
-func (b *BaudHandler) TimeOutEndHandler(c *gin.Context) {
+func (b *BaseHandler) TimeOutEndHandler(c *gin.Context) {
 	if value, exists := c.Get(CancelFunc); exists && value != nil {
 		value.(context.CancelFunc)()
 	}

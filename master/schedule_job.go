@@ -19,7 +19,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/vearch/vearch/util/baudlog"
+	"github.com/vearch/vearch/util/vearchlog"
 	"time"
 
 	"github.com/jasonlvhit/gocron"
@@ -237,7 +237,7 @@ func (s *Server) frozenJob(ctx context.Context) {
 					return
 				}
 
-				defer baudlog.FunIfNotNil(lock.Unlock)
+				defer vearchlog.FunIfNotNil(lock.Unlock)
 
 				nowSpace, err := s.client.Master().QuerySpaceById(ctx, space.DBId, space.Id)
 				if err != nil {

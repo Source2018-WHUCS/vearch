@@ -12,16 +12,14 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-package baudlog
+package vearchlog
 
 import (
 	"fmt"
 	"os"
 )
 
-var blog *baudLog
-
-func NewBaudLog(dir, module, level string, toConsole bool) *baudLog {
+func NewVearchLog(dir, module, level string, toConsole bool) *vearchLog {
 	var l loggingT
 	l.dir = dir
 	l.module = module
@@ -31,63 +29,63 @@ func NewBaudLog(dir, module, level string, toConsole bool) *baudLog {
 		panic("Unknown output log level")
 	}
 	ToInit(&l)
-	return &baudLog{l: &l}
+	return &vearchLog{l: &l}
 }
 
-type baudLog struct {
+type vearchLog struct {
 	l *loggingT
 }
 
-func (l *baudLog) IsDebugEnabled() bool {
+func (l *vearchLog) IsDebugEnabled() bool {
 	return l.l.outputLevel == debugLog
 }
 
-func (l *baudLog) IsInfoEnabled() bool {
+func (l *vearchLog) IsInfoEnabled() bool {
 	return int(l.l.outputLevel) <= INFO
 }
 
-func (l *baudLog) IsWarnEnabled() bool {
+func (l *vearchLog) IsWarnEnabled() bool {
 	return int(l.l.outputLevel) <= WARN
 }
 
-func (l *baudLog) Error(format string, arg ...interface{}) {
+func (l *vearchLog) Error(format string, arg ...interface{}) {
 	if errorLog >= l.l.outputLevel {
 		l.l.printDepth(errorLog, 1, format, arg...)
 	}
 }
 
-func (l *baudLog) Info(format string, arg ...interface{}) {
+func (l *vearchLog) Info(format string, arg ...interface{}) {
 	if infoLog >= l.l.outputLevel {
 		l.l.printDepth(infoLog, 1, format, arg...)
 	}
 }
 
-func (l *baudLog) Debug(format string, arg ...interface{}) {
+func (l *vearchLog) Debug(format string, arg ...interface{}) {
 	if debugLog >= l.l.outputLevel {
 		l.l.printDepth(debugLog, 1, format, arg...)
 	}
 }
 
-func (l *baudLog) Warn(format string, arg ...interface{}) {
+func (l *vearchLog) Warn(format string, arg ...interface{}) {
 	if warningLog >= l.l.outputLevel {
 		l.l.printDepth(warningLog, 1, format, arg...)
 	}
 }
 
-func (l *baudLog) Panic(format string, v ...interface{}) {
+func (l *vearchLog) Panic(format string, v ...interface{}) {
 	if errorLog >= l.l.outputLevel {
 		l.l.printDepth(errorLog, 1, format, v...)
 	}
 	panic(fmt.Sprintf(format, v...))
 }
 
-func (l *baudLog) Fault(format string, v ...interface{}) {
+func (l *vearchLog) Fault(format string, v ...interface{}) {
 	if errorLog >= l.l.outputLevel {
 		l.l.printDepth(errorLog, 1, format, v...)
 	}
 	os.Exit(-1)
 }
 
-func (l *baudLog) Flush() {
+func (l *vearchLog) Flush() {
 	l.l.lockAndFlushAll()
 }

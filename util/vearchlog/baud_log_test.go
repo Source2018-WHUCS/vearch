@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-package baudlog
+package vearchlog
 
 import (
 	"github.com/tiglabs/log"
@@ -21,13 +21,12 @@ import (
 	"time"
 )
 
-func TestBaudLog(t *testing.T) {
+func TestVearchLog(t *testing.T) {
 
-	log.Regist(NewBaudLog("test", "Test", "debug", false))
+	log.Regist(NewVearchLog("test", "Test", "debug", false))
 
 	assert.True(t, log.IsDebugEnabled())
 
-	//log.Regist(baudLog)
 
 	log.Info("hello %s", "info")
 	log.Debug("hello %s", "debug")

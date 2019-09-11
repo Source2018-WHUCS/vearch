@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vearch/vearch/util/baudlog"
+	"github.com/vearch/vearch/util/vearchlog"
 	"github.com/vearch/vearch/util/metrics/mserver"
 
 	"github.com/vearch/vearch/ps/storage/raftstore"
@@ -62,7 +62,7 @@ type Server struct {
 func NewServer(ctx context.Context) *Server {
 
 	// set up logging
-	var psLogger = baudlog.NewBaudLog(config.Conf().GetLogDir(config.PS), "PS", config.Conf().GetLevel(config.PS), true)
+	var psLogger = vearchlog.NewVearchLog(config.Conf().GetLogDir(config.PS), "PS", config.Conf().GetLevel(config.PS), true)
 	log.Regist(psLogger)
 
 	cli, err := client.NewClient(config.Conf())
