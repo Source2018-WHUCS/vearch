@@ -61,294 +61,161 @@ def get_model(model_path):
     return model
 
 
-class ImageDealProcess(Process):
-
-    def __init__(self, input_queue, output_queue, result_queue):
-        Process.__init__(self)
-        self.input_queue = input_queue
-        self.output_queue = output_queue
-        self.result_queue = result_queue
-
-    def read_image(self, image_url):
-        if image_url.startswith("http"):
-            resp = urllib.request.urlopen(image_url).read()
-        else:
-            with open(image_url, "rb") as f:
+def read_image(imageurl):
+    if "." in imageurl:
+        if imageurl.startswith("http"):
+            resp = urllib.request.urlopen(imageurl).read()
+        elif os.path.exists(imageurl):
+            with open(imageurl, "rb") as f:
                 resp = f.read()
-        return resp
-
-    def deal(self, url):
-        if len(url) > 100:
-            resp = base64.b64decode(url)
         else:
-            resp = self.read_image(url)
-        img = np.asarray(bytearray(resp), dtype="uint8")
-        img = cv2.imdecode(img, cv2.IMREAD_COLOR)
-        # img = cv2.resize(img, (self.img_size, self.img_size), interpolation=cv2.INTER_LINEAR)
-        return img
+            raise Exception("imageurl is not existed")
+    else:
+        # print(imageurl)
+        resp = base64.b64decode(imageurl)
+    image = np.asarray(bytearray(resp), dtype="uint8")
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+    # model = load_model()
+    # model.load_model()
+    return image
 
-    def run(self):
-        """Parallel deal image"""
-        executor = ThreadPoolExecutor(50)
+def load_detect_model(model_name):
+    model = get_model("model.image_detect." + model_name).load_model()
+    return model
 
-        def parallel_deal(uuid, method, data):
-            try:
-                imageurl = data["imageurl"]
-                # print(imageurl)
-                img = self.deal(imageurl)
-                self.output_queue.put((uuid, method, data, img))
-            except Exception as err:
-                if DEBUG:
-                    traceback.print_exc()
-                self.result_queue.put((uuid, False, str(err)))
+def detect(model, image):
+    results = model.detect(image)
+    # print(results)
+    return results[0]
 
-        while True:
-            uuid, method, data = self.input_queue.get()
-            # print(uuid, url)
-            executor.submit(parallel_deal, uuid, method, data)
-
-
-def watch_thread_queue(thread_queue, process_queue):
-    """Get data from Process queue and put it in Thread queue
-    Args:
-        thread_queue  : Thread  queue
-        process_queue : Process queue
-    """
-    while True:
-        res = process_queue.get()
-        thread_queue.put(res)
+def crop(image, bbox):
+    x_min, y_min, x_max, y_max = map(int, bbox)
+    img_crop = image[y_min:y_max, x_min:x_max]
+    # print(bbox, img_crop)
+    return img_crop
 
 
-class DetectProcess(Process):
+def load_extract_model(model_name):
+    model = get_model("model.image_retrieval." + model_name).load_model()
+    model.load_model()
+    return model
 
-    def __init__(self, gpu_id, detect_model, input_queue, output_queue, result_queue, loc_queue):
+def extract(model, image):
+    feat = model.forward(image)
+    return (feat/np.linalg.norm(feat, axis=1)[:,np.newaxis]).tolist()[0]
+
+
+class PackageProcess(Process):
+    def __init__(self, gpu_id, input_queue, output_queue):
         Process.__init__(self)
         self.gpu_id = gpu_id
-        self.detect_model = detect_model
         self.input_queue = input_queue
         self.output_queue = output_queue
-        self.result_queue = result_queue
-        self.loc_queue = loc_queue
         self.watch_queue = queue.Queue()
+        self.extract_model = None
+        self.detect_model = None
 
     def build(self):
-        # os.environ['CUDA_VISIBLE_DEVICES'] = "1"
-        if self.detect_model is None:
-            self.model = None
-        else:
-            os.environ['CUDA_VISIBLE_DEVICES'] = self.gpu_id
-            self.model = get_model(f"model.image_detect.{self.detect_model}").load_model()
-        t = threading.Thread(target=watch_thread_queue, args=(self.watch_queue, self.input_queue))
-        t.start()
+        os.environ['CUDA_VISIBLE_DEVICES'] = self.gpu_id
+        if config.detect_model is not None:
+            self.detect_model = load_detect_model(config.detect_model)
 
-    def detect(self, uuid, method, data, image):
-        """Detect loc and label by image
-        """
+        if config.extract_model is not None:
+            self.extract_model = load_extract_model(config.extract_model)
+
+    def deal_request(self, data):
+        # print(data)
         detection_flag = data.pop("detection", True)
         if detection_flag:
-            if self.model is None:
-                raise Exception("detect model is not defined")
-            results = self.model.detect(image)
-            if len(results) == 0:
-                results = [[None, 1.00, None]]
+            assert self.detect_model is not None, "invaild detect model"
+
+        # imageurl = data["imageurl"]
+        #download image
+        # image = read_image(imageurl)
+        image = read_image(data["imageurl"])
+        if detection_flag:
+            assert self.detect_model is not None, "invaild detect model"
+            label, score, bbox = detect(self.detect_model, image)
         else:
             if "boundingbox" in data and data["boundingbox"] is not None:
                 bbox = list(map(int, map(float, data.pop("boundingbox").split(","))))
             else:
                 bbox = None
-                # bbox = [0, 0, image.shape[1], image.shape[0]]
-            if "label" in data:
-                label = data.pop("label")
-            else:
-                label = None
-            results = [[label, 1.00, bbox]]
-        results = list(sorted(results, key=lambda d:d[1], reverse=True))
+            label = data.pop("label", None)
+
+        # print(bbox)
+        image = crop(image, bbox) if bbox else image
+        feat = extract(self.extract_model, image)
+        return label, bbox, feat
+
+    def package_body(self, method, data):
+        db_name = data.pop("db")
+        space_name = data.pop("space")
+        imageurl = data["imageurl"]
+        label, bbox, feat = self.deal_request(data)
         if method == _INSERT:
-            for res in results:
-                label, score, bbox = res
-                self.output_queue.put((uuid, method, data, image, label, bbox))
-                break
-        elif method == _SEARCH:
-            label, score, bbox = results[0]
-            self.output_queue.put((uuid, method, data, image, label, bbox))
+            ip = f"{config.ip_insert}/{db_name}/{space_name}"
+            if "_id" in data:
+                _id = data.pop("_id")
+                ip = f"{ip}/{_id}"
+            if bbox:
+                bbox = list(map(str, bbox))
+                data["boundingbox"] = ",".join(bbox)
+            if label:
+                data["label"] = label
+            data["feature"] = {"source": imageurl, "feature": feat}
         else:
-            self.loc_queue.put((uuid, True, json.dumps(results)))
+            size = data.pop("size", 10)
+            min_score = data.pop("score", 0)
+            filters = data.pop("filter", None)
+            ip = f"{config.ip_insert}/{db_name}/{space_name}/_search?size={size}"
+            data = {"query": {"sum": [{"feature": feat, "field": "feature", "min_score": min_score, "max_score": 1.0}],"filter":filters}}
+        return ip, data
+
+    def deal(self, param):
+        # Repackage the request body and send it to VectorDB
+        # and put the response into `response_queue`
+        try:
+            uuid, method, data = param
+            # print(param)
+            ip, data = self.package_body(method, data)
+            # print(data)
+            response_body = requests.post(ip, headers=_HEADERS, data=json.dumps(data))
+            self.output_queue.put((uuid, True, response_body.json()))
+        except Exception as err:
+            if DEBUG:
+                traceback.print_exc()
+                print(data)
+            self.output_queue.put((uuid, False, str(err)))
+
+
 
     def run(self):
-        self.build()
-        while True:
-            uuid, method, data, image = self.watch_queue.get()
-            try:
-                self.detect(uuid, method, data, image)
-            except Exception as err:
-                if DEBUG:
-                    traceback.print_exc()
-                self.result_queue.put((uuid, False, str(err)))
-
-
-class CropAndResizeProcess(Process):
-    
-    def __init__(self, model_name, input_queue, output_queue, result_queue):
-        Process.__init__(self)
-        self.model_name = model_name
-        self.input_queue = input_queue
-        self.output_queue = output_queue
-        self.result_queue = result_queue
-
-    def deal(self, image, loc):
-        if loc is None:
-            img_crop = image
-        else:
-            x_min, y_min, x_max, y_max = map(int, map(float, loc))
-            img_crop = image[y_min:y_max, x_min:x_max]
-        # img_resize = cv2.resize(img_crop, (self.image_size, self.image_size), interpolation=cv2.INTER_LINEAR)
-        img_resize = self.model.preprocess_input(img_crop)
-        return img_resize
-
-    def run(self):
-        self.model = get_model("model.image_retrieval." + self.model_name).load_model()
-        while True:
-            uuid, method, data, image, label, loc = self.input_queue.get()
-            # print(uuid, url, image.shape, label, loc)
-            try:
-                img_resize = self.deal(image, loc)
-                self.output_queue.put((uuid, method, data, img_resize, label, loc))
-            except Exception as err:
-                if DEBUG:
-                    traceback.print_exc()
-                self.result_queue.put((uuid, False, str(err)))
-
-
-class ExtractProcess(Process):
-
-    def __init__(self, gpu_id, model_name, input_queue, output_queue):
-        Process.__init__(self)
-        self.gpu_id = gpu_id
-        self.model_name = model_name
-        self.input_queue = input_queue
-        self.output_queue = output_queue
-        self.watch_queue = queue.Queue()
-
-    def build(self):
-        # os.environ['CUDA_VISIBLE_DEVICES'] = "1"
-        os.environ['CUDA_VISIBLE_DEVICES'] = self.gpu_id
-        self.model = get_model("model.image_retrieval." + self.model_name).load_model()
-        self.model.load_model()
-        # print(self.model)
-        t = threading.Thread(target=watch_thread_queue, args=(self.watch_queue, self.input_queue))
-        t.start()
-
-    def normlize(self, mat):
-        return mat/np.linalg.norm(mat, axis=1)[:,np.newaxis]
-
-    def exect(self, imgs):
-        # print(len(imgs), self.watch_queue.qsize())
-        # imgs = np.array(imgs, dtype=np.float64)
-        # imgs = self.model.preprocess_input(imgs)
-        # imgs = torch.from_numpy(imgs)
-        # imgs = imgs.permute(0,3,1,2).float()
-        # print(imgs.shape, imgs)
-        feats_list = self.model.forward(imgs)
-        # feats_list = self.model.torch2list(feats_torch)
-        # result = normalize(feats_list, norm='l2', axis=1)
-        result = self.normlize(feats_list)
-        return result.tolist()
-
-    def get_batch(self):
-        is_block = True
-        batch_list = []
-        for _ in range(config.batch_size):
-            try:
-                uuid, method, data, img_resize, label, loc = self.watch_queue.get(block=is_block)
-                batch_list.append((uuid, method, data, img_resize, label, loc))
-            except:
-                break
-            is_block = False
-        return batch_list
-
-    def run(self):
-        self.build()
-        while True:
-            batch_list = self.get_batch()
-            try:
-                feat_list = self.exect([d[3] for d in batch_list])
-            except:
-                if DEBUG:
-                    traceback.print_exc()
-                feat_list = len(batch_list) * [None]
-
-            for idx in range(len(batch_list)):
-                uuid, method, data, img_resize, label, loc = batch_list[idx]
-                self.output_queue.put((uuid, method, data, label, loc, feat_list[idx]))
-
-
-class PackageProcess(Process):
-    def __init__(self, input_queue, output_queue):
-        Process.__init__(self)
-        self.input_queue = input_queue
-        self.output_queue = output_queue
-        self.watch_queue = queue.Queue()
-
-    def run(self):
-        executor = ThreadPoolExecutor(50)
+        # executor = ThreadPoolExecutor(20)
         # Put data in the process queue into the thread queue
-        t = threading.Thread(target=watch_thread_queue, args=(self.watch_queue, self.input_queue))
-        t.start()
-
-        def deal(uuid, ip, request_body):
-            # Repackage the request body and send it to VectorDB
-            # and put the response into `response_queue`
-            try:
-                # print("response body", uuid, ip, _HEADERS, request_body)
-                response_body = requests.post(ip, headers=_HEADERS, data=json.dumps(request_body))
-                # print("response_body", response_body)
-                # print("response_body", response_body.text)
-                self.output_queue.put((uuid, True, response_body.json()))
-            except Exception as err:
-                if DEBUG:
-                    traceback.print_exc()
-                self.output_queue.put((uuid, False, str(err)))
+        # t = threading.Thread(target=watch_thread_queue, args=(self.watch_queue, self.input_queue))
+        # t.start()
+        self.build()
+        print("load model success")
 
         while True:
-            uuid, method, data, label, loc, feat = self.watch_queue.get()
-            db_name = data.pop("db")
-            space_name = data.pop("space")
-            imageurl = data["imageurl"]
-            if method == _INSERT:
-                ip = f"{config.ip_insert}/{db_name}/{space_name}"
-                if "_id" in data:
-                    _id = data.pop("_id")
-                    ip = f"{ip}/{_id}"
-                if loc is not None:
-                    loc = list(map(str, loc))
-                    data["boundingbox"] = ",".join(loc)
-                if label is not None:
-                    data["label"] = label
-                data["feature"] = {"source": imageurl, "feature": feat}
-            else:
-                size = data.pop("size", 10)
-                min_score = data.pop("score", 0)
-                filters = data.pop("filter", None)
-                ip = f"{config.ip_insert}/{db_name}/{space_name}/_search?size={size}"
-                data = {"query": {"sum": [{"feature": feat, "field": "feature", "min_score": min_score, "max_score": 1.0}],"filter":filters}}
-            executor.submit(deal, uuid, ip, data)
+            param = self.input_queue.get()
+            self.deal(param)
+            # executor.submit(self.deal, param)
 
 
 class TornadoProcess(Process):
 
-    def __init__(self, port, input_queue, output_queue, loc_queue, futures_dict):
+    def __init__(self, port, input_queue, output_queue, futures_dict):
         Process.__init__(self)
         self.port = port   # run the server on given port
         self.watch_queue = queue.Queue()
         self.input_queue = input_queue
         self.output_queue = output_queue
-        self.loc_queue = loc_queue
         self.futures_dict = futures_dict
 
     def run(self):
         t1 = threading.Thread(target=set_result_thread, args=(self.output_queue, self.futures_dict))
-        t1.start()
-        t1 = threading.Thread(target=set_result_thread, args=(self.loc_queue, self.futures_dict))
         t1.start()
         app = tornado.web.Application(
             [(f'/.*', TableHandler, dict(input_queue=self.input_queue, futures_dict=self.futures_dict))]
@@ -543,12 +410,12 @@ class TableHandler(tornado.web.RequestHandler):
 
 
     async def _insert(self, data):
+        # print(data)
         method = data.pop("method", "single")
         assert "imageurl" in data, "imageurl not in requests body"
         result = {"db": self.db_name, "space": self.space_name, "ids": [], "successful":0}
 
         def pkg_result(response_body):
-            # print(response_body)
             assert "_id" in response_body, response_body
             _id = response_body["_id"]
             if response_body["status"] == 201:
@@ -596,26 +463,27 @@ def main():
     # detect_model = args.detect_model
     # gpu = config.gpu
     # port = config.port
-    detect_model = config.detect_model
-    extract_model = config.extract_model
+    # detect_model = config.detect_model
+    # extract_model = config.extract_model
 
     process_list = []
     url_queue = Queue()
     result_queue = Queue()
-    download_queue = Queue()
-    detect_queue = Queue()
-    crop_resize_queue = Queue()
-    extract_queue = Queue()
-    loc_queue = Queue()
-    image_deal_process = ImageDealProcess(url_queue, download_queue, result_queue)
-    process_list.append(image_deal_process)
-    detect_process = DetectProcess(gpu, detect_model, download_queue, detect_queue, result_queue, loc_queue)
-    process_list.append(detect_process)
-    crop_resize_process = CropAndResizeProcess(extract_model, detect_queue, crop_resize_queue, result_queue)
-    process_list.append(crop_resize_process)
-    extract_process = ExtractProcess(gpu, extract_model, crop_resize_queue, extract_queue)
-    process_list.append(extract_process)
-    package_process = PackageProcess(extract_queue, result_queue)
+    # download_queue = Queue()
+    # detect_queue = Queue()
+    # crop_resize_queue = Queue()
+    # extract_queue = Queue()
+    # loc_queue = Queue()
+    # image_deal_process = ImageDealProcess(url_queue, download_queue, result_queue)
+    # process_list.append(image_deal_process)
+    # detect_process = DetectProcess(gpu, detect_model, download_queue, detect_queue, result_queue, loc_queue)
+    # process_list.append(detect_process)
+    # crop_resize_process = CropAndResizeProcess(extract_model, detect_queue, crop_resize_queue, result_queue)
+    # process_list.append(crop_resize_process)
+    # extract_process = ExtractProcess(gpu, extract_model, crop_resize_queue, extract_queue)
+    # process_list.append(extract_process)
+    # package_process = PackageProcess(extract_queue, result_queue)
+    package_process = PackageProcess(gpu, url_queue, result_queue)
     process_list.append(package_process)
 
     # tornado_process = TornadoProcess(port, url_queue, result_queue, loc_queue, dict())
@@ -631,7 +499,7 @@ def main():
             is_alive = False
 
     if is_alive:
-        tornado_process = TornadoProcess(port, url_queue, result_queue, loc_queue, dict())
+        tornado_process = TornadoProcess(port, url_queue, result_queue, dict())
         tornado_process.start()
         tornado_process.join()
 

@@ -1,3 +1,4 @@
+
 # Copyright 2019 The Vearch Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -531,6 +532,14 @@ class Darknet(nn.Module):
                 conv_layer.weight.data.copy_(conv_w)
                 ptr += num_w
 
+def getOrisize(bbox, w, h, size=416):
+    x_min,y_min,x_max,y_max = map(int, bbox)
+    new_x_min = max(0, x_min * w / size)
+    new_y_min = max(0, y_min * h / size)
+    new_x_max = min(w, (x_max - x_min) * w / size + new_x_min)
+    new_y_max = min(h, (y_max - y_min) * h / size + new_y_min)
+    return [new_x_min, new_y_min, new_x_max, new_y_max]
+
 class YoloDetect(object):
 
     def __init__(self):
@@ -551,6 +560,8 @@ class YoloDetect(object):
     def detect(self, img):
         # print(img.shape)
         image = Image.fromarray(img)
+        w, h = image.size[:2]
+        # print(h, w)
         image = self.test_transform(image)
         image = torch.unsqueeze(image, 0)
         image = Variable(image.type(self.Tensor))
@@ -559,9 +570,12 @@ class YoloDetect(object):
         with torch.no_grad():
             detections = self.model(image)
             detections = non_max_suppression(detections)[0]
-            detections = rescale_boxes(detections, 416, img.shape[:2])
+        if detections is None:
+            return [[None, 1.00, None]]
+        # detections = rescale_boxes(detections, 416, img.shape[:2])
         detections = detections.cpu().detach().numpy().tolist()
-        result = [[self.classes[int(detection[-1])],  detection[4], list(map(int, detection[:4]))] for detection in detections]
+        # print(detections)
+        result = [[self.classes[int(detection[-1])],  detection[4], getOrisize(list(map(int, detection[:4])),w,h)] for detection in detections]
         return result
 
 
@@ -571,7 +585,7 @@ def load_model():
 
 if __name__ == "__main__":
     fashion_detect = load_model()
-    image = cv2.imread("/home/gaosen/project/vectorbase/plugin/images/test/COCO_val2014_000000123599.jpg")
+    image = cv2.imread("/home/gaosen/project/vectorbase/plugin/images/test/COCO_val2014_000000095375.jpg")
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     print(image.shape)
     result = fashion_detect.detect(image)
