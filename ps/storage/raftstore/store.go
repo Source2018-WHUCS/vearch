@@ -22,14 +22,14 @@ import (
 
 	"github.com/tiglabs/log"
 
+	"github.com/tiglabs/raft"
+	"github.com/tiglabs/raft/proto"
+	"github.com/tiglabs/raft/storage/wal"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/ps/engine/register"
 	"github.com/vearch/vearch/ps/storage"
-	"github.com/tiglabs/raft"
-	"github.com/tiglabs/raft/proto"
-	"github.com/tiglabs/raft/storage/wal"
 )
 
 // Store is the default implementation of PartitionStore interface which
@@ -128,7 +128,7 @@ func (s *Store) Start() (err error) {
 	// Start Raft Truncate Worker
 	s.startTruncateJob(apply)
 
-	// Start GuiXu engine frozen check worker
+	// Start frozen check worker
 	if config.Conf().PS.MaxSize > 0 && s.Space.CanFrozen() {
 		s.startFrozenJob()
 	}

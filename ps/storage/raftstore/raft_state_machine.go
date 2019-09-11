@@ -16,14 +16,14 @@ package raftstore
 
 import (
 	"fmt"
+	"github.com/tiglabs/log"
+	"github.com/tiglabs/raft"
+	"github.com/tiglabs/raft/proto"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/pspb/raftpb"
 	"github.com/vearch/vearch/ps/psutil"
 	"github.com/vearch/vearch/util/cbjson"
-	"github.com/tiglabs/log"
-	"github.com/tiglabs/raft"
-	"github.com/tiglabs/raft/proto"
 )
 
 // Apply implements the raft interface.
@@ -95,7 +95,6 @@ func (s *Store) updateSchemaBySpace(spaceBytes []byte, version uint64) (rap *Raf
 	}
 
 	s.SetSpace(space)
-	// set frozen at engine GuiXu
 	if s.Space.CanFrozen() {
 		partition := space.GetPartition(s.Partition.Id)
 		if partition == nil {
