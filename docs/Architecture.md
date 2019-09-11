@@ -2,24 +2,24 @@
 
 ![arc](docs/img/VearchArch.jpg)
 
+* Data Model
+
+  space, documents, vectors, scalars
+
 * Components
 
-   `Master`, `Router` and `PartitionServer` 
+  `Master`, `Router` and `PartitionServer` 
 
 * Master 
 
-   When you crate database or space you must use this service , default port is `8817` when you create database is only create a scope associate user permissions.
-
-   When you create space ,the master will select relatively idel machine to create partition , when you delete space the master notice the related machines to delete local partition.
-
-   Responsible for the management of distributed configurations.
+  Responsible for schema mananagement, cluster-level metadata, and resource coordination. 
+  
 * Router
 
-   Supports restful api.`create`  , `delete`  `search` and `update` ， also when write document it routing function to related machine , to save it , you can define your routing args default is `_id` , and merge multiple searching results to one result.
+  Provides RESTful API: `create`  , `delete`  `search` and `update` ; request routing, and result merging. 
 
 * PartitionServer (PS)
 
-   Hosts document partitions, raft-based replication.
+  Hosts document partitions with raft-based replication.
 
-   Gamma`is the core vector search engine. It provides the ability of storing, indexing and retrieving the vectors and scalars.
-
+  Gamma`is the core vector search engine. It provides the ability of storing, indexing and retrieving the vectors and scalars.
