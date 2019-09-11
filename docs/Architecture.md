@@ -8,7 +8,7 @@
 
 * Master 
 
-   When you crate database or space you must use this service , default port is `8817` when you create dabase is only create a scope associate user permissions.
+   When you crate database or space you must use this service , default port is `8817` when you create database is only create a scope associate user permissions.
 
    When you create space ,the master will select relatively idel machine to create partition , when you delete space the master notice the related machines to delete local partition.
 
