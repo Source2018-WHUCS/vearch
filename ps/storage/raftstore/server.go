@@ -17,10 +17,10 @@ package raftstore
 import (
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/config"
-	"github.com/vearch/vearch/proto/entity"
 	"github.com/tiglabs/log"
 	"github.com/tiglabs/raft"
+	"github.com/vearch/vearch/config"
+	"github.com/vearch/vearch/proto/entity"
 	"sync"
 	"sync/atomic"
 	"time"
