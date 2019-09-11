@@ -14,5 +14,3 @@ cat ../config/config.toml.example > config.toml
 docker run -p 8888:8817 -p 9999:9001 -v $PWD/config.toml:/vearch/config.toml  vearch all
 
 echo "good luck service is ready you can visit http://127.0.0.1:9001 to use it"
-
-curl http://127.0.0.1:9999
