@@ -15,29 +15,29 @@
 package util
 
 import (
-    "bufio"
-    "os"
+	"bufio"
+	"os"
 )
 
 func WriteWithBufio(name, content string) error {
-    fileObj, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-    defer fileObj.Close()
-    if err != nil {
-        panic(err)
-    }
+	fileObj, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	defer fileObj.Close()
+	if err != nil {
+		panic(err)
+	}
 
-    writeObj := bufio.NewWriterSize(fileObj, 4096)
+	writeObj := bufio.NewWriterSize(fileObj, 4096)
 
-    buf := []byte(content)
-    _, err = writeObj.Write(buf)
-    if err != nil {
-        panic(err)
-    }
+	buf := []byte(content)
+	_, err = writeObj.Write(buf)
+	if err != nil {
+		panic(err)
+	}
 
-    err = writeObj.Flush()
-    if err != nil {
-        panic(err)
-    }
+	err = writeObj.Flush()
+	if err != nil {
+		panic(err)
+	}
 
-    return nil
+	return nil
 }

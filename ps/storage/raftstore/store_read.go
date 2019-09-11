@@ -16,11 +16,11 @@ package raftstore
 
 import (
 	"context"
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
-	"github.com/tiglabs/log"
 )
 
 func (s *Store) GetDocument(ctx context.Context, readLeader bool, docID string) (*response.DocResult, error) {

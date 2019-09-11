@@ -1,4 +1,4 @@
- $PATH/batch_deployment -dir=$PATH/demo $PATH/baudengine [deploy,stop, start , destroy, status]
+ $PATH/batch_deployment -dir=$PATH/demo $PATH/vearch [deploy,stop, start , destroy, status]
  
  
  

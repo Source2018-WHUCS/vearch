@@ -15,29 +15,28 @@
 package netutil
 
 import (
-    "io/ioutil"
-    "net/http"
+	"io/ioutil"
+	"net/http"
 )
 
 func GetUrlQuery(r *http.Request) map[string]string {
-    r.ParseForm()
-    params := make(map[string]string)
-    for name, values := range r.Form {
-        if len(values) > 0 {
-            params[name] = values[0]
-        } else {
-            params[name] = ""
-        }
-    }
-    return params
+	r.ParseForm()
+	params := make(map[string]string)
+	for name, values := range r.Form {
+		if len(values) > 0 {
+			params[name] = values[0]
+		} else {
+			params[name] = ""
+		}
+	}
+	return params
 }
 
 func GetReqBody(r *http.Request) ([]byte, error) {
-    body, err := ioutil.ReadAll(r.Body)
-    if err != nil {
-        return nil, nil
-    }
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, nil
+	}
 
-    return body, nil
+	return body, nil
 }
-

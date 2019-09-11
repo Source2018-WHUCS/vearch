@@ -17,13 +17,13 @@ package server
 import (
 	"context"
 	"github.com/smallnest/rpcx/protocol"
-	"github.com/vearch/vearch/util/baudlog"
+	"github.com/vearch/vearch/util/vearchlog"
 	"strings"
 
 	"github.com/smallnest/rpcx/client"
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/util/atomic"
 	"github.com/vearch/vearch/util/server/rpc/handler"
-	"github.com/tiglabs/log"
 )
 
 type RpcClient struct {
@@ -95,7 +95,7 @@ func (this *RpcClient) StreamExecute(ctx context.Context, servicePath string, re
 	ch := make(chan *protocol.Message, 100)
 	defer close(ch)
 	xclient := client.NewBidirectionalXClient(servicePath, client.Failtry, client.RandomSelect, d, client.DefaultOption, ch)
-	defer baudlog.CloseIfNotNil(xclient)
+	defer vearchlog.CloseIfNotNil(xclient)
 	resp := handler.NewRpcResponse(req.MessageId)
 	go func() {
 		if err := xclient.Call(ctx, serviceMethod, req, resp); err != nil {

@@ -394,7 +394,6 @@ func copyFile(client *ssh.Client, localFilePath, remoteFilePath string) {
 		log.Fatal(err, " ", client.Conn.RemoteAddr(), " ", localFilePath, " ", remoteDir)
 	}
 
-
 	dstFile, err := sftpClient.Create(remoteFilePath)
 	if err != nil {
 		log.Fatal(err, " ", client.Conn.RemoteAddr(), " ", localFilePath, " ", remoteDir)

@@ -22,7 +22,7 @@ import (
 	"github.com/vearch/vearch/util/monitoring"
 	"github.com/vearch/vearch/util/netutil"
 	"github.com/vearch/vearch/util/reflect"
-	"github.com/vearch/vearch/util/server/baudhttp"
+	"github.com/vearch/vearch/util/server/vearchhttp"
 	"net/http"
 	"time"
 )
@@ -72,7 +72,7 @@ func (this *Response) SendJson(data interface{}) {
 
 	//write monitor info
 	if this.monitor != nil {
-		if value, exists := this.ginContext.Get(baudhttp.Start); exists {
+		if value, exists := this.ginContext.Get(vearchhttp.Start); exists {
 			this.monitor.FunctionTP(value.(time.Time), false)
 		}
 	}
@@ -101,7 +101,7 @@ func (this *Response) SendJsonHttpReplyError(err error) {
 
 	//write monitor info
 	if this.monitor != nil {
-		if value, exists := this.ginContext.Get(baudhttp.Start); exists {
+		if value, exists := this.ginContext.Get(vearchhttp.Start); exists {
 			this.monitor.FunctionTP(value.(time.Time), true)
 		}
 	}

@@ -41,7 +41,6 @@ type query struct {
 	timeout int64
 }
 
-
 func (this *query) SetMethod(method string) *query {
 	this.method = method
 	return this
@@ -114,7 +113,7 @@ func (this *query) Do() ([]byte, error) {
 	// timeout
 	if this.timeout > 0 {
 		ctx, cancel := context.WithCancel(context.Background())
-		time.AfterFunc(time.Duration(this.timeout) * time.Second, func() {
+		time.AfterFunc(time.Duration(this.timeout)*time.Second, func() {
 			cancel()
 		})
 		request = request.WithContext(ctx)
@@ -138,8 +137,6 @@ func (this *query) Do() ([]byte, error) {
 	return respBody, nil
 }
 
-
-
 func (this *query) DoResponse() (*http.Response, error) {
 	url := this.GetUrl()
 	request, _ := http.NewRequest(this.method, url, strings.NewReader(this.reqBody))
@@ -150,7 +147,7 @@ func (this *query) DoResponse() (*http.Response, error) {
 	// timeout
 	if this.timeout > 0 {
 		ctx, cancel := context.WithCancel(context.Background())
-		time.AfterFunc(time.Duration(this.timeout) * time.Second, func() {
+		time.AfterFunc(time.Duration(this.timeout)*time.Second, func() {
 			cancel()
 		})
 		request = request.WithContext(ctx)
@@ -158,4 +155,3 @@ func (this *query) DoResponse() (*http.Response, error) {
 	// do request
 	return http.DefaultClient.Do(request)
 }
-

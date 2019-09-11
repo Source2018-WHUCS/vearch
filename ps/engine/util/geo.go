@@ -29,8 +29,10 @@ type GeoLocation struct {
 const EARTH_RADIUS = 6378137
 const EARTH_RADIUS_FLOAT64 = float64(EARTH_RADIUS)
 const RAD = math.Pi / 180.0
+
 // Earth semi long axis defined by WGS84 in meters
 const EARTH_SEMI_LONG_AXIS = 6378137.0
+
 // Earth semi short axis defined by WGS84 in meters
 const EARTH_SEMI_SHORT_AXIS = 6378137.0
 const EARTH_EQUATOR = 2 * math.Pi * EARTH_SEMI_LONG_AXIS
@@ -69,9 +71,9 @@ func GeoDistanceAre(lat1, lon1, lat2, lon2 float64) (float64, error) {
 }
 
 func GeoDistancePlane(lat1, lon1, lat2, lon2 float64) (float64, error) {
-	px := lon2 - lon1;
-	py := lat2 - lat1;
-	disntance := math.Sqrt(px * px + py * py) * DistancePerDegree()
+	px := lon2 - lon1
+	py := lat2 - lat1
+	disntance := math.Sqrt(px*px+py*py) * DistancePerDegree()
 	return disntance, nil
 }
 

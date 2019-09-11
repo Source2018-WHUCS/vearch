@@ -18,17 +18,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/tiglabs/raft"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/util/metrics/mserver"
-	"github.com/tiglabs/raft"
 	"time"
 
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/util/server/rpc/handler"
-	"github.com/tiglabs/log"
 )
 
 func ExportToRpcAdminHandler(server *Server) {
@@ -222,13 +222,13 @@ func (mm *MaxMinZoneFieldHandler) Execute(req *handler.RpcRequest, resp *handler
 	//store := req.Arg.(*request.ObjRequest).GetStore().(PartitionStore)
 	//
 	//aggs := fmt.Sprintf(`{
-    //    	"max": {
-    //        	"max": {"field":"%s"}
-    //    	},
-    //    	"min": {
-    //        	"min": {"field":"%s"}
-    //    	}
-    //	}`, store.GetSpace().Engine.ZoneField, store.GetSpace().Engine.ZoneField)
+	//    	"max": {
+	//        	"max": {"field":"%s"}
+	//    	},
+	//    	"min": {
+	//        	"min": {"field":"%s"}
+	//    	}
+	//	}`, store.GetSpace().Engine.ZoneField, store.GetSpace().Engine.ZoneField)
 	//
 	//searchReq := &request.SearchRequest{
 	//	SearchDocumentRequest: &request.SearchDocumentRequest{
@@ -255,7 +255,6 @@ func (mm *MaxMinZoneFieldHandler) Execute(req *handler.RpcRequest, resp *handler
 	//		Min, err = cast.ToFloat64E(agg.GetResult().(*metrics.MinResult).Value)
 	//	}
 	//}
-
 
 	//if err != nil {
 	//	log.Error(err.Error())

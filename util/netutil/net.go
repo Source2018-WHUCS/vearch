@@ -47,7 +47,7 @@ func getPrivateIPIfAvailable() net.IP {
 
 func getPrivateIPByName(name string) net.IP {
 	itfc, err := net.InterfaceByName(name)
-	if err != nil || itfc == nil{
+	if err != nil || itfc == nil {
 		return nil
 	}
 	addrs, _ := itfc.Addrs()

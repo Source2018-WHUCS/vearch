@@ -18,8 +18,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/vearch/vearch/util/metrics/export"
 	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/metrics/export"
 
 	"github.com/vearch/vearch/util/metrics"
 	"github.com/vearch/vearch/util/metrics/sysstat"

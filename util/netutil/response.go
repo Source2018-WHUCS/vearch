@@ -18,9 +18,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/util/cbjson"
-	"github.com/tiglabs/log"
 )
 
 type Response struct {

@@ -14,9 +14,9 @@
 package ratelimit
 
 import (
-	"time"
 	"github.com/juju/ratelimit"
 	"sync"
+	"time"
 )
 
 type RateLimit interface {
@@ -24,15 +24,15 @@ type RateLimit interface {
 }
 
 type BucketRateLimit struct {
-	timeout    time.Duration
-	bucket     *ratelimit.Bucket
+	timeout time.Duration
+	bucket  *ratelimit.Bucket
 }
 
 func NewBucketRateLimit(rate int, capacity int64, waitTimeout time.Duration) RateLimit {
 	return &BucketRateLimit{timeout: waitTimeout, bucket: ratelimit.NewBucketWithRate(float64(rate), capacity)}
 }
 
-func (r *BucketRateLimit)Wait(n int64) bool {
+func (r *BucketRateLimit) Wait(n int64) bool {
 	if r.timeout == 0 {
 		r.bucket.Wait(n)
 		return true
@@ -41,21 +41,21 @@ func (r *BucketRateLimit)Wait(n int64) bool {
 	}
 }
 
-type NullRateLimit struct {}
+type NullRateLimit struct{}
 
 func NewNullRateLimit() RateLimit {
 	return &NullRateLimit{}
 }
 
-func (r *NullRateLimit)Wait(n int64) bool {
+func (r *NullRateLimit) Wait(n int64) bool {
 	return true
 }
 
 type ConcurrentLimit struct {
 	timeout time.Duration
-	done   chan struct{}
-	sem    chan struct{}
-	once   sync.Once
+	done    chan struct{}
+	sem     chan struct{}
+	once    sync.Once
 }
 
 func NewConcurrentLimit(c int, timeout time.Duration) *ConcurrentLimit {
@@ -67,15 +67,14 @@ func NewConcurrentLimit(c int, timeout time.Duration) *ConcurrentLimit {
 		timeout = time.Minute * 10
 	}
 	return &ConcurrentLimit{
-		sem: make(chan struct{}, c),
-		done: make(chan struct{}),
+		sem:     make(chan struct{}, c),
+		done:    make(chan struct{}),
 		timeout: timeout}
 }
 
-
 func (c *ConcurrentLimit) GetToken() bool {
 	select {
-	case c.sem<- struct{}{}:
+	case c.sem <- struct{}{}:
 	case <-c.done:
 		return false
 	case <-time.After(c.timeout):
@@ -89,5 +88,5 @@ func (c *ConcurrentLimit) PutToken() {
 }
 
 func (c *ConcurrentLimit) Close() {
-	c.once.Do(func() {close(c.done)})
+	c.once.Do(func() { close(c.done) })
 }

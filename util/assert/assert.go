@@ -32,15 +32,15 @@ type TestingT interface {
 }
 
 func Equal(t TestingT, actual, expected interface{}, msg string) {
-	assert.Check(t, func() (success bool, message string){
+	assert.Check(t, func() (success bool, message string) {
 		actualType := reflect.TypeOf(actual)
 		expectedType := reflect.TypeOf(expected)
 		if actualType.Kind() != expectedType.Kind() {
-			return false, fmt.Sprintf(fatalSource() + "Needs same type, but %s != %s",
+			return false, fmt.Sprintf(fatalSource()+"Needs same type, but %s != %s",
 				actualType.Kind(), expectedType.Kind())
 		}
 		if !cmp.Equal(actual, expected)().Success() {
-			return false, fmt.Sprintf(fatalSource() + "Expected '%v' (%T) got '%v' (%T). msg:%s",
+			return false, fmt.Sprintf(fatalSource()+"Expected '%v' (%T) got '%v' (%T). msg:%s",
 				expected, expected, actual, actual, msg)
 		}
 		return true, ""
@@ -48,15 +48,15 @@ func Equal(t TestingT, actual, expected interface{}, msg string) {
 }
 
 func NotEqual(t assert.TestingT, actual, expected interface{}, msg string) {
-	assert.Check(t, func() (success bool, message string){
+	assert.Check(t, func() (success bool, message string) {
 		actualType := reflect.TypeOf(actual)
 		expectedType := reflect.TypeOf(expected)
 		if actualType.Kind() != expectedType.Kind() {
-			return false, fmt.Sprintf(fatalSource() + "Needs same type, but %s != %s",
+			return false, fmt.Sprintf(fatalSource()+"Needs same type, but %s != %s",
 				actualType.Kind(), expectedType.Kind())
 		}
 		if cmp.Equal(actual, expected)().Success() {
-			return false, fmt.Sprintf(fatalSource() + "Not Expected '%v' (%T) got '%v' (%T). msg:%s",
+			return false, fmt.Sprintf(fatalSource()+"Not Expected '%v' (%T) got '%v' (%T). msg:%s",
 				expected, expected, actual, actual, msg)
 		}
 		return true, ""
@@ -64,15 +64,15 @@ func NotEqual(t assert.TestingT, actual, expected interface{}, msg string) {
 }
 
 func DeepEqual(t assert.TestingT, actual, expected interface{}) {
-	assert.Check(t, func() (success bool, message string){
+	assert.Check(t, func() (success bool, message string) {
 		actualType := reflect.TypeOf(actual)
 		expectedType := reflect.TypeOf(expected)
 		if actualType.Kind() != expectedType.Kind() {
-			return false, fmt.Sprintf(fatalSource() + "Needs same type, but %s != %s",
+			return false, fmt.Sprintf(fatalSource()+"Needs same type, but %s != %s",
 				actualType.Kind(), expectedType.Kind())
 		}
 		if !cmp.DeepEqual(actual, expected)().Success() {
-			return false, fmt.Sprintf(fatalSource() + "Expected '%v' (%T) got '%v' (%T).",
+			return false, fmt.Sprintf(fatalSource()+"Expected '%v' (%T) got '%v' (%T).",
 				expected, expected, actual, actual)
 		}
 		return true, ""
@@ -80,16 +80,16 @@ func DeepEqual(t assert.TestingT, actual, expected interface{}) {
 }
 
 func NotNil(t assert.TestingT, obj interface{}) {
-	assert.Check(t, func() (success bool, message string){
+	assert.Check(t, func() (success bool, message string) {
 		if cmp.Nil(obj)().Success() {
-			return false, fmt.Sprintf(fatalSource() + "Expected non-nil value. %t", obj)
+			return false, fmt.Sprintf(fatalSource()+"Expected non-nil value. %t", obj)
 		}
 		return true, ""
 	}, "")
 }
 
 func Nil(t assert.TestingT, obj interface{}) {
-	assert.Check(t, func() (success bool, message string){
+	assert.Check(t, func() (success bool, message string) {
 		if !cmp.Nil(obj)().Success() {
 			return false, fmt.Sprintf(fatalSource() + "Expected nil value.")
 		}

@@ -55,7 +55,7 @@ func DebugPprofHandler(w http.ResponseWriter, r *http.Request) {
 	if file := r.FormValue("file"); file != "" {
 		f, err := os.Create(file)
 		if err != nil {
-			log.Error("baud-debug: create file failed(%v), path=%v", err, file)
+			log.Error("vearch-debug: create file failed(%v), path=%v", err, file)
 			return
 		}
 		defer f.Close()
@@ -70,7 +70,7 @@ func DebugPprofCmdlineHandler(w http.ResponseWriter, r *http.Request) {
 	if file := r.FormValue("file"); file != "" {
 		f, err := os.Create(file)
 		if err != nil {
-			log.Error("baud-debug: create file failed(%v), path=%v", err, file)
+			log.Error("vearch-debug: create file failed(%v), path=%v", err, file)
 			return
 		}
 		defer f.Close()
@@ -85,7 +85,7 @@ func DebugPprofProfileHandler(w http.ResponseWriter, r *http.Request) {
 	if file := r.FormValue("file"); file != "" {
 		f, err := os.Create(file)
 		if err != nil {
-			log.Error("baud-debug: create file failed(%v), path=%v", err, file)
+			log.Error("vearch-debug: create file failed(%v), path=%v", err, file)
 			return
 		}
 		defer f.Close()
@@ -100,7 +100,7 @@ func DebugPprofSymbolHandler(w http.ResponseWriter, r *http.Request) {
 	if file := r.FormValue("file"); file != "" {
 		f, err := os.Create(file)
 		if err != nil {
-			log.Error("baud-debug: create file failed(%v), path=%v", err, file)
+			log.Error("vearch-debug: create file failed(%v), path=%v", err, file)
 			return
 		}
 		defer f.Close()
@@ -115,7 +115,7 @@ func DebugPprofTraceHandler(w http.ResponseWriter, r *http.Request) {
 	if file := r.FormValue("file"); file != "" {
 		f, err := os.Create(file)
 		if err != nil {
-			log.Error("baud-debug: create file failed(%v), path=%v", err, file)
+			log.Error("vearch-debug: create file failed(%v), path=%v", err, file)
 			return
 		}
 		defer f.Close()
@@ -157,7 +157,7 @@ func debugPprofLookupHandler(w http.ResponseWriter, r *http.Request, name string
 	if file := r.FormValue("file"); file != "" {
 		f, err := os.Create(file)
 		if err != nil {
-			log.Error("baud-debug: create file failed(%v), path=%v", err, file)
+			log.Error("vearch-debug: create file failed(%v), path=%v", err, file)
 			return
 		}
 		defer f.Close()

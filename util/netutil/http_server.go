@@ -27,15 +27,15 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/julienschmidt/httprouter"
-	ratelimit2 "github.com/vearch/vearch/util/ratelimit"
 	"github.com/tiglabs/log"
+	ratelimit2 "github.com/vearch/vearch/util/ratelimit"
 	"golang.org/x/net/netutil"
 )
 
 const (
 	RouterModeHttpRouter RouterMode = "httprouter"
 	RouterModeGorilla    RouterMode = "gorilla"
-	StartTime = "__start_time"
+	StartTime                       = "__start_time"
 )
 
 type RouterMode string
@@ -269,7 +269,7 @@ func (s *Server) doHandles(method, path string, handles []HandleContinued, end H
 	var flag bool
 	if routerMode == RouterModeGorilla {
 		var h = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx,cancel := context.WithCancel(context.WithValue(context.Background(), StartTime, time.Now()))
+			ctx, cancel := context.WithCancel(context.WithValue(context.Background(), StartTime, time.Now()))
 			defer cancel()
 
 			defer s.CatchPanicAndSendErrReply(w)
@@ -294,7 +294,7 @@ func (s *Server) doHandles(method, path string, handles []HandleContinued, end H
 	} else if routerMode == RouterModeHttpRouter {
 		var h = func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 
-			ctx,cancel := context.WithCancel(context.WithValue(context.Background(), StartTime, time.Now()))
+			ctx, cancel := context.WithCancel(context.WithValue(context.Background(), StartTime, time.Now()))
 			defer cancel()
 
 			uriParams := make(map[string]string)

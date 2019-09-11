@@ -30,8 +30,8 @@ import (
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine"
-	"github.com/vearch/vearch/util/baudlog"
 	"github.com/vearch/vearch/util/ioutil2"
+	"github.com/vearch/vearch/util/vearchlog"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -216,7 +216,7 @@ func (wi *writerImpl) Commit(ctx context.Context, snx int64) (chan error, error)
 		log.Info("begin dump data for gamma")
 
 		if code := C.Dump(gamma); code != 0 {
-			fc <- baudlog.LogErrAndReturn(fmt.Errorf("dump index err response code :[%d]", code))
+			fc <- vearchlog.LogErrAndReturn(fmt.Errorf("dump index err response code :[%d]", code))
 		} else {
 			fileName := filepath.Join(wi.path, indexSn)
 			err := ioutil2.WriteFileAtomic(fileName, []byte(string(strconv.FormatInt(sn, 10))), os.ModePerm)

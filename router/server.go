@@ -24,14 +24,14 @@ import (
 
 	"github.com/vearch/vearch/util/metrics/mserver"
 
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/router/document"
 	"github.com/vearch/vearch/util"
-	"github.com/vearch/vearch/util/baudlog"
 	_ "github.com/vearch/vearch/util/init"
 	"github.com/vearch/vearch/util/netutil"
-	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/vearchlog"
 )
 
 const (
@@ -47,7 +47,7 @@ type Server struct {
 
 func NewServer(ctx context.Context) (*Server, error) {
 	// master service load cfg and init
-	log.Regist(baudlog.NewBaudLog(config.Conf().GetLogDir(config.Router), "Router", config.Conf().GetLevel(config.Router), true))
+	log.Regist(vearchlog.NewVearchLog(config.Conf().GetLogDir(config.Router), "Router", config.Conf().GetLevel(config.Router), true))
 	cli, err := client.NewClient(config.Conf())
 	if err != nil {
 		return nil, err

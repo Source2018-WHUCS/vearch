@@ -1,16 +1,8 @@
-//// +build vector TODO ANSJ if caprice bak to open it
+//// +build vector
 
 package ps
 
-import(
+import (
 	//if not need support vector go build --tags=vector
 	_ "github.com/vearch/vearch/ps/engine/gammacb"
 )
-
-
-
-
-
-
-
-

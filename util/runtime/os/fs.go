@@ -15,13 +15,13 @@
 package os
 
 import (
-	"github.com/vearch/vearch/util/runtime/stack"
-	"os/exec"
-	"os"
-	"path/filepath"
-	"strings"
 	"errors"
 	"fmt"
+	"github.com/vearch/vearch/util/runtime/stack"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 func GetCurrentPath() (string, error) {
@@ -43,17 +43,16 @@ func GetCurrentPath() (string, error) {
 	return string(path[0 : i+1]), nil
 }
 
-
-func GetCurrentSourceCodePath() (fileName string, err error){
+func GetCurrentSourceCodePath() (fileName string, err error) {
 	_, fileName, _, ok := stack.CallerName(2)
 	if !ok {
 		err = errors.New("Can not get the current source code path!")
 	}
-	return fileName,err
+	return fileName, err
 }
 
 func PathExist(p string) bool {
-	fmt.Println("checking path:",p)
+	fmt.Println("checking path:", p)
 	_, err := os.Stat(p)
 	if err != nil && os.IsNotExist(err) {
 		return false
