@@ -8,7 +8,6 @@
 #ifndef RAW_VECTOR_FACTORY_H_
 #define RAW_VECTOR_FACTORY_H_
 
-#include "memory_disk_raw_vector.h"
 #include "memory_raw_vector.h"
 #include "raw_vector.h"
 #include <string>
