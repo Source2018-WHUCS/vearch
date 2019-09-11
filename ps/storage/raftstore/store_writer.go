@@ -17,6 +17,7 @@ package raftstore
 import (
 	"context"
 	"fmt"
+	"github.com/tiglabs/log"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/pspb"
@@ -25,7 +26,6 @@ import (
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/util"
 	"github.com/vearch/vearch/util/cbjson"
-	"github.com/tiglabs/log"
 )
 
 type RaftApplyResponse struct {
