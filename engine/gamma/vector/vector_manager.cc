@@ -35,7 +35,7 @@ VectorInfo **CopyVectorInfos(VectorInfo **vectors_info, int vector_info_num) {
   return ret_vector_infos;
 }
 
-ByteArray *ReadByteArray(FILE *fp) {
+ByteArray *FReadByteArray(FILE *fp) {
   int len = 0;
   fread((void *)&len, sizeof(len), 1, fp);
   char *data = new char[len];
@@ -43,6 +43,11 @@ ByteArray *ReadByteArray(FILE *fp) {
   ByteArray *ba = MakeByteArray(data, len);
   delete[] data;
   return ba;
+}
+
+void FWriteByteArray(FILE *fp, ByteArray *ba) {
+  fwrite((void *)&ba->len, sizeof(ba->len), 1, fp);
+  fwrite((void *)ba->value, ba->len, 1, fp);
 }
 
 VectorManager::VectorManager(const RetrievalModel &model,
@@ -317,33 +322,15 @@ int VectorManager::Dump(const string &path, int dump_docid, int max_docid) {
   fwrite((void *)&vectors_num_, sizeof(vectors_num_), 1, info_fp);
   for (int i = 0; i < vectors_num_; i++) {
     VectorInfo *vi = vectors_info_[i];
-    fwrite((void *)&vi->name->len, sizeof(vi->name->len), 1, info_fp);
-    fwrite((void *)vi->name->value, sizeof(char), vi->name->len, info_fp);
+    FWriteByteArray(info_fp, vi->name);
     fwrite((void *)&vi->data_type, sizeof(vi->data_type), 1, info_fp);
     fwrite((void *)&vi->dimension, sizeof(vi->dimension), 1, info_fp);
-    fwrite((void *)&vi->model_id->len, sizeof(vi->model_id->len), 1, info_fp);
-    fwrite((void *)vi->model_id->value, sizeof(char), vi->model_id->len,
-           info_fp);
-    fwrite((void *)&vi->retrieval_type->len, sizeof(vi->retrieval_type->len), 1,
-           info_fp);
-    fwrite((void *)vi->retrieval_type->value, sizeof(char),
-           vi->retrieval_type->len, info_fp);
-    fwrite((void *)&vi->store_type->len, sizeof(vi->store_type->len), 1,
-           info_fp);
-    fwrite((void *)vi->store_type->value, sizeof(char), vi->store_type->len,
-           info_fp);
+    FWriteByteArray(info_fp, vi->model_id);
+    FWriteByteArray(info_fp, vi->retrieval_type);
+    FWriteByteArray(info_fp, vi->store_type);
   }
   // dump ivfqp parameters
-  fwrite((void *)&ivfpq_param_->metric_type, sizeof(ivfpq_param_->metric_type),
-         1, info_fp);
-  fwrite((void *)&ivfpq_param_->nprobe, sizeof(ivfpq_param_->nprobe), 1,
-         info_fp);
-  fwrite((void *)&ivfpq_param_->ncentroids, sizeof(ivfpq_param_->ncentroids), 1,
-         info_fp);
-  fwrite((void *)&ivfpq_param_->nsubvector, sizeof(ivfpq_param_->nsubvector), 1,
-         info_fp);
-  fwrite((void *)&ivfpq_param_->nbits_per_idx,
-         sizeof(ivfpq_param_->nbits_per_idx), 1, info_fp);
+  fwrite((void *)ivfpq_param_, sizeof(*ivfpq_param_), 1, info_fp);
   fclose(info_fp);
 
   for (const auto &iter : vector_indexes_) {
@@ -386,26 +373,18 @@ int VectorManager::Load(const std::vector<std::string> &index_dirs) {
   VectorInfo **vectors_info = MakeVectorInfos(vectors_num);
   for (int i = 0; i < vectors_num; i++) {
     VectorInfo *vi = static_cast<VectorInfo *>(malloc(sizeof(VectorInfo)));
-    vi->name = ReadByteArray(info_fp);
+    vi->name = FReadByteArray(info_fp);
     fread((void *)&vi->data_type, sizeof(vi->data_type), 1, info_fp);
     fread((void *)&vi->dimension, sizeof(vi->dimension), 1, info_fp);
-    vi->model_id = ReadByteArray(info_fp);
-    vi->retrieval_type = ReadByteArray(info_fp);
-    vi->store_type = ReadByteArray(info_fp);
+    vi->model_id = FReadByteArray(info_fp);
+    vi->retrieval_type = FReadByteArray(info_fp);
+    vi->store_type = FReadByteArray(info_fp);
     vectors_info[i] = vi;
   }
   // load ivfpq parameters
   IVFPQParameters *ivfpq_param =
       static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
-  fread((void *)&ivfpq_param->metric_type, sizeof(ivfpq_param->metric_type), 1,
-        info_fp);
-  fread((void *)&ivfpq_param->nprobe, sizeof(ivfpq_param->nprobe), 1, info_fp);
-  fread((void *)&ivfpq_param->ncentroids, sizeof(ivfpq_param->ncentroids), 1,
-        info_fp);
-  fread((void *)&ivfpq_param->nsubvector, sizeof(ivfpq_param->nsubvector), 1,
-        info_fp);
-  fread((void *)&ivfpq_param->nbits_per_idx, sizeof(ivfpq_param->nbits_per_idx),
-        1, info_fp);
+  fread((void *)ivfpq_param, sizeof(*ivfpq_param), 1, info_fp);
   fclose(info_fp);
 
   IVFPQParamHelper ivfpq_param_helper(ivfpq_param);

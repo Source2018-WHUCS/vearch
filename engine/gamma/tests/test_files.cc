@@ -33,7 +33,7 @@ struct Options {
     fields_type = {STRING, STRING, INT, INT, INT};
     vector_name = "abc";
     path = "files";
-    string log_dir = "log";
+    log_dir = "log";
     model_id = "model";
     retrieval_type = "IVFPQ";
     store_type = "MemoryOnly";

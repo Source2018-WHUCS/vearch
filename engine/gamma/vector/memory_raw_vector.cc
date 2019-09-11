@@ -165,7 +165,7 @@ int MemoryRawVector::Dump(const string &path, int dump_docid, int max_docid) {
   assert((size_t)total == nwrite);
 
   // dump inc vector to feature file
-  nwrite = fwrite((void *)(vector_mem_ + vid_begin * dimension_),
+  nwrite = fwrite((void *)(vector_mem_ + (uint64_t)vid_begin * dimension_),
                   sizeof(float) * dimension_, total, fet_fp);
   assert((size_t)total == nwrite);
 
@@ -224,7 +224,7 @@ int MemoryRawVector::Load(const std::vector<std::string> &dirs) {
       fclose(fet_fp);
       return -1;
     }
-    read_n = fread((void *)(vector_mem_ + ntotal_ * dimension_),
+    read_n = fread((void *)(vector_mem_ + (uint64_t)ntotal_ * dimension_),
                    sizeof(float) * dimension_, total, fet_fp);
     assert((size_t)total == read_n);
     fclose(fet_fp);

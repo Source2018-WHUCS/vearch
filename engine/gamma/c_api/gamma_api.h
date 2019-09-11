@@ -231,6 +231,7 @@ enum ResponseCode DestroyField(Field *field);
  */
 enum ResponseCode DestroyFields(Field **fields, int num);
 
+#pragma pack(1)
 typedef struct IVFPQParameters {
   int metric_type;
   int nprobe;     // scan nprobe
@@ -238,6 +239,7 @@ typedef struct IVFPQParameters {
   int nsubvector;
   int nbits_per_idx; // bit number of sub cluster center
 } IVFPQParameters;
+#pragma pack()
 
 /** make a IVFPQParameters pointer
  *
