@@ -1,6 +1,8 @@
 # Binaries for programs and plugins
 *.exe
+*.exe~
 *.dll
+*.so
 *.dylib
 
 # Test binary, build with `go test -c`
@@ -8,36 +10,3 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-
-# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
-.glide/
-
-# intellij files
-*.iml
-.idea
-
-#others
-*.log
-*.swp
-*.lib
-
-test/test.toml
-config/config.toml
-**/wal/**/META
-.DS_Store
-
-
-
-ps/engine/gammacb/build/*
-ps/engine/gammacb/lib/
-build/bin/
-build/lib
-build/gamma_build/
-
-#gamma
-release/
-debug/
-build/
-.vscode/
-
-cloud/env/app
