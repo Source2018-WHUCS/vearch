@@ -94,7 +94,7 @@ func (query *VectorQuery) ToC() (*C.struct_VectorQuery, error) {
 }
 
 func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
-	tmp := make(map[string]map[string]interface{})
+	tmp := make(map[string]json.RawMessage)
 	err := json.Unmarshal(data, &tmp)
 	if err != nil {
 		return nil, err
@@ -113,11 +113,18 @@ func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
 			return nil, fmt.Errorf("err term filter by operator:[%s]", op)
 		}
 
+		fmt.Println(tmp)
 		delete(tmp, "operator")
+
+		fmt.Println(tmp)
 	}
 
 	for field, rv := range tmp {
-		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(cast.ToString(rv["value"])), C.char(isUnion)), nil
+		fieldTmp := make(map[string]json.RawMessage)
+		if err := json.Unmarshal(rv, &fieldTmp); err != nil {
+			return nil, fmt.Errorf("parse field:[%s] value:[%s] err:[%s] ", field, string(rv), err.Error())
+		}
+		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(cast.ToString(fieldTmp["value"])), C.char(isUnion)), nil
 	}
 
 	return nil, nil
