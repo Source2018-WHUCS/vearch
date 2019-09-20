@@ -94,34 +94,30 @@ func (query *VectorQuery) ToC() (*C.struct_VectorQuery, error) {
 }
 
 func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
-	tmp := make(map[string]json.RawMessage)
+	tmp := make(map[string]interface{})
 	err := json.Unmarshal(data, &tmp)
 	if err != nil {
 		return nil, err
 	}
 
 	isUnion := 1
-fmt.Println(tmp)
+
 	if operator, found := tmp["operator"]; found {
-		op := strings.ToLower(string(operator))
+		op := strings.ToLower(cast.ToString(operator))
 		switch op {
 		case "and":
 			isUnion = 0
 		case "or":
 			isUnion = 1
 		default:
-			return nil, fmt.Errorf("err term filter by operator:[%s]", op)
+			return nil, fmt.Errorf("err term filter by operator:[%s]", operator)
 		}
 
 		delete(tmp, "operator")
 	}
 
 	for field, rv := range tmp {
-		fieldTmp := make(map[string]json.RawMessage)
-		if err := json.Unmarshal(rv, &fieldTmp); err != nil {
-			return nil, fmt.Errorf("parse field:[%s] value:[%s] err:[%s] ", field, string(rv), err.Error())
-		}
-		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(cast.ToString(fieldTmp["value"])), C.char(isUnion)), nil
+		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(cast.ToString(rv.(map[string]interface{})["value"])), C.char(isUnion)), nil
 	}
 
 	return nil, nil
