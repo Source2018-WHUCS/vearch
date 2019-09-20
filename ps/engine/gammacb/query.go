@@ -334,6 +334,8 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 		}
 		req.vec_fields = cvqs
 		req.vec_fields_num = C.int(len(vqs))
+	}else{
+		req.vec_fields_num = C.int(0)
 	}
 
 	if len(tfs) > 0 {
@@ -343,6 +345,8 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 		}
 		req.term_filters = ctfs
 		req.term_filters_num = C.int(len(tfs))
+	}else{
+		req.term_filters_num = C.int(0)
 	}
 
 	if len(rfs) > 0 {
@@ -352,6 +356,12 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 		}
 		req.range_filters = crfs
 		req.range_filters_num = C.int(len(rfs))
+	}else{
+		req.range_filters_num = C.int(0)
+	}
+
+	if reqNum <= 0 {
+		reqNum = 1
 	}
 
 	req.req_num = C.int(reqNum)
