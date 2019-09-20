@@ -304,9 +304,6 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 		}
 	}
 
-	if len(vqs) == 0 {
-		return fmt.Errorf("query has err no vector conditions")
-	}
 
 	for _, filterBytes := range temp.Filter {
 		tmp := make(map[string]json.RawMessage)
