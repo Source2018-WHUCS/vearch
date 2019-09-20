@@ -112,6 +112,8 @@ func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
 		default:
 			return nil, fmt.Errorf("err term filter by operator:[%s]", op)
 		}
+
+		delete(tmp, "operator")
 	}
 
 	for field, rv := range tmp {
@@ -303,7 +305,6 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 			return err
 		}
 	}
-
 
 	for _, filterBytes := range temp.Filter {
 		tmp := make(map[string]json.RawMessage)
