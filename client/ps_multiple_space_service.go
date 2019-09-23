@@ -136,20 +136,20 @@ func (this *multipleSpaceSender) Search(req *request.SearchRequest) *response.Se
 	var wg sync.WaitGroup
 	respChain := make(chan *response.SearchResponse, len(this.senders))
 
-	for _, s := range this.senders {
+	for _, sender := range this.senders {
 		wg.Add(1)
 		go func(par *spaceSender) {
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
 					fmt.Println(r)
-					respChain <- newSearchResponseWithError(s.db, s.space, 0, fmt.Errorf(cast.ToString(r)))
+					respChain <- newSearchResponseWithError(par.db, par.space, 0, fmt.Errorf(cast.ToString(r)))
 				}
 			}()
 			now := time.Now()
-			respChain <- s.Search(req)
-			log.Debug("search :[%s/%s] use time:[%s]", s.db, s.space, time.Now().Sub(now))
-		}(s)
+			respChain <- par.Search(req)
+			log.Debug("search :[%s/%s] use time:[%s]", par.db, par.space, time.Now().Sub(now))
+		}(sender)
 	}
 
 	wg.Wait()
