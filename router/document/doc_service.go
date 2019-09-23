@@ -173,7 +173,6 @@ func (this *docService) searchDoc(ctx context.Context, dbName string, spaceName 
 
 	nameCache := make(response.NameCache)
 
-
 	for i, dbName := range dbNames{
 		spaceName := spaceNames[i]
 		if space, err := this.client.Master().Cache().SpaceByCache(ctx, dbName, spaceName); err == nil {
