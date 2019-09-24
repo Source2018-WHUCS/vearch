@@ -75,45 +75,44 @@ def test_创建空间():
         "dynamic_schema": "strict",
         "partition_num": 2, #"partition_num": 2-6之间
         "replica_num": 1,
-        "engine": {"name":"gamma", "index_size":100000, "max_size":7000000},
+        "engine": {"name":"gamma", "index_size":8192, "max_size":10000},
         "properties": {
-            "pro": {
-                "type" : "integer",
-                "index" : "false"
+            "string": {
+                "type" : "keyword",
+                "index" : "true"
             },
-            "i_url": {
-                "type": "keyword"
+            "int": {
+                "type": "int",
+                "index" : "true"
             },
-            "fid1": {
-                "type": "integer"
+            "float": {
+                "type": "float",
+                "index" : "true"
             },
-            "fid2": {
-                "type": "integer"
-            },
-            "fid3": {
-                "type": "integer"
-            },
-            "su" : {
-                "type": "integer",
-                "index" : "false"
-            },
-            "b_id": {
-                "type": "integer",
-                "index" : "false"
-            },
-            "status" : {
-                "type" : "integer",
-                "index" : "false"
-            },
-            "feature": {
+            "vector": {
                 "type": "vector",
                 "model_id": "img",
-                "dimension": 512
+                "dimension": 128
+            },
+            "string_tags": {
+                "type": "string",
+                "array": True,
+                "index" : "true"
+            },
+            "int_tags": {
+                "type": "integer",
+                "array": True,
+                "index" : "true"
+            },
+            "float_tags" : {
+                "type": "float",
+                "array": True,
+                "index" : "true"
             }
         },
         "models": [{
             "model_id": "vgg16",
-            "fields": ["url"],
+            "fields": ["string"],
             "out": "feature"
         }]
     }
