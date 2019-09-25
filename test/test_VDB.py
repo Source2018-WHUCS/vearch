@@ -20,32 +20,32 @@ space_name = "vector_space"
 @pytest.mark.author('')
 @pytest.mark.level(2)
 @pytest.mark.cover(["VDB"])
-def test_状态查看():
-    logger.info("集群信息")
+def test_stats():
+    logger.info("_cluster_information")
     url = "http://" + ip_db + "/_cluster/stats"
     response = requests.get(url)
-    print("状态查看---\n" + response.text)
+    print("cluster_stats:" + response.text)
     assert response.status_code == 200
 
-def test_健康状态():
+def test_health():
     url = "http://" + ip_db + "/_cluster/health"
     response = requests.get(url)
-    print("健康状态---\n" + response.text)
+    print("cluster_health---\n" + response.text)
     assert response.status_code == 200
 
-def test_端口状态():
+def test_server():
     url = "http://" + ip_db + "/list/server"
     response = requests.get(url)
-    print("端口状态---\n" + response.text)
+    print("list_server---\n" + response.text)
     assert response.status_code == 200
 
-def test_查看库列表():
+def test_db():
     url = "http://" + ip_db + "/list/db"
     response = requests.get(url)
-    print("查看库列表---\n" + response.text)
+    print("list_db---\n" + response.text)
     assert response.status_code == 200
 
-def test_创建库():
+def test_createDB():
     logger.info("------------")
     url = "http://" + ip_db + "/db/_create"
     headers = {"content-type": "application/json"}
@@ -53,23 +53,22 @@ def test_创建库():
         'name':db_name
     }
     response = requests.put(url, headers=headers, data=json.dumps(data))
-    print("创建库---\n" + response.text)
+    print("db_create---\n" + response.text)
     assert response.status_code == 200
 
-def test_查看库():
+def test_dbsearch():
     url = "http://" + ip_db + "/db/" + db_name
     response = requests.get(url)
-    print("查看库---\n" + response.text)
+    print("db_search---\n" + response.text)
     assert response.status_code == 200
 
-def test_查看指定空间():
+def test_dbspace():
     url = "http://" + ip_db + "/list/space?db=" + db_name
     response = requests.get(url)
-    print("查看指定空间---\n" + response.text)
+    print("space_search---\n" + response.text)
     assert response.status_code == 200
 
-def test_创建空间():
-    logger.info("创建空间")
+def test_createspace():
     url = "http://" + ip_db + "/space/" + db_name +"/_create"
     headers = {"content-type": "application/json"}
     data = {
@@ -84,7 +83,7 @@ def test_创建空间():
                 "index" : "true"
             },
             "int": {
-                "type": "int",
+                "type": "integer",
                 "index" : "true"
             },
             "float": {
@@ -118,188 +117,76 @@ def test_创建空间():
             "out": "feature"
         }]
     }
+    print(url+"---"+json.dumps(data))
     response = requests.put(url, headers=headers, data=json.dumps(data))
-    print("创建空间---\n" + response.text)
+    print("space_create---\n" + response.text)
     assert response.status_code == 200
 
-def test_查看空间():
+def test_space():
     url = "http://" + ip_db + "/space/"+db_name+"/" + space_name
     response = requests.get(url)
-    print("查看空间---\n" + response.text)
+    print("space---\n" + response.text)
     assert response.status_code == 200
 
-logger.info("router(PS)模块")
-def test_添加数据1():
-    logger.info("添加数据")
+logger.info("router(PS)")
+def test_insertWithId():
+    logger.info("insert")
     headers = {"content-type": "application/json"}
-    fileData = "data1.txt"
-    fileFeature = "feature1.txt"
-    with open(fileData, "r") as dataLine1, open(fileFeature,"r") as fileFeature1:
+    fileData = "D:/tool/vectorbase/test/data/test1.json"
+    with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
-            i = 1
-            url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + str(i)
-            feature = fileFeature1.readline()
-            feature = feature.replace('(', '[')
-            feature = feature.replace(')', ']')
-            list = dataLine.split("\t")
-            pro = list[0]
-            source = list[1]
-            fid1 = list[2]
-            fid2 = list[3]
-            fid3 = list[4]
-            su = list[5]
-            b_id = list[8].strip()
-            data = {
-                "pro": pro,
-                "su": su,
-                "feature": [{
-                    "source": source,
-                    "feature": feature
-                }],
-                "b_id": b_id,
-                "fid1": fid1,
-                "fid2": fid2,
-                "fid3": fid3
-            }
-            data["feature"][0]["feature"] = json.loads(data["feature"][0]["feature"])
-            response = requests.post(url, headers=headers, data=json.dumps(data))
-            print("添加数据_指定id---\n" + response.text)
-            assert response.status_code == 200
-            i = i + 1
-def test_查询数据():
-    logger.info("查询数据")
-    for i in range(100001):
-        url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + str(i)
-        response = requests.get(url)
-        print("查询数据_根据id查询---\n" + response.text)
-        assert response.status_code == 200
-
-def test_添加数据():
-    logger.info("添加数据")
-    headers = {"content-type": "application/json"}
-    fileData = "data1.txt"
-    fileFeature = "feature1.txt"
-    with open(fileData, "r") as dataLine1, open(fileFeature,"r") as fileFeature1:
-        for dataLine in dataLine1:
-            url = "http://" + ip_data +  "/" + db_name + "/" + space_name
-            feature = fileFeature1.readline()
-            feature = feature.replace('(', '[')
-            feature = feature.replace(')', ']')
-            list = dataLine.split("\t")
-            pro = list[0]
-            source = list[1]
-            fid1 = list[2]
-            fid2 = list[3]
-            fid3 = list[4]
-            su = list[5]
-            b_id = list[8].strip()
-            data = {
-                "pro": pro,
-                "su": su,
-                "feature": [{
-                    "source": source,
-                    "feature": feature
-                }],
-                "b_id": b_id,
-                "fid1": fid1,
-                "fid2": fid2,
-                "fid3": fid3
-            }
-            data["feature"][0]["feature"] = json.loads(data["feature"][0]["feature"])
-            response = requests.post(url, headers=headers, data=json.dumps(data))
-            print("添加数据_不指定id---\n" + response.text)
+            print(dataLine)
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            data = "{"+dataLine.split(',', 1)[1]
+            print("_id:" + id)
+            print("_data:" + data)
+            url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
+            response = requests.post(url, headers=headers, data=data)
+            print("insertWithID:" + response.text)
             assert response.status_code == 200
 
-def test_批量添加():
-    logger.info("批量添加")
-    url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/_bulk"
-    headers = {"content-type": "application/json"}
-    fileData = "data1.txt"
-    fileFeature = "feature1.txt"
-    with open(fileData, "r") as dataLine1, open(fileFeature,"r") as fileFeature1:
+def test_searchById():
+    logger.info("test_searchById")
+    fileData = "D:/tool/vectorbase/test/data/test1.json"
+    with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
-            feature = fileFeature1.readline()
-            feature = feature.replace('(', '[')
-            feature = feature.replace(')', ']')
-            list = dataLine.split("\t")
-            pro = list[0]
-            source = list[1]
-            fid1 = list[2]
-            fid2 = list[3]
-            fid3 = list[4]
-            su = list[5]
-            b_id = list[8].strip()
-            data = {
-                "pro": pro,
-                "su": su,
-                "feature": [{
-                    "source": source,
-                    "feature": feature
-                }],
-                "b_id": b_id,
-                "fid1": fid1,
-                "fid2": fid2,
-                "fid3": fid3
-            }
-            data["feature"][0]["feature"] = json.loads(data["feature"][0]["feature"])
-            response = requests.post(url, headers=headers, data=json.dumps(data))
-            print("批量添加---\n" + response.text)
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            print("_id:" + id)
+            url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
+            response = requests.get(url)
+            print("searchById:" + response.text)
             assert response.status_code == 200
 
-def test_更新文档():
-    logger.info("更新文档")
-    url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/1"
+def test_insterNoId():
+    logger.info("insertDataNoId")
     headers = {"content-type": "application/json"}
-    fileData = "data1.txt"
-    fileFeature = "feature1.txt"
-    with open(fileData, "r") as dataLine1, open(fileFeature,"r") as fileFeature1:
+    fileData = "D:/tool/vectorbase/test/data/test1.json"
+    with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
-            feature = fileFeature1.readline()
-            feature = feature.replace('(', '[')
-            feature = feature.replace(')', ']')
-            list = dataLine.split("\t")
-            pro = list[0]
-            source = list[1]
-            fid1 = list[2]
-            fid2 = list[3]
-            fid3 = list[4]
-            su = list[5]
-            b_id = list[8].strip()
-            data = {
-                "pro": pro,
-                "su": su,
-                "feature": [{
-                    "source": source,
-                    "feature": feature
-                }],
-                "b_id": b_id,
-                "fid1": fid1,
-                "fid2": fid2,
-                "fid3": fid3
-            }
-            data["feature"][0]["feature"] = json.loads(data["feature"][0]["feature"])
-            response = requests.post(url, headers=headers, data=json.dumps(data))
-            print("更新文档---\n" + response.text)
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            data = "{"+dataLine.split(',', 1)[1]
+            url = "http://" + ip_data + "/" + db_name + "/" + space_name
+            response = requests.post(url, headers=headers, data=data)
+            print("insertNoID:" + response.text)
             assert response.status_code == 200
 
-def test_删除文档():
-    logger.info("删除文档")
-    url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/1"
-    response = requests.delete(url)
-    print("删除文档---\n" + response.text)
-    assert response.status_code == 200
-
-
-def test_查询数据使用特征查询():
+def test_searchByFeature():
+    headers = {"content-type": "application/json"}
     url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/_search?size=100"
-    headers = {"content-type": "application/json"}
-    fileData = "data1.txt"
-    fileFeature = "feature1.txt"
-    with open(fileData, "r") as dataLine1, open(fileFeature,"r") as fileFeature1:
+    fileData = "D:/tool/vectorbase/test/data/test1.json"
+    with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
-            feature = fileFeature1.readline()
-            feature = feature.replace('(', '[')
-            feature = feature.replace(')', ']')
+            print(dataLine)
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            feature = "{"+dataLine.split(',', 1)[1]
+            print("_id:" + id)
+            print("_data:" + feature)
+            feature = json.loads(feature)
+            feature = feature["vector"]["feature"]
             data = {
                 "query": {
                     "sum" :[{
@@ -308,12 +195,12 @@ def test_查询数据使用特征查询():
                     }]
                 }
             }
-            data["query"]["sum"][0]["feature"] = json.loads(data["query"]["sum"][0]["feature"])
+            print(json.dumps(data))
             response = requests.post(url, headers=headers, data=json.dumps(data))
-            print("查询数据_使用特征查询---\n" + response.text)
+            print("searchByFeature---\n" + response.text)
             assert response.status_code == 200
 
-def test_查询数据使用特征带数值过滤字段():
+def test_searchByFeatureandFilter():
     url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/_search"
     headers = {"content-type": "application/json"}
     fileData = "data1.txt"
@@ -338,18 +225,58 @@ def test_查询数据使用特征带数值过滤字段():
             }
             data["query"]["sum"][0]["feature"] = json.loads(data["query"]["sum"][0]["feature"])
             response = requests.post(url, headers=headers, data=json.dumps(data))
-            print("查询数据_使用特征带数值过来字段查询---\n" + response.text)
+            print("searchByFeatureandFilter:" + response.text)
             assert response.status_code == 200
 
+def test_updateDoc():
+    logger.info("updateDoc")
+    headers = {"content-type": "application/json"}
+    fileData = "D:/tool/vectorbase/test/data/test1.json"
+    with open(fileData, "r") as dataLine1:
+        for dataLine in dataLine1:
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            data = "{"+dataLine.split(',', 1)[1]
+            url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
+            response = requests.post(url, headers=headers, data=data)
+            print("updateDoc:" + response.text)
+            assert response.status_code == 200
 
-def test_删除空间():
+def test_insertBulk():
+    logger.info("insertBulk")
+    url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/_bulk"
+    headers = {"content-type": "application/json"}
+    fileData = "D:/tool/vectorbase/test/data/test1.json"
+    with open(fileData, "r") as dataLine1:
+        for dataLine in dataLine1:
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            data = "{"+dataLine.split(',', 1)[1]
+            response = requests.post(url, headers=headers, data=data)
+            print("insertBulk:" + response.text)
+            assert response.status_code == 200
+
+def test_deleteDoc():
+    logger.info("test_deleteDoc")
+    fileData = "D:/tool/vectorbase/test/data/test1.json"
+    with open(fileData, "r") as dataLine1:
+        for dataLine in dataLine1:
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            data = "{"+dataLine.split(',', 1)[1]
+            url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
+            response = requests.delete(url)
+            print("deleteDoc:" + response.text)
+            assert response.status_code == 200
+
+def test_deleteSpace():
     url = "http://" + ip_db + "/space/"+db_name+"/"+space_name
     response = requests.delete(url)
-    print("删除空间---\n" + response.text)
+    print("deleteSpace:" + response.text)
     assert response.status_code == 200
 
-def test_删除库():
+def test_deleteDB():
     url = "http://" + ip_db + "/db/"+db_name
     response = requests.delete(url)
-    print("删除库---\n" + response.text)
+    print("deleteDB:" + response.text)
     assert response.status_code == 200
