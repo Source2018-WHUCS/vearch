@@ -93,7 +93,8 @@ def test_createspace():
             "vector": {
                 "type": "vector",
                 "model_id": "img",
-                "dimension": 128
+                "dimension": 128,
+                "format":"normalization"
             },
             "string_tags": {
                 "type": "string",
@@ -135,12 +136,9 @@ def test_insertWithId():
     fileData = "D:/tool/vectorbase/test/data/test1.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
-            print(dataLine)
             idStr = dataLine.split(',', 1)[0].replace('{', '')
             id = eval(idStr.split(':')[1])
             data = "{"+dataLine.split(',', 1)[1]
-            print("_id:" + id)
-            print("_data:" + data)
             url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
             response = requests.post(url, headers=headers, data=data)
             print("insertWithID:" + response.text)
@@ -153,7 +151,6 @@ def test_searchById():
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
             id = eval(idStr.split(':')[1])
-            print("_id:" + id)
             url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
             response = requests.get(url)
             print("searchById:" + response.text)
@@ -190,8 +187,9 @@ def test_searchByFeature():
             data = {
                 "query": {
                     "sum" :[{
-                        "field": "feature",
-                        "feature": feature
+                        "field": "vector",
+                        "feature": feature,
+                        "format":"normalization"
                     }]
                 }
             }
@@ -203,29 +201,29 @@ def test_searchByFeature():
 def test_searchByFeatureandFilter():
     url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/_search"
     headers = {"content-type": "application/json"}
-    fileData = "data1.txt"
-    fileFeature = "feature1.txt"
-    with open(fileData, "r") as dataLine1, open(fileFeature,"r") as fileFeature1:
+    fileData = "D:/tool/vectorbase/test/data/test1.json"
+    with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
-            feature = fileFeature1.readline()
-            feature = feature.replace('(', '[')
-            feature = feature.replace(')', ']')
-            list = dataLine.split("\t")
-            fid3 = list[4]
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            feature = "{"+dataLine.split(',', 1)[1]
+            feature = json.loads(feature)
+            string_tags = feature["string_tags"]
+            feature = feature["vector"]["feature"]
             data = {
                 "query": {
                     "filter": [{
-                        "fid3": fid3
+                        "string_tags": string_tags
                     }],
                     "sum" :[{
-                        "field": "feature",
-                        "feature": feature
+                        "field": "vector",
+                        "feature": feature,
+                        "format":"normalization"
                     }]
                 }
             }
-            data["query"]["sum"][0]["feature"] = json.loads(data["query"]["sum"][0]["feature"])
             response = requests.post(url, headers=headers, data=json.dumps(data))
-            print("searchByFeatureandFilter:" + response.text)
+            print("searchByFeature---\n" + response.text)
             assert response.status_code == 200
 
 def test_updateDoc():
