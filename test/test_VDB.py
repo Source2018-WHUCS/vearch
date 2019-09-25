@@ -15,6 +15,7 @@ ip_db = "11.3.170.164:443"
 ip_data = "11.3.170.164:80"
 db_name = "test_vector_db"
 space_name = "vector_space"
+fileData = "/home/vearch/test/data/test_data.json"
 
 
 @pytest.mark.author('')
@@ -133,7 +134,7 @@ logger.info("router(PS)")
 def test_insertWithId():
     logger.info("insert")
     headers = {"content-type": "application/json"}
-    fileData = "D:/tool/vectorbase/test/data/test_data.json"
+    fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -146,7 +147,7 @@ def test_insertWithId():
 
 def test_searchById():
     logger.info("test_searchById")
-    fileData = "D:/tool/vectorbase/test/data/test_data.json"
+    fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -159,7 +160,7 @@ def test_searchById():
 def test_insterNoId():
     logger.info("insertDataNoId")
     headers = {"content-type": "application/json"}
-    fileData = "D:/tool/vectorbase/test/data/test_data.json"
+    fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -173,7 +174,7 @@ def test_insterNoId():
 def test_searchByFeature():
     headers = {"content-type": "application/json"}
     url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/_search?size=100"
-    fileData = "D:/tool/vectorbase/test/data/test_data.json"
+    fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             print(dataLine)
@@ -201,7 +202,7 @@ def test_searchByFeature():
 def test_searchByFeatureandFilter():
     url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/_search"
     headers = {"content-type": "application/json"}
-    fileData = "D:/tool/vectorbase/test/data/test_data.json"
+    fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -229,7 +230,7 @@ def test_searchByFeatureandFilter():
 def test_updateDoc():
     logger.info("updateDoc")
     headers = {"content-type": "application/json"}
-    fileData = "D:/tool/vectorbase/test/data/test_data.json"
+    fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -244,7 +245,7 @@ def test_insertBulk():
     logger.info("insertBulk")
     url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/_bulk"
     headers = {"content-type": "application/json"}
-    fileData = "D:/tool/vectorbase/test/data/test_data.json"
+    fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -256,7 +257,7 @@ def test_insertBulk():
 
 def test_deleteDoc():
     logger.info("test_deleteDoc")
-    fileData = "D:/tool/vectorbase/test/data/test_data.json"
+    fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
