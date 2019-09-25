@@ -118,15 +118,20 @@ func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
 	}
 
 	for field, rv := range tmp {
+
+		if qb.mapping.GetField(field).Options()&pspb.FieldOption_Index != pspb.FieldOption_Index {
+			return nil, fmt.Errorf("field:[%d] not open index", field)
+		}
+
 		buf := bytes2.Buffer{}
-		if ia, ok := rv.([]interface{}) ; ok {
-			for i , obj := range ia{
+		if ia, ok := rv.([]interface{}); ok {
+			for i, obj := range ia {
 				buf.WriteString(cast.ToString(obj))
-				if i != len(ia)-1{
+				if i != len(ia)-1 {
 					buf.WriteRune('\001')
 				}
 			}
-		}else{
+		} else {
 			buf.WriteString(cast.ToString(rv))
 		}
 		return C.MakeTermFilter(byteArrayStr(field), byteArrayStr(buf.String()), C.char(isUnion)), nil
@@ -152,6 +157,10 @@ func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 	)
 
 	for field, rv = range tmp {
+
+		if qb.mapping.GetField(field).Options()&pspb.FieldOption_Index != pspb.FieldOption_Index {
+			return nil, fmt.Errorf("field:[%d] not open index", field)
+		}
 
 		var found bool
 
@@ -346,7 +355,7 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 		}
 		req.vec_fields = cvqs
 		req.vec_fields_num = C.int(len(vqs))
-	}else{
+	} else {
 		req.vec_fields_num = C.int(0)
 	}
 
@@ -357,7 +366,7 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 		}
 		req.term_filters = ctfs
 		req.term_filters_num = C.int(len(tfs))
-	}else{
+	} else {
 		req.term_filters_num = C.int(0)
 	}
 
@@ -368,7 +377,7 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 		}
 		req.range_filters = crfs
 		req.range_filters_num = C.int(len(rfs))
-	}else{
+	} else {
 		req.range_filters_num = C.int(0)
 	}
 
