@@ -134,7 +134,7 @@ logger.info("router(PS)")
 def test_insertWithId():
     logger.info("insert")
     headers = {"content-type": "application/json"}
-    fileData = "/home/vearch/test/data/test_data.json"
+    # fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -147,7 +147,7 @@ def test_insertWithId():
 
 def test_searchById():
     logger.info("test_searchById")
-    fileData = "/home/vearch/test/data/test_data.json"
+    # fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -160,7 +160,7 @@ def test_searchById():
 def test_insterNoId():
     logger.info("insertDataNoId")
     headers = {"content-type": "application/json"}
-    fileData = "/home/vearch/test/data/test_data.json"
+    # fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -174,7 +174,7 @@ def test_insterNoId():
 def test_searchByFeature():
     headers = {"content-type": "application/json"}
     url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/_search?size=100"
-    fileData = "/home/vearch/test/data/test_data.json"
+    # fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             print(dataLine)
@@ -202,7 +202,7 @@ def test_searchByFeature():
 def test_searchByFeatureandFilter():
     url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/_search"
     headers = {"content-type": "application/json"}
-    fileData = "/home/vearch/test/data/test_data.json"
+    # fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -230,7 +230,7 @@ def test_searchByFeatureandFilter():
 def test_updateDoc():
     logger.info("updateDoc")
     headers = {"content-type": "application/json"}
-    fileData = "/home/vearch/test/data/test_data.json"
+    # fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -245,7 +245,7 @@ def test_insertBulk():
     logger.info("insertBulk")
     url = "http://" + ip_data + "/"+db_name+"/"+space_name+"/_bulk"
     headers = {"content-type": "application/json"}
-    fileData = "/home/vearch/test/data/test_data.json"
+    # fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
@@ -257,7 +257,7 @@ def test_insertBulk():
 
 def test_deleteDoc():
     logger.info("test_deleteDoc")
-    fileData = "/home/vearch/test/data/test_data.json"
+    # fileData = "/home/vearch/test/data/test_data.json"
     with open(fileData, "r") as dataLine1:
         for dataLine in dataLine1:
             idStr = dataLine.split(',', 1)[0].replace('{', '')
