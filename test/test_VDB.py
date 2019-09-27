@@ -11,8 +11,8 @@ __author__ = 'wangjiangjuan'
 __date__ = '2019-07-22 09:25:00'
 __description__ = """ """
 
-ip_db = "127.0.0.1:443"
-ip_data = "127.0.0.1:80"
+ip_db = "11.3.170.164:443"
+ip_data = "11.3.170.164:80"
 db_name = "test_vector_db"
 space_name = "vector_space"
 fileData = "/home/vearch/test/data/test_data.json"
