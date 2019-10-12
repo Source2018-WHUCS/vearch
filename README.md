@@ -10,8 +10,6 @@ Vearch is a scalable distributed system for efficient similarity search of deep 
 
 ## Architecture
 
-![arc](docs/img/VearchArch.jpg)
-
 * Data Model
 
   space, documents, vectors, scalars
@@ -32,16 +30,15 @@ Vearch is a scalable distributed system for efficient similarity search of deep 
 
   Hosts document partitions with raft-based replication.
 
-  Gamma is the core vector search engine implemented based on [faiss](https://github.com/facebookresearch/faiss). It provides the ability of storing, indexing and retrieving the vectors and scalars.
+  Gamma is the core vector search engine implemented based on [faiss](https://github.com/facebookresearch/faiss). It provides the ability of storing, indexing and retrieving the vectors and scalars. For more details,see [architecture](docs/img/VearchArch.jpg)
 
 
 ## Quick start
-
+![docs/img/plugin/main_process.gif](docs/img/plugin/main_process.gif)
 * Quickly build a distributed vector search system with RESTful API, please see [docs/Deploy.md](docs/Deploy.md).
 
 
 * Vearch can be leveraged to build a complete visual search system to index billions of images. The image retrieval plugin for object detection and feature extraction is also required. For more information, please refer to [docs/Quickstart.md](docs/Quickstart.md).
-![docs/img/plugin/main_process.gif](docs/img/plugin/main_process.gif)
 
 ## APIs and Use Cases
 
