@@ -3,6 +3,7 @@
 Vearch is aimed to build a simple and fast image retrieval system. Through this system, you can easily build your own image retrieval system, including image object detection,  feature extraction and similarity search. This quickstart demonstrates how to use it.
 
 
+![docs/img/plugin/main_process.gif](img/plugin/main_process.gif)
 
 
 ## Before you begin
