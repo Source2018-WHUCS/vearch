@@ -92,40 +92,6 @@ curl -H "content-type: application/json" -XPOST -d'
           "boost":0.8,
         }
       ],
-      "filter":[
-          {
-              "range":{
-                  "product_code":{
-                      "gte":1,
-                      "lte":3
-                  }
-              }
-          },
-          {
-              "term":{
-                "tags":["t1","t2"],
-                "operator":"and"
-              }
-          }
-       ]
-      "direct_search_type":0,
-      "online_log_level":"debug" 
-  },
-  "size":10,
-   "sort" : [
-       { "_score" : {"order" : "asc"} }
-   ]
-}
-' http://11.3.149.73/tpy/tpy/_search?size=10
-````
-
-
-````$xslt
-# search
-curl -H "content-type: application/json" -XPOST -d'
-
-{
-  "query": {
       "and":[
         {
           "field": "feature2",
