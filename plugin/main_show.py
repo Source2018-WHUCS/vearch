@@ -57,7 +57,6 @@ class ImageShowHandler(tornado.web.RequestHandler):
         for hit in result['hits']['hits']:
             source = hit.pop("_source")
             source["score"] = hit["_extra"]["vector_result"][0]["score"]
-            source["imageurl"] =  source["imageurl"].replace("imgcps.360buyimg.local","img30.360buyimg.com")+"!q10"
             search_list.append(source)
         return search_list
 

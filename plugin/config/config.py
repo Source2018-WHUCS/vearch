@@ -23,11 +23,7 @@ batch_size = 16
 # The name of model for web platform, Currently only one model is supported
 detect_model = "yolo3"
 extract_model = "vgg16"
-# Define gpu parameters,
-gpu = "0"
 # Define deployment address of vearch
 ip_address = "http://****"
 ip_scheme = ip_address + ":443/space"
 ip_insert = ip_address + ":80"
-database_name = "test"
-table_name = "test"
