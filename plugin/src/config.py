@@ -14,10 +14,9 @@
 import os
 root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-port = 5200 
+port = 4101
 gpu = "-1"
 ip_address = "http://****"
-ip_address = "http://11.3.146.4"
 ip_scheme = ip_address + ":443/space"
 ip_insert = ip_address + ":80"
 
@@ -34,7 +33,7 @@ video = dict(db="video",
              space="video",
              ip="http://127.0.0.1",
              imagepath=os.path.join(root_path, "images","face_retrieval"),
-             videopath="rtmp://58.200.131.2:1935/livetv/hunantv")
+             videopath="******")
 
 def test():
     print("face_config:\n", face_config)
