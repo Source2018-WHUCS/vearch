@@ -151,7 +151,7 @@ func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 
 	var (
 		field                      string
-		min, max                   string
+		min, max                   interface{}
 		rv                         map[string]interface{}
 		minInclusive, maxInclusive bool
 	)
@@ -285,7 +285,17 @@ func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 			maxC = 1
 		}
 
-		return C.MakeRangeFilter(byteArrayStr(field), byteArrayStr(min), byteArrayStr(max), C.char(minC), C.char(maxC)), nil
+		minByte, err := bytes.ValueToByte(min)
+		if err != nil {
+			return nil, err
+		}
+
+		maxByte, err := bytes.ValueToByte(max)
+		if err != nil {
+			return nil, err
+		}
+
+		return C.MakeRangeFilter(byteArrayStr(field), byteArray(minByte), byteArray(maxByte), C.char(minC), C.char(maxC)), nil
 	}
 
 	return nil, nil
