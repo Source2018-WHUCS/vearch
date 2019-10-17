@@ -49,7 +49,7 @@ def create_DB_space():
                 "dimension": 512
             }
             }
-    res = requests.get(f"{config.ip_address}:443/db/{config.video['db']}")
+    res = requests.get(f"{config.master_address}/db/{config.video['db']}")
     if res.json()["code"] == 200:
         data["db"] = False
     ip = f"{config.video['ip']}:{config.port}/{config.video['db']}/{config.video['space']}/_create"

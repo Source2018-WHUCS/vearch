@@ -90,7 +90,7 @@ class PackageProcess(Process):
         db_name = data.pop("db")
         space_name = data.pop("space")
 
-        ip = f"{config.ip_insert}/{db_name}/{space_name}"
+        ip = f"{config.router_address}/{db_name}/{space_name}"
         if method == _INSERT:
             # define id for request
             if "_id" in data:
@@ -162,11 +162,11 @@ class TableHandler(tornado.web.RequestHandler):
         logger.debug(f"response -*- {self.request.uri} -*- {chunk}")
 
     async def get(self):
-        response = requests.get(f"{config.ip_insert}/{self.request.uri}", headers=_HEADERS)
+        response = requests.get(f"{config.router_address}/{self.request.uri}", headers=_HEADERS)
         self.write(response.text)
 
     async def delete(self):
-        response = requests.delete(f"{config.ip_insert}/{self.request.uri}", headers=_HEADERS)
+        response = requests.delete(f"{config.router_address}/{self.request.uri}", headers=_HEADERS)
         data = response.json()
         if data["status"] == 200:
             result = {"code": 200, "msg": "success"}
@@ -233,7 +233,7 @@ class TableHandler(tornado.web.RequestHandler):
         db_flag = data.pop("db", True)
         if db_flag:
             res = requests.put(
-                        config.ip_address + ":443/db/_create",
+                        config.master_address + "/db/_create",
                         headers=_HEADERS,
                         data=json.dumps({"name": self.db_name})
                     )
@@ -277,7 +277,7 @@ class TableHandler(tornado.web.RequestHandler):
         data["properties"]["feature"] = feature
 
         res = requests.put(
-                    f"{config.ip_address}:443/space/{self.db_name}/_create?timeout=600",
+                    f"{config.master_address}/space/{self.db_name}/_create?timeout=600",
                     headers=_HEADERS,
                     data=json.dumps(data)
                 )
@@ -291,7 +291,7 @@ class TableHandler(tornado.web.RequestHandler):
     def _delete(self, data):
         space_flag = data.pop("space", True)
         if space_flag:
-            res = requests.delete(f"{config.ip_address}:443/space/{self.db_name}/{self.space_name}")
+            res = requests.delete(f"{config.master_address}/space/{self.db_name}/{self.space_name}")
             result_space = json.loads(res.text)
             if result_space["code"] != 200:
                 return result_space
@@ -300,7 +300,7 @@ class TableHandler(tornado.web.RequestHandler):
 
         db_flag = data.pop("db", True)
         if db_flag:
-            res = requests.delete(f"{config.ip_address}:443/db/{self.db_name}")
+            res = requests.delete(f"{config.master_address}/db/{self.db_name}")
             result_db = json.loads(res.text)
             if result_db["code"] != 200:
                 return result_db
