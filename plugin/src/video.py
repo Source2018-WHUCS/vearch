@@ -65,7 +65,7 @@ def run():
     res = create_DB_space()
 
     if res["code"] in [200, 550, 561]:
-        print(res["msg"])
+        print(res)
     else:
         raise exceptions.CreateDBAndSpaceError()
 
