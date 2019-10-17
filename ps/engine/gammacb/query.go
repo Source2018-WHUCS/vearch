@@ -224,7 +224,7 @@ func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 				}
 			}
 
-			min, max = cast.ToString(minNum), cast.ToString(maxNum)
+			min, max = minNum, maxNum
 
 		case pspb.FieldType_FLOAT:
 			var minNum, maxNum *float64
@@ -245,7 +245,7 @@ func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 				}
 			}
 
-			min, max = cast.ToString(minNum), cast.ToString(maxNum)
+			min, max = minNum, maxNum
 
 		case pspb.FieldType_DATE:
 
@@ -272,7 +272,7 @@ func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 				}
 			}
 
-			min, max = cast.ToString(minDate.UnixNano()), cast.ToString(maxDate.UnixNano())
+			min, max = minDate.UnixNano(), maxDate.UnixNano()
 
 		}
 
@@ -285,14 +285,20 @@ func (qb *queryBuilder) parseRange(data []byte) (*C.struct_RangeFilter, error) {
 			maxC = 1
 		}
 
-		minByte, err := bytes.ValueToByte(min)
-		if err != nil {
-			return nil, err
+		var minByte, maxByte []byte
+
+		if min != nil {
+			minByte, err = bytes.ValueToByte(min)
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		maxByte, err := bytes.ValueToByte(max)
-		if err != nil {
-			return nil, err
+		if max != nil {
+			maxByte, err = bytes.ValueToByte(max)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		return C.MakeRangeFilter(byteArrayStr(field), byteArray(minByte), byteArray(maxByte), C.char(minC), C.char(maxC)), nil
