@@ -126,6 +126,8 @@ func (s *Server) LoadPartition(ctx context.Context, pid entity.PartitionID) (Par
 }
 
 func (s *Server) CreatePartition(ctx context.Context, space *entity.Space, pid entity.PartitionID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	store, err := raftstore.CreateStore(ctx, pid, s.nodeID, space, s.raftServer, s, s.client)
 

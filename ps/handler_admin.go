@@ -59,11 +59,11 @@ func ExportToRpcAdminHandler(server *Server) {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.MaxMinZoneFieldHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, storeHandler, new(MaxMinZoneFieldHandler)), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.PartitionInfoHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, storeHandler, new(PartitionSizeHandler)), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.PartitionInfoHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, storeHandler, new(PartitionSizeHandler)), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.AddRaftMemberHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, storeHandler, new(AddRaftMemberHandler)), ""); err != nil {
 		panic(err)
 	}
 
@@ -213,70 +213,6 @@ func (mm *PartitionSizeHandler) Execute(req *handler.RpcRequest, resp *handler.R
 	return nil
 }
 
-type MaxMinZoneFieldHandler int
-
-func (mm *MaxMinZoneFieldHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
-
-	//panice guixu only support caprice TODO ANSJ
-
-	//store := req.Arg.(*request.ObjRequest).GetStore().(PartitionStore)
-	//
-	//aggs := fmt.Sprintf(`{
-	//    	"max": {
-	//        	"max": {"field":"%s"}
-	//    	},
-	//    	"min": {
-	//        	"min": {"field":"%s"}
-	//    	}
-	//	}`, store.GetSpace().Engine.ZoneField, store.GetSpace().Engine.ZoneField)
-	//
-	//searchReq := &request.SearchRequest{
-	//	SearchDocumentRequest: &request.SearchDocumentRequest{
-	//		Size: util.PInt(0),
-	//		Aggs: []byte(aggs),
-	//	},
-	//}
-	//
-	//result, err := store.Search(req.Ctx, true, searchReq)
-	//
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//log.Info("search maxMin Field:[%s] zone result :[%s]", store.GetSpace().Engine.ZoneField, cbjson.ToJsonString(result.Aggs))
-	//
-	//var Max, Min float64
-
-	//for _, agg := range result.Aggs {
-	//	if agg.Type() == "max" {
-	//		Max, err = cast.ToFloat64E(agg.GetResult().(*metrics.MaxResult).Max)
-	//	}
-	//	if agg.Type() == "min" {
-	//		Min, err = cast.ToFloat64E(agg.GetResult().(*metrics.MinResult).Value)
-	//	}
-	//}
-
-	//if err != nil {
-	//	log.Error(err.Error())
-	//}
-	//
-	//if Max <= 0 {
-	//	return fmt.Errorf("partitionID:[%d] max value can not to zero , please check data is right?", store.GetPartition().Id)
-	//}
-	//
-	//value := struct {
-	//	Max float64
-	//	Min float64
-	//}{
-	//	Max: Max,
-	//	Min: Min,
-	//}
-	//
-	//resp.Result, err = response.NewObjResponse(value)
-
-	return nil
-}
-
 type StatsHandler struct {
 	server *Server
 }
@@ -285,6 +221,35 @@ func (sh *StatsHandler) Execute(req *handler.RpcRequest, resp *handler.RpcRespon
 	stats := mserver.NewServerStats()
 	stats.ActiveConn = len(sh.server.rpcServer.ActiveClientConn())
 	resp.Result = stats
+	return nil
+}
+
+type AddRaftMemberHandler struct {
+	server *Server
+}
+
+func (ah *AddRaftMemberHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
+	reqs := req.GetArg().(*request.ObjRequest)
+
+	reqObj := &struct {
+		Space       *entity.Space
+		PartitionID entity.PartitionID
+	}{}
+
+	if err := reqs.Decode(reqObj); err != nil {
+		return err
+	}
+
+	if ah.server.GetPartition(reqObj.PartitionID) != nil {
+		return pkg.ErrPartitionDuplicate
+	}
+
+	if err := ah.server.CreatePartition(req.Ctx, reqObj.Space, reqObj.PartitionID); err != nil {
+		ah.server.DeletePartition(reqObj.PartitionID)
+		return err
+	}
+	return nil
+
 	return nil
 }
 
