@@ -72,7 +72,7 @@ curl -XPOST -H "content-type:application/json" -d '{
 A successful response looks like this:
 
 ```shell
-{"code": 200, "db_msg": "success", "space_msg": "success"}
+{"code": 200, "db_msg": null, "space_msg": "success"}
 ```
 
 
