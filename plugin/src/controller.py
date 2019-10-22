@@ -121,6 +121,7 @@ class ImageSearch(Base):
                                 boundingbox=bbox
                                 )
                            )
+            break
         return results
 
 

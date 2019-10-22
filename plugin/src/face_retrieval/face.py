@@ -140,13 +140,5 @@ def load_model(config=None):
     model = FaceRecognition() if config is None else FaceRecognition(**config)
     return model
 
-def test(image_path):
-    image = cv2.imread(image_path)
-    faces = face_embedding.encode(image)
-    return faces
-
 if __name__ == "__main__":
-    rootpath = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    face_embedding = load_model()
-    image_path = os.path.join(rootpath, "images", "face_retrieval", "test.jpg")
-    print(test(image_path))
+    pass
