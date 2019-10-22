@@ -10,6 +10,8 @@ Vearch is a scalable distributed system for efficient similarity search of deep 
 
 ## Architecture
 
+![arc](docs/img/VearchArch.jpg)
+
 * Data Model
 
   space, documents, vectors, scalars
@@ -32,8 +34,6 @@ Vearch is a scalable distributed system for efficient similarity search of deep 
 
   Gamma is the core vector search engine implemented based on [faiss](https://github.com/facebookresearch/faiss). It provides the ability of storing, indexing and retrieving the vectors and scalars.
 
-  For more details,see [architecture](docs/img/VearchArch.jpg)
-
 
 ## Quick start
 ![docs/img/plugin/main_process.gif](docs/img/plugin/main_process.gif)
@@ -41,6 +41,7 @@ Vearch is a scalable distributed system for efficient similarity search of deep 
 
 
 * Vearch can be leveraged to build a complete visual search system to index billions of images. The image retrieval plugin for object detection and feature extraction is also required. For more information, please refer to [docs/Quickstart.md](docs/Quickstart.md).
+
 
 ## APIs and Use Cases
 
@@ -55,7 +56,11 @@ Vearch is a scalable distributed system for efficient similarity search of deep 
 ## Document
 
 * https://vearch.readthedocs.io/en/latest
-* https://vdb-docs.readthedocs.io/zh_CN/latest/
+* https://vearch.readthedocs.io/zh_CN/latest
+
+## Benchmarks
+
+* [benchmarks](/engine/gamma/benchs/README.md)
 
 ## Publication
 Jie Li, Haifeng Liu, Chuanghua Gui, Jianyu chen, Zhenyun Ni, Ning Wang, Yuan Chen. The Design and Implementation of a Real Time Visual Search System on JD E-commerce Platform. In the 19th International ACM Middleware Conference, December 10–14, 2018, Rennes, France. https://arxiv.org/abs/1908.07389
