@@ -20,6 +20,8 @@ This requires only two operations:
 1. Modify parameters in `config/config.py`;
 2. Execution script `bash ./bin/run.sh image` or `bash ./bin/run.sh video`;
 
+>>>>>>> master
+
 
 
 ## Create a database and space

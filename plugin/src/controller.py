@@ -69,7 +69,6 @@ class Base(object):
         result = self.encode(image)
         feat = result[0]["feat"]
         data = {"query": {"sum": [{"feature": feat, "field": "feature", "min_score": min_score, "max_score": 1.0}],"filter":filters}}
-        print(456,data)
         response_body = requests.post(ip, headers=_HEADERS, data=json.dumps(data))
         return response_body.json()
 
@@ -109,7 +108,6 @@ class ImageSearch(Base):
         if self.detection:
             assert self.detect_model is not None, "detect model is not defined"
             boundingboxes = self.detect_model.detect(image)
-        print(123,boundingboxes)
         for box in boundingboxes:
             if box:
                 label, score, bbox = box
@@ -123,7 +121,6 @@ class ImageSearch(Base):
                                 boundingbox=bbox
                                 )
                            )
-        print(456,boundingboxes)
         return results
 
 

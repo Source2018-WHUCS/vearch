@@ -99,7 +99,6 @@ class PackageProcess(Process):
             result = self.model.insert(ip, data)
         else:
             # define the num of return
-            print(data)
             size = data.pop("size", 10)
             ip = f"{ip}/_search?size={size}"
             result = self.model.search(ip, data)
@@ -270,14 +269,13 @@ class TableHandler(tornado.web.RequestHandler):
 
         data = {
                 "name": self.space_name,
-                "engine": {"name": "gamma", "metric_type": -1},
+                "engine": {"name": "gamma", "metric_type": method},
                 "properties": {}
                 }
 
         data["properties"].update(columns)
         data["properties"]["feature"] = feature
-	
-        print(json.dumps(data))
+
         res = requests.put(
                     f"{config.master_address}/space/{self.db_name}/_create?timeout=600",
                     headers=_HEADERS,
