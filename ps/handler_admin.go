@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/tiglabs/raft"
+	"github.com/tiglabs/raft/proto"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
@@ -63,7 +64,7 @@ func ExportToRpcAdminHandler(server *Server) {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.AddRaftMemberHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, storeHandler, new(AddRaftMemberHandler)), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.ChangeMemberHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, storeHandler, new(ChangeMemberHandler)), ""); err != nil {
 		panic(err)
 	}
 
@@ -224,33 +225,28 @@ func (sh *StatsHandler) Execute(req *handler.RpcRequest, resp *handler.RpcRespon
 	return nil
 }
 
-type AddRaftMemberHandler struct {
-	server *Server
-}
+type ChangeMemberHandler int
 
-func (ah *AddRaftMemberHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
+func (ah *ChangeMemberHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
 	reqs := req.GetArg().(*request.ObjRequest)
 
 	reqObj := &struct {
-		Space       *entity.Space
 		PartitionID entity.PartitionID
+		NodeID      entity.NodeID
+		Method      proto.ConfChangeType
 	}{}
 
 	if err := reqs.Decode(reqObj); err != nil {
 		return err
 	}
 
-	if ah.server.GetPartition(reqObj.PartitionID) != nil {
-		return pkg.ErrPartitionDuplicate
+	store := reqs.GetStore().(PartitionStore)
+
+	if store.IsLeader() {
+		return pkg.ErrPartitionNotLeader
 	}
 
-	if err := ah.server.CreatePartition(req.Ctx, reqObj.Space, reqObj.PartitionID); err != nil {
-		ah.server.DeletePartition(reqObj.PartitionID)
-		return err
-	}
-	return nil
-
-	return nil
+	return store.ChangeMember(reqObj.Method, reqObj.NodeID)
 }
 
 // it when has happen , redirect some other to response and send err to status

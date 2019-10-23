@@ -16,6 +16,7 @@ package ps
 
 import (
 	"context"
+	"github.com/tiglabs/raft/proto"
 	"github.com/vearch/vearch/proto/request"
 	"sync"
 
@@ -60,6 +61,8 @@ type Raft interface {
 	GetVersion() uint64
 
 	GetUnreachable(id uint64) []uint64
+
+	ChangeMember(changeType proto.ConfChangeType, id entity.NodeID) error
 }
 
 type PartitionStore interface {

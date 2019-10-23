@@ -67,7 +67,7 @@ const (
 	StatsHandler           = "StatsHandler"
 	IsLiveHandler          = "IsLiveHandler"
 	PartitionInfoHandler   = "PartitionInfoHandler"
-	AddRaftMemberHandler   = "AddRaftMemberHandler"
+	ChangeMemberHandler   = "ChangeMemberHandler"
 )
 
 type psClient struct {
