@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/tiglabs/raft"
-	"github.com/tiglabs/raft/proto"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
@@ -230,11 +229,7 @@ type ChangeMemberHandler int
 func (ah *ChangeMemberHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
 	reqs := req.GetArg().(*request.ObjRequest)
 
-	reqObj := &struct {
-		PartitionID entity.PartitionID
-		NodeID      entity.NodeID
-		Method      proto.ConfChangeType
-	}{}
+	reqObj := new(entity.ChangeMember)
 
 	if err := reqs.Decode(reqObj); err != nil {
 		return err

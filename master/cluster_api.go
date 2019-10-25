@@ -92,7 +92,7 @@ func ExportToClusterHandler(router *gin.Engine, masterService *masterService) {
 	router.Handle(http.MethodPost, "/space/:"+dbName+"/:"+sapceName, dh.PaincHandler, dh.TimeOutHandler, c.auth, c.updateSpace, dh.TimeOutEndHandler)
 
 	//partition handler
-	router.Handle(http.MethodPost, "/partition/delete", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.deletePartition, dh.TimeOutEndHandler)
+	router.Handle(http.MethodPost, "/partition/change_member", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.changeMember, dh.TimeOutEndHandler)
 
 }
 
@@ -250,30 +250,6 @@ func (this *clusterApi) getDB(c *gin.Context) {
 	}
 }
 
-func (this *clusterApi) deletePartition(c *gin.Context) {
-	ctx, _ := c.Get(vearchhttp.Ctx)
-	if err := c.Request.ParseForm(); err != nil {
-		ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplyError(err)
-		return
-	}
-
-	dbName := c.Request.FormValue(dbName)
-	spaceName := c.Request.FormValue(sapceName)
-	partitionID := c.Request.FormValue(PartitionId)
-	log.Info("delete partition,dbName :[%s],  spaceName:[%s] partitionID:[%s]", dbName, spaceName, partitionID)
-
-	pid, err := cast.ToUint32E(partitionID)
-	if err != nil {
-		ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplyError(err)
-		return
-	}
-
-	if err := this.masterService.deletePartition(ctx.(context.Context), dbName, spaceName, entity.PartitionID(pid)); err != nil {
-		ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplyError(err)
-	} else {
-		ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplySuccess(nil)
-	}
-}
 
 func (this *clusterApi) createSpace(c *gin.Context) {
 	log.Debug("create space, db: %s", c.Param(dbName))
@@ -484,6 +460,23 @@ func (this *clusterApi) auth(c *gin.Context) {
 		defer this.dh.TimeOutEndHandler(c)
 		c.Abort()
 		ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplyError(err)
+	}
+}
+
+
+func (this *clusterApi) changeMember(c *gin.Context) {
+	ctx, _ := c.Get(vearchhttp.Ctx)
+
+	cm := &entity.ChangeMember{}
+
+	if err := c.ShouldBindJSON(cm); err != nil {
+		ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplyError(err)
+		return
+	}
+	if err := this.masterService.ChangeMember(ctx.(context.Context), cm); err != nil {
+		ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplyError(err)
+	} else {
+		ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplySuccess(nil)
 	}
 }
 

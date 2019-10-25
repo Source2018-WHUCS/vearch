@@ -24,7 +24,6 @@ import (
 	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/metrics/mserver"
 	"github.com/vearch/vearch/util/uuid"
-	"github.com/vearch/vearch/util/vearchlog"
 	"math"
 	"sort"
 	"strings"
@@ -370,10 +369,8 @@ func (this *masterService) createSpaceService(ctx context.Context, dbName string
 	}
 
 	space.Enabled = util.PBool(true)
-	//set worked partitions
-	space.WorkedPartitions = space.Partitions
-	//update version
 
+	//update version
 	err = this.updateSpace(ctx, space)
 	if err != nil {
 		space.Enabled = util.PBool(false)
@@ -430,152 +427,6 @@ func (this *masterService) generatePartitionsInfo(servers []*entity.Server, serv
 
 	return addres, nil
 }
-
-
-func (ms *masterService) deletePartition(ctx context.Context, dbName string, spaceName string, pid entity.PartitionID) error {
-	dbID, err := ms.Master().QueryDBName2Id(ctx, dbName)
-	if err != nil {
-		log.Error("append partition query db error :%v", err)
-		return err
-	}
-
-	lock := ms.Master().NewLock(ctx, entity.LockSpaceKey(dbName, spaceName), 300*time.Second)
-	if err = lock.Lock(); err != nil {
-		return err
-	}
-	defer vearchlog.FunIfNotNil(lock.Unlock)
-
-	space, err := ms.Master().QuerySpaceByName(ctx, dbID, spaceName)
-	if err != nil {
-		return err
-	}
-
-	for i, wp := range space.Partitions {
-		if wp.Id == pid {
-			space.Partitions = append(space.Partitions[:i], space.Partitions[i+1:]...)
-			break
-		}
-	}
-
-	for i, wp := range space.WorkedPartitions {
-		if wp.Id == pid {
-			space.WorkedPartitions = append(space.WorkedPartitions[:i], space.WorkedPartitions[i+1:]...)
-			break
-		}
-	}
-
-	return ms.updateSpace(ctx, space)
-}
-
-func (ms *masterService) appendPartitionLocked(ctx context.Context, space *entity.Space) error {
-	//find all servers for create space
-	servers, err := ms.Master().QueryServers(ctx)
-	if err != nil {
-		return err
-	}
-
-	//add new servers
-	serverPartitions, err := ms.filterAndSortServer(ctx, space, servers)
-	if err != nil {
-		return err
-	}
-
-	if int(space.ReplicaNum) > len(serverPartitions) {
-		return pkg.ErrMasterPSNotEnoughSelect
-	}
-
-	newPartitionID, err := ms.Master().NewIDGenerate(ctx, entity.PartitionIdSequence, 1, 5*time.Second)
-	if err != nil {
-		log.Error("create partition id err:[%s]", err.Error())
-		return err
-	}
-
-	newPartition := &entity.Partition{
-		Id:      entity.PartitionID(newPartitionID),
-		SpaceId: space.Id,
-		DBId:    space.DBId,
-	}
-
-	defer func() { //some times add partition err , need rollback
-		lastWPs := space.WorkedPartitions[len(space.WorkedPartitions)-1]
-		if lastWPs.Id == entity.PartitionID(newPartitionID) {
-			return
-		}
-
-		lastPs := space.Partitions[len(space.Partitions)-1]
-		if lastPs.Id != entity.PartitionID(newPartitionID) {
-			return
-		}
-
-		space.Partitions = space.Partitions[:len(space.WorkedPartitions)-1]
-
-		log.Warn("create partition has err so roolbak partitionID:[%d]", newPartitionID)
-
-		if err := ms.updateSpace(ctx, space); err != nil {
-			log.Error(err.Error())
-		}
-	}()
-
-	//only add partitions for add partition
-	space.Partitions = append(space.Partitions, newPartition)
-
-	if err := ms.updateSpace(ctx, space); err != nil {
-		return err
-	}
-
-	addrs, err := ms.generatePartitionsInfo(servers, serverPartitions, space.ReplicaNum, newPartition)
-	if err != nil {
-		return err
-	}
-
-	for _, addr := range addrs {
-		if err := ms.PS().B().Admin(addr).CreatePartition(space, newPartition.Id); err != nil {
-			return vearchlog.LogErrAndReturn(fmt.Errorf("create partition err: %s ", err.Error()))
-		}
-	}
-
-	var (
-		maxCheckTimes = 100
-		checkTimes    = 0
-	)
-
-	for {
-		checkTimes++
-
-		if checkTimes%5 == 0 {
-			log.Debug("check the partition:%d check times :%v, max check times :%v", newPartitionID, checkTimes, maxCheckTimes)
-		}
-
-		if checkTimes >= maxCheckTimes {
-			return fmt.Errorf("create partition reaced max check times :%", maxCheckTimes)
-		}
-
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("appendPartitionocked ctx canceld")
-		default:
-		}
-
-		partition, err := ms.Master().QueryPartition(ctx, entity.PartitionID(newPartitionID))
-		if err != nil && err != pkg.ErrPartitionNotExist {
-			return err
-		}
-		if partition != nil {
-			break
-		}
-
-		time.Sleep(50 * time.Millisecond)
-	}
-
-	space.WorkedPartitions = append(space.WorkedPartitions, newPartition)
-
-	if err := ms.updateSpace(ctx, space); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 
 func (ms *masterService) filterAndSortServer(ctx context.Context, space *entity.Space, servers []*entity.Server) (map[int]int, error) {
 
@@ -1017,4 +868,55 @@ func (ms *masterService) updateSpace(ctx context.Context, space *entity.Space) e
 	}
 
 	return nil
+}
+
+func (this *masterService) ChangeMember(ctx context.Context, cm *entity.ChangeMember) error {
+	partition, err := this.Master().QueryPartition(ctx, cm.PartitionID)
+	if err != nil {
+		return err
+	}
+
+	space, err := this.Master().QuerySpaceById(ctx, partition.DBId, partition.SpaceId)
+	if err != nil {
+		return err
+	}
+
+	dbName, err := this.Master().QueryDBId2Name(ctx, space.DBId)
+	if err != nil {
+		return err
+	}
+
+	spacePartition := space.GetPartition(cm.PartitionID)
+
+	for _, nodeID := range spacePartition.Replicas {
+		if nodeID == cm.NodeID {
+			return fmt.Errorf("partition:[%d] already has this server:[%d] in replicas:[%v]", cm.PartitionID, cm.NodeID, spacePartition.Replicas)
+		}
+	}
+
+	spacePartition.Replicas = append(spacePartition.Replicas, cm.NodeID)
+
+	targetNode, err := this.Master().QueryServer(ctx, partition.LeaderID)
+	if err != nil {
+		return err
+	}
+
+	if !this.PS().Be(ctx).Admin(targetNode.RpcAddr()).IsLive() {
+		return fmt.Errorf("server:[%d] addr:[%s] can not connect ", cm.NodeID, targetNode.RpcAddr())
+	}
+
+	if _, err := this.updateSpaceService(ctx, dbName, space.Name, space); err != nil {
+		return err
+	}
+
+	if err := this.PS().Be(ctx).Admin(targetNode.RpcAddr()).CreatePartition(space, cm.PartitionID); err != nil {
+		return err
+	}
+
+	leader, err := this.Master().QueryServer(ctx, partition.LeaderID)
+	if err != nil {
+		return err
+	}
+
+	return this.PS().Be(ctx).Admin(leader.RpcAddr()).ChangeMember(cm)
 }

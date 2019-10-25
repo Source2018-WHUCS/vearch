@@ -432,11 +432,7 @@ func (handler *DocumentHandler) handleUpdateDoc(ctx context.Context, w http.Resp
 		resp.SendError(ctx, w, http.StatusBadRequest, err.Error(), handler.monitor)
 		return ctx, false
 	}
-	docAsUpsert := jsonMap.GetJsonVal("doc_as_upsert")
-	if docAsUpsert != nil {
-		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", "`doc_as_upsert` field not support.", handler.monitor)
-		return ctx, false
-	}
+	
 	doc, err := jsonMap.GetJsonValBytes("doc")
 	if err != nil {
 		resp.SendError(ctx, w, http.StatusBadRequest, err.Error(), handler.monitor)

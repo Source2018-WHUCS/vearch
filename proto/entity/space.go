@@ -73,8 +73,10 @@ type Space struct {
 	DocValuesDynamic *bool           `json:"docvalues_dynamic,omitempty"` //default true
 	Models           json.RawMessage `json:"models,omitempty"`            //json model config for python plugin
 
-	WorkedPartitions []*Partition `json:"worked_partitions"` // partitionids not sorted
 }
+
+
+
 
 func (this *Space) String() string {
 	return fmt.Sprintf("%d_%s_%d_%d_%d_%d",
@@ -93,11 +95,11 @@ func (this *Space) GetPartition(id PartitionID) *Partition {
 func (this *Space) PartitionId(slotID SlotID) PartitionID {
 	switch this.Engine.Name {
 	default:
-		if len(this.WorkedPartitions) == 1 {
-			return this.WorkedPartitions[0].Id
+		if len(this.Partitions) == 1 {
+			return this.Partitions[0].Id
 		}
 
-		arr := this.WorkedPartitions
+		arr := this.Partitions
 
 		maxKey := len(arr) - 1
 
@@ -113,11 +115,11 @@ func (this *Space) PartitionId(slotID SlotID) PartitionID {
 			} else if midVal < slotID {
 				low = mid + 1
 			} else {
-				return this.WorkedPartitions[mid].Id
+				return arr[mid].Id
 			}
 		}
 
-		return this.WorkedPartitions[low-1].Id
+		return arr[low-1].Id
 	}
 
 }

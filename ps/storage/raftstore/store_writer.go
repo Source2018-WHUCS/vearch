@@ -164,11 +164,11 @@ func (s *Store) Write(ctx context.Context, request *pspb.DocCmd) (result *respon
 	if (request.Type == pspb.OpType_MERGE || request.Type == pspb.OpType_DELETE) && request.Version == 0 {
 		doc, err := s.GetRTDocument(ctx, true, request.DocId)
 		if err != nil {
-			return nil, fmt.Errorf("get document error 111:%v", err)
+			return nil, fmt.Errorf("get document error:%v", err)
 		}
 
 		if doc != nil && doc.Failure != nil {
-			return nil, fmt.Errorf("get document failed 222:%v", doc.Failure)
+			return nil, fmt.Errorf("get document failed:%v", doc.Failure)
 		}
 
 		if doc.Found {
