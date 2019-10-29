@@ -20,17 +20,8 @@ import (
 	"fmt"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/util"
-	"strings"
 	"unicode"
 )
-
-type DynamicType string
-
-func (dy *DynamicType) UnmarshalJSON(bs []byte) error {
-	dynamicType := DynamicType(strings.Replace(string(bs), "\"", "", 2))
-	*dy = dynamicType
-	return nil
-}
 
 const (
 	Gamma = "gamma"
@@ -65,18 +56,9 @@ type Space struct {
 	ReplicaNum   uint8           `json:"replica_num"`
 	Properties   json.RawMessage `json:"properties"`
 	Engine       *Engine         `json:"engine"`
-
-	DynamicSchema    DynamicType     `json:"dynamic_schema,omitempty"`    // has three types true , false , strict
-	DefaultField     string          `json:"default_field"`               //default _all
-	StoreDynamic     bool            `json:"store_dynamic"`               //default false
-	StoreSource      *bool           `json:"store_source"`                //default true
-	DocValuesDynamic *bool           `json:"docvalues_dynamic,omitempty"` //default true
-	Models           json.RawMessage `json:"models,omitempty"`            //json model config for python plugin
+	Models       json.RawMessage `json:"models,omitempty"` //json model config for python plugin
 
 }
-
-
-
 
 func (this *Space) String() string {
 	return fmt.Sprintf("%d_%s_%d_%d_%d_%d",
@@ -199,9 +181,6 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 
 //check params is ok
 func (space *Space) Validate() error {
-	if space.DynamicSchema != "true" && space.DynamicSchema != "false" && space.DynamicSchema != "strict" {
-		return fmt.Errorf("dynamic only support true , false or strict , but got [%s]", space.DynamicSchema)
-	}
 
 	switch space.Engine.Name {
 	case Gamma:

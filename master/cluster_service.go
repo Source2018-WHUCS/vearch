@@ -556,9 +556,6 @@ func (this *masterService) updateSpaceService(ctx context.Context, dbName, space
 	if temp.Name != "" {
 		space.Name = temp.Name
 	}
-	if temp.DynamicSchema != "" {
-		space.DynamicSchema = temp.DynamicSchema
-	}
 
 	if temp.Enabled != nil {
 		space.Enabled = temp.Enabled
@@ -567,6 +564,9 @@ func (this *masterService) updateSpaceService(ctx context.Context, dbName, space
 	if err := space.Validate(); err != nil {
 		return nil, err
 	}
+
+	space.Version++
+	space.Partitions = temp.Partitions
 
 	if temp.Properties != nil && len(temp.Properties) > 0 {
 
@@ -637,6 +637,7 @@ func (this *masterService) updateSpaceService(ctx context.Context, dbName, space
 		}
 	}
 
+	space.Version--
 	if err := this.updateSpace(ctx, space); err != nil {
 		return nil, err
 	} else {
@@ -896,13 +897,18 @@ func (this *masterService) ChangeMember(ctx context.Context, cm *entity.ChangeMe
 
 	spacePartition.Replicas = append(spacePartition.Replicas, cm.NodeID)
 
-	targetNode, err := this.Master().QueryServer(ctx, partition.LeaderID)
+	masterNode, err := this.Master().QueryServer(ctx, partition.LeaderID)
 	if err != nil {
 		return err
 	}
 
-	if !this.PS().Be(ctx).Admin(targetNode.RpcAddr()).IsLive() {
-		return fmt.Errorf("server:[%d] addr:[%s] can not connect ", cm.NodeID, targetNode.RpcAddr())
+	targetNode, err := this.Master().QueryServer(ctx, cm.NodeID)
+	if err != nil {
+		return err
+	}
+
+	if !this.PS().Be(ctx).Admin(masterNode.RpcAddr()).IsLive() {
+		return fmt.Errorf("server:[%d] addr:[%s] can not connect ", cm.NodeID, masterNode.RpcAddr())
 	}
 
 	if _, err := this.updateSpaceService(ctx, dbName, space.Name, space); err != nil {
@@ -910,13 +916,8 @@ func (this *masterService) ChangeMember(ctx context.Context, cm *entity.ChangeMe
 	}
 
 	if err := this.PS().Be(ctx).Admin(targetNode.RpcAddr()).CreatePartition(space, cm.PartitionID); err != nil {
-		return err
+		return fmt.Errorf("create partiiton has err:[%s] addr:[%s]", err.Error(), targetNode.RpcAddr())
 	}
 
-	leader, err := this.Master().QueryServer(ctx, partition.LeaderID)
-	if err != nil {
-		return err
-	}
-
-	return this.PS().Be(ctx).Admin(leader.RpcAddr()).ChangeMember(cm)
+	return this.PS().Be(ctx).Admin(masterNode.RpcAddr()).ChangeMember(cm)
 }

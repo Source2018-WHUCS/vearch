@@ -153,13 +153,6 @@ func (s *Store) Write(ctx context.Context, request *pspb.DocCmd) (result *respon
 	raftCmd.Type = raftpb.CmdType_WRITE
 	raftCmd.WriteCommand = request
 
-	if !*s.Space.StoreSource { //need del source when not open source
-		if request.Type == pspb.OpType_MERGE {
-			return nil, fmt.Errorf("can not merge when space disable the source")
-		}
-		request.Source = nil
-	}
-
 	//TODO: pspb.Replace not use check version
 	if (request.Type == pspb.OpType_MERGE || request.Type == pspb.OpType_DELETE) && request.Version == 0 {
 		doc, err := s.GetRTDocument(ctx, true, request.DocId)

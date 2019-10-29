@@ -26,7 +26,6 @@ import (
 	"unicode"
 
 	"github.com/vearch/vearch/proto"
-	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/util/netutil"
 
 	"github.com/gin-gonic/gin"
@@ -75,6 +74,7 @@ func ExportToClusterHandler(router *gin.Engine, masterService *masterService) {
 	router.Handle(http.MethodGet, "/list/server", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.serverList, dh.TimeOutEndHandler)
 	router.Handle(http.MethodGet, "/list/db", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.dbList, dh.TimeOutEndHandler)
 	router.Handle(http.MethodGet, "/list/space", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.spaceList, dh.TimeOutEndHandler)
+	router.Handle(http.MethodGet, "/list/partition", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.partitionList, dh.TimeOutEndHandler)
 
 	//partition register
 	router.Handle(http.MethodPost, "/register", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.register, dh.TimeOutEndHandler)
@@ -250,7 +250,6 @@ func (this *clusterApi) getDB(c *gin.Context) {
 	}
 }
 
-
 func (this *clusterApi) createSpace(c *gin.Context) {
 	log.Debug("create space, db: %s", c.Param(dbName))
 
@@ -275,26 +274,6 @@ func (this *clusterApi) createSpace(c *gin.Context) {
 	log.Debug("create space, db: %s", c.Param(dbName))
 	if space.ReplicaNum <= 0 {
 		space.ReplicaNum = 1
-	}
-
-	if space.DynamicSchema == "" {
-		space.DynamicSchema = "true"
-	}
-
-	if space.StoreSource == nil {
-		space.StoreSource = util.PBool(true)
-	}
-
-	if space.DynamicSchema == "" {
-		space.DynamicSchema = "true"
-	}
-
-	if space.DefaultField == "" {
-		space.DefaultField = mapping.DefaultField
-	}
-
-	if space.DocValuesDynamic == nil {
-		space.DocValuesDynamic = util.PBool(true)
 	}
 
 	log.Debug("create space, db: %s", c.Param(dbName))
@@ -454,6 +433,17 @@ func (this *clusterApi) spaceList(c *gin.Context) {
 	}
 }
 
+//list partition
+func (this *clusterApi) partitionList(c *gin.Context) {
+	ctx, _ := c.Get(vearchhttp.Ctx)
+	partitions, err := this.masterService.Master().QueryPartitions(ctx.(context.Context))
+	if err != nil {
+		ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplyError(err)
+	} else {
+		ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplySuccess(partitions)
+	}
+}
+
 func (this *clusterApi) auth(c *gin.Context) {
 	ctx, _ := c.Get(vearchhttp.Ctx)
 	if err := this._auth(ctx.(context.Context), c); err != nil {
@@ -462,7 +452,6 @@ func (this *clusterApi) auth(c *gin.Context) {
 		ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplyError(err)
 	}
 }
-
 
 func (this *clusterApi) changeMember(c *gin.Context) {
 	ctx, _ := c.Get(vearchhttp.Ctx)

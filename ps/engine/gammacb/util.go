@@ -23,7 +23,6 @@ package gammacb
 import "C"
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/spf13/cast"
 	"github.com/tiglabs/log"
@@ -35,7 +34,6 @@ import (
 	"github.com/vearch/vearch/util/bytes"
 	"reflect"
 	"strings"
-	"time"
 	"unsafe"
 )
 
@@ -80,7 +78,7 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*C.struc
 	err := m.RangeField(func(key string, value *mapping.DocumentMapping) error {
 
 		switch value.Field.FieldType() {
-		case pspb.FieldType_KEYWORD:
+		case pspb.FieldType_STRING:
 			value.Field.Options()
 			fs = append(fs, C.MakeFieldInfo(byteArrayStr(key), STRING, C.char((value.Field.Options()&pspb.FieldOption_Index)/pspb.FieldOption_Index)))
 		case pspb.FieldType_FLOAT:
@@ -91,7 +89,7 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*C.struc
 			fs = append(fs, C.MakeFieldInfo(byteArrayStr(key), INT, C.char((value.Field.Options()&pspb.FieldOption_Index)/pspb.FieldOption_Index)))
 		case pspb.FieldType_VECTOR:
 			fieldMapping := value.Field.FieldMappingI.(*mapping.VectortFieldMapping)
-			vf := C.MakeVectorInfo(byteArrayStr(key), VECTOR, C.int(fieldMapping.Dimension), byteArrayStr(fieldMapping.ModelId), byteArrayStr(fieldMapping.RetrievalType), byteArrayStr(fieldMapping.StoreType), byteArray(fieldMapping.StoreParam))
+			vf := C.MakeVectorInfo(byteArrayStr(key), VECTOR, C.int(fieldMapping.Dimension), byteArrayStr(fieldMapping.ModelId), byteArrayStr(fieldMapping.RetrievalType), byteArrayStr(fieldMapping.StoreType))
 			vfs = append(vfs, vf)
 		}
 
@@ -160,48 +158,21 @@ func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 		}
 
 		switch f.Type {
-		case pspb.FieldType_TEXT:
-			log.Error("gamma engine not support text field:[%s]", f.Name)
-		case pspb.FieldType_KEYWORD:
-			fields = append(fields, newField(f.Name, []byte(f.Value.Text), STRING))
+		case pspb.FieldType_STRING:
+			fields = append(fields, newField(f.Name, f.Value, STRING))
 		case pspb.FieldType_FLOAT:
-			if toByte, err := bytes.ValueToByte(f.Value.Float); err != nil {
-				return nil, err
-			} else {
-				fields = append(fields, newField(f.Name, toByte, DOUBLE))
-			}
-		case pspb.FieldType_INT:
-			if toByte, err := bytes.ValueToByte(f.Value.Int); err != nil {
-				return nil, err
-			} else {
-				fields = append(fields, newField(f.Name, toByte, LONG))
-			}
-		case pspb.FieldType_DATE:
-			if f.Value.Time == nil {
-				return nil, errors.New("miss date field value")
-			}
-			date := time.Unix(f.Value.Time.Sec, f.Value.Time.Usec)
-			if toByte, err := bytes.ValueToByte(date.Nanosecond()); err != nil {
-				return nil, err
-			} else {
-				fields = append(fields, newField(f.Name, toByte, LONG))
-			}
+			fields = append(fields, newField(f.Name, f.Value, FLOAT))
+		case pspb.FieldType_INT, pspb.FieldType_DATE:
+			fields = append(fields, newField(f.Name, f.Value, LONG))
 		case pspb.FieldType_BOOL:
-			var v int
-			if !f.Value.Bool {
-				v = 1
-			}
-			if toByte, err := bytes.ValueToByte(v); err != nil {
-				return nil, err
-			} else {
-				fields = append(fields, newField(f.Name, toByte, INT))
-			}
+			fields = append(fields, newField(f.Name, f.Value, INT))
 		case pspb.FieldType_VECTOR:
-			code := bytes.UnsafeFloat32SliceAsByteSlice(f.Value.Vector.Feature)
-			fields = append(fields, newFieldBySource(f.Name, code, f.Value.Vector.Source, VECTOR))
+			length := int(bytes.ByteToUInt32(f.Value))
+			fields = append(fields, newFieldBySource(f.Name, f.Value[4:length+4], string(f.Value[length+4:]), VECTOR))
 		default:
 			log.Debug("gamma invalid field type:[%v]", f.Type)
 		}
+
 	}
 
 	arr := C.MakeFields(C.int(len(fields)))
@@ -259,11 +230,9 @@ func (ge *gammaEngine) Doc2DocResult(doc *C.struct_Doc) *response.DocResult {
 				continue
 			}
 			switch field.FieldType() {
-			case pspb.FieldType_TEXT:
-				source[name] = string(CbArr2ByteArray(fv.value))
-			case pspb.FieldType_KEYWORD:
+			case pspb.FieldType_STRING:
 				tempValue := string(CbArr2ByteArray(fv.value))
-				if field.FieldMappingI.(*mapping.KeywordFieldMapping).Array {
+				if field.FieldMappingI.(*mapping.StringFieldMapping).Array {
 					source[name] = strings.Split(tempValue, string([]byte{'\001'}))
 				} else {
 					source[name] = tempValue
