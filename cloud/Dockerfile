@@ -1,4 +1,4 @@
-FROM centos:7
+FROM centos:7.2.1511
 
 ADD compile/bin /vearch/bin/
 ADD compile/lib /vearch/lib/
