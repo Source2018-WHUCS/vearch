@@ -3,8 +3,8 @@ SET(RocksDB_INCLUDE_SEARCH_PATHS
    /usr/include/faiss
    /usr/local/include
    /usr/local/include/faiss
-   $ENV{RocksDB_HOME}
-   $ENV{RocksDB_HOME}/include
+   $ENV{ROCKSDB_HOME}
+   $ENV{ROCKSDB_HOME}/include
 )
 
 SET(RocksDB_LIB_SEARCH_PATHS
@@ -14,8 +14,8 @@ SET(RocksDB_LIB_SEARCH_PATHS
     /usr/lib64
     /usr/local/lib
     /usr/local/lib64
-    $ENV{RocksDB_HOME}
-    $ENV{RocksDB_HOME}/lib
+    $ENV{ROCKSDB_HOME}
+    $ENV{ROCKSDB_HOME}/lib
  )
 
 FIND_PATH(RocksDB_INCLUDE_DIR NAMES rocksdb/db.h PATHS ${RocksDB_INCLUDE_SEARCH_PATHS})
@@ -42,7 +42,7 @@ IF (RocksDB_FOUND)
   ENDIF (NOT RocksDB_FIND_QUIETLY)
 ELSE (RocksDB_FOUND)
   IF (RocksDB_FIND_REQUIRED)
-    MESSAGE(FATAL_ERROR "Could not find RocksDB, please install faiss or set $RocksDB_HOME")
+    MESSAGE(FATAL_ERROR "Could not find RocksDB, please install faiss or set $ROCKSDB_HOME")
   ENDIF (RocksDB_FIND_REQUIRED)
 ENDIF (RocksDB_FOUND)
 

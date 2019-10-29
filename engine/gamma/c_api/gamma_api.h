@@ -99,7 +99,7 @@ typedef struct VectorInfo {
   int dimension;             // dimension
   ByteArray *model_id;       // model_id, temporarily useless
   ByteArray *retrieval_type; // "IVFPQ"
-  ByteArray *store_type;     // "Memory", "RocksDB"
+  ByteArray *store_type;     // "Mmap", "RocksDB"
   ByteArray *store_param;    // parameters of store, json format
 } VectorInfo;
 
