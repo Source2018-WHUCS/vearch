@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 yum update
-yum install -y wget gcc gcc-c++ make automake git blas-devel lapack-devel
+yum install -y wget gcc gcc-c++ make automake git blas-devel lapack-devel which
 
 cd /env/app/
 if [ ! -f "cmake-3.12.4.tar.gz" ]; then
