@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/vearch/vearch/util"
-	"github.com/vearch/vearch/util/bytes"
+	"github.com/vearch/vearch/util/cbbytes"
 	"strings"
 
 	"github.com/mmcloughlin/geohash"
@@ -330,7 +330,7 @@ func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*
 		return &pspb.Field{
 			Name:   fieldName,
 			Type:   pspb.FieldType_DATE,
-			Value:  bytes.Int64ToByte(parsedDateTime.UnixNano()),
+			Value:  cbbytes.Int64ToByte(parsedDateTime.UnixNano()),
 			Option: fm.Options(),
 		}, nil
 
@@ -348,7 +348,7 @@ func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*
 			return &pspb.Field{
 				Name:   fieldName,
 				Type:   pspb.FieldType_INT,
-				Value:  bytes.Int64ToByte(i),
+				Value:  cbbytes.Int64ToByte(i),
 				Option: fm.Options(),
 			}, nil
 		} else {
@@ -368,7 +368,7 @@ func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*
 			return &pspb.Field{
 				Name:   fieldName,
 				Type:   pspb.FieldType_FLOAT,
-				Value:  bytes.Float64ToByte(f),
+				Value:  cbbytes.Float64ToByte(f),
 				Option: fm.Options(),
 			}, nil
 		} else {
@@ -380,7 +380,7 @@ func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*
 			return nil, err
 		}
 
-		code, err := bytes.FloatArrayByte([]float32{float32(lon), float32(lat)})
+		code, err := cbbytes.FloatArrayByte([]float32{float32(lon), float32(lat)})
 		if err != nil {
 			return nil, err
 		}
@@ -410,21 +410,21 @@ func processNumber(ctx *walkContext, fm *FieldMapping, fieldName string, val flo
 		return &pspb.Field{
 			Name:   fieldName,
 			Type:   pspb.FieldType_INT,
-			Value:  bytes.Int64ToByte(i),
+			Value:  cbbytes.Int64ToByte(i),
 			Option: fm.Options(),
 		}, nil
 	case pspb.FieldType_FLOAT:
 		return &pspb.Field{
 			Name:   fieldName,
 			Type:   pspb.FieldType_FLOAT,
-			Value:  bytes.Float64ToByte(val),
+			Value:  cbbytes.Float64ToByte(val),
 			Option: fm.Options(),
 		}, nil
 	case pspb.FieldType_DATE:
 		return &pspb.Field{
 			Name:   fieldName,
 			Type:   pspb.FieldType_DATE,
-			Value:  bytes.Int64ToByte(int64(val) * 1e6),
+			Value:  cbbytes.Int64ToByte(int64(val) * 1e6),
 			Option: fm.Options(),
 		}, nil
 	default:
@@ -439,7 +439,7 @@ func processGeoPoint(ctx *walkContext, fm *FieldMapping, fieldName string, lon, 
 
 	switch fm.FieldType() {
 	case pspb.FieldType_GEOPOINT:
-		code, err := bytes.FloatArrayByte([]float32{float32(lon), float32(lat)})
+		code, err := cbbytes.FloatArrayByte([]float32{float32(lon), float32(lat)})
 		if err != nil {
 			return nil, err
 		}
@@ -463,7 +463,7 @@ func processBool(ctx *walkContext, fm *FieldMapping, fieldName string, val bool)
 		return &pspb.Field{
 			Name:   fieldName,
 			Type:   pspb.FieldType_BOOL,
-			Value:  bytes.BoolToByte(val),
+			Value:  cbbytes.BoolToByte(val),
 			Option: fm.Options(),
 		}, nil
 	default:
@@ -493,7 +493,7 @@ func processVector(ctx *walkContext, fm *FieldMapping, fieldName string, val []f
 			}
 		}
 
-		bs, err := bytes.VectorToByte(val, source)
+		bs, err := cbbytes.VectorToByte(val, source)
 		if err != nil {
 			return nil, err
 		}

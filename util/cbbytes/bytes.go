@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-package bytes
+package cbbytes
 
 import "C"
 import (
@@ -182,9 +182,9 @@ func UnsafeFloat32SliceAsByteSlice(floats []float32) []byte {
 
 func BoolToByte(b bool) []byte {
 	if b {
-		return []byte{1}
+		return UInt32ToByte(1)
 	} else {
-		return []byte{0}
+		return UInt32ToByte(0)
 	}
 }
 

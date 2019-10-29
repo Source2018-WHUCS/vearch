@@ -31,7 +31,7 @@ import (
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/ps/engine/register"
 	"github.com/vearch/vearch/ps/engine/sortorder"
-	"github.com/vearch/vearch/util/bytes"
+	"github.com/vearch/vearch/util/cbbytes"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -141,7 +141,7 @@ func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 	fields = append(fields, newField(mapping.IdField, []byte(docCmd.DocId), STRING))
 
 	//version
-	if toByte, e := bytes.ValueToByte(docCmd.Version); e != nil {
+	if toByte, e := cbbytes.ValueToByte(docCmd.Version); e != nil {
 		return nil, e
 	} else {
 		fields = append(fields, newField(mapping.VersionField, toByte, INT))
@@ -167,7 +167,7 @@ func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 		case pspb.FieldType_BOOL:
 			fields = append(fields, newField(f.Name, f.Value, INT))
 		case pspb.FieldType_VECTOR:
-			length := int(bytes.ByteToUInt32(f.Value))
+			length := int(cbbytes.ByteToUInt32(f.Value))
 			fields = append(fields, newFieldBySource(f.Name, f.Value[4:length+4], string(f.Value[length+4:]), VECTOR))
 		default:
 			log.Debug("gamma invalid field type:[%v]", f.Type)
@@ -216,9 +216,9 @@ func (ge *gammaEngine) Doc2DocResult(doc *C.struct_Doc) *response.DocResult {
 
 		switch name {
 		case mapping.VersionField:
-			result.Version = int64(bytes.ByteArray2UInt64(CbArr2ByteArray(fv.value)))
+			result.Version = int64(cbbytes.ByteArray2UInt64(CbArr2ByteArray(fv.value)))
 		case mapping.SlotField:
-			result.SlotID = uint32(bytes.ByteArray2UInt64(CbArr2ByteArray(fv.value)))
+			result.SlotID = uint32(cbbytes.ByteArray2UInt64(CbArr2ByteArray(fv.value)))
 		case mapping.IdField:
 			result.Id = string(CbArr2ByteArray(fv.value))
 		case mapping.SourceField:
@@ -238,9 +238,9 @@ func (ge *gammaEngine) Doc2DocResult(doc *C.struct_Doc) *response.DocResult {
 					source[name] = tempValue
 				}
 			case pspb.FieldType_INT:
-				source[name] = bytes.Bytes2Int(CbArr2ByteArray(fv.value))
+				source[name] = cbbytes.Bytes2Int(CbArr2ByteArray(fv.value))
 			case pspb.FieldType_FLOAT:
-				source[name] = bytes.ByteToFloat64(CbArr2ByteArray(fv.value))
+				source[name] = cbbytes.ByteToFloat64(CbArr2ByteArray(fv.value))
 			case pspb.FieldType_VECTOR:
 			default:
 				log.Warn("can not set value by type:[%v] ", field.FieldType())
@@ -285,7 +285,7 @@ func CbArr2ByteArray(arr *C.struct_ByteArray) []byte {
 	sliceHeader.Cap = int(arr.len)
 	sliceHeader.Len = int(arr.len)
 	sliceHeader.Data = uintptr(unsafe.Pointer(arr.value))
-	return bytes.CloneBytes(oids)
+	return cbbytes.CloneBytes(oids)
 }
 
 func rowDateToFloatArray(data []byte, dimension int) ([]float32, error) {
