@@ -28,7 +28,7 @@ import (
 
 	"github.com/vearch/vearch/proto/entity"
 
-	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/log"
 	"github.com/tiglabs/raft"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/config"

@@ -33,7 +33,7 @@ import (
 	"github.com/vearch/vearch/util/uuid"
 
 	"github.com/spf13/cast"
-	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/util/netutil"

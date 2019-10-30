@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/log"
 	"github.com/valyala/fastjson"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/util"
