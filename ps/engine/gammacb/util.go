@@ -25,7 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine/mapping"

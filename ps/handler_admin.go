@@ -26,7 +26,7 @@ import (
 	"github.com/vearch/vearch/util/metrics/mserver"
 	"time"
 
-	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/util/server/rpc/handler"

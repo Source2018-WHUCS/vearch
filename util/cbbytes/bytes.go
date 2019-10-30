@@ -19,7 +19,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/log"
 	"math"
 	"unsafe"
 )

@@ -4,7 +4,7 @@ import (
 	bytes2 "bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/log"
 	"github.com/tiglabs/raft/proto"
 	"github.com/vearch/vearch/util/cbbytes"
 	"io/ioutil"

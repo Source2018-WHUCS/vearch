@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/spf13/cast"
-	"github.com/tiglabs/log"
+	"github.com/vearch/vearch/util/log"
 )
 
 const (
