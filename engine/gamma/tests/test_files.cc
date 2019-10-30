@@ -37,7 +37,7 @@ struct Options {
     log_dir = "log";
     model_id = "model";
     retrieval_type = "IVFPQ";
-    store_type = "MemoryOnly";
+    store_type = "Mmap";
     profiles.resize(max_doc_size * fields_vec.size());
     engine = nullptr;
   }
