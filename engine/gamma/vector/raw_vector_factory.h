@@ -10,7 +10,11 @@
 
 #include "mmap_raw_vector.h"
 #include "raw_vector.h"
-#include "rocks_raw_vector.h"
+
+#ifdef WITH_ROCKSDB
+#include "rocksdb_raw_vector.h"
+#endif // WITH_ROCKSDB
+
 #include <string>
 
 namespace tig_gamma {
@@ -29,11 +33,14 @@ public:
     case Mmap:
       return (RawVector *)new MmapRawVector(name, dimension, max_doc_size,
                                             root_path, store_params);
+#ifdef WITH_ROCKSDB
     case RocksDB:
-      return (RawVector *)new RocksRawVector(name, dimension, max_doc_size,
-                                             root_path, store_params);
+      return (RawVector *)new RocksDBRawVector(name, dimension, max_doc_size,
+                                               root_path, store_params);
+#endif // WITH_ROCKSDB
     default:
-      throw std::invalid_argument("invalid raw feature type");
+      LOG(ERROR) << "invalid raw feature type:" << type;
+      return nullptr;
     }
   }
 };

@@ -1,12 +1,7 @@
-/**
- * Copyright 2019 The Gamma Authors.
- *
- * This source code is licensed under the Apache License, Version 2.0 license
- * found in the LICENSE file in the root directory of this source tree.
- */
+#ifdef WITH_ROCKSDB
 
-#ifndef ROCKS_RAW_VECTOR_H_
-#define ROCKS_RAW_VECTOR_H_
+#ifndef ROCKSDB_RAW_VECTOR_H_
+#define ROCKSDB_RAW_VECTOR_H_
 
 #include "raw_vector.h"
 #include "rocksdb/db.h"
@@ -17,11 +12,12 @@
 
 namespace tig_gamma {
 
-class RocksRawVector : public RawVector, public AsyncFlusher {
+class RocksDBRawVector : public RawVector, public AsyncFlusher {
 public:
-  RocksRawVector(const std::string &name, int dimension, int max_vector_size,
-                 const std::string &root_path, const StoreParams &store_params);
-  ~RocksRawVector();
+  RocksDBRawVector(const std::string &name, int dimension, int max_vector_size,
+                   const std::string &root_path,
+                   const StoreParams &store_params);
+  ~RocksDBRawVector();
   /* RawVector */
   int Init() override;
   const float *GetVector(long vid) const override;
@@ -45,4 +41,6 @@ private:
 };
 } // namespace tig_gamma
 
-#endif // ROCKS_RAW_VECTOR_H_
+#endif // ROCKSDB_RAW_VECTOR_H_
+
+#endif // WITH_ROCKSDB

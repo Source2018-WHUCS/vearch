@@ -649,14 +649,15 @@ int GammaEngine::Dump() {
     LOG(INFO) << "No fresh doc, cannot dump.";
     return 0;
   }
-  std::time_t t = std::time(nullptr);
-  char tm_str[100];
-  std::strftime(tm_str, sizeof(tm_str), date_time_format_.c_str(),
-                std::localtime(&t));
 
   if (!utils::isFolderExist(dump_path_.c_str())) {
     mkdir(dump_path_.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   }
+
+  std::time_t t = std::time(nullptr);
+  char tm_str[100];
+  std::strftime(tm_str, sizeof(tm_str), date_time_format_.c_str(),
+                std::localtime(&t));
 
   string path = dump_path_ + "/" + tm_str;
   if (!utils::isFolderExist(path.c_str())) {
