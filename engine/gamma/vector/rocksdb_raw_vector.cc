@@ -1,11 +1,6 @@
-/**
- * Copyright 2019 The Gamma Authors.
- *
- * This source code is licensed under the Apache License, Version 2.0 license
- * found in the LICENSE file in the root directory of this source tree.
- */
+#ifdef WITH_ROCKSDB
 
-#include "rocks_raw_vector.h"
+#include "rocksdb_raw_vector.h"
 #include "log.h"
 #include "rocksdb/table.h"
 #include "utils.h"
@@ -16,10 +11,10 @@ using namespace rocksdb;
 
 namespace tig_gamma {
 
-RocksRawVector::RocksRawVector(const std::string &name, int dimension,
-                               int max_vector_size,
-                               const std::string &root_path,
-                               const StoreParams &store_params)
+RocksDBRawVector::RocksDBRawVector(const std::string &name, int dimension,
+                                   int max_vector_size,
+                                   const std::string &root_path,
+                                   const StoreParams &store_params)
     : RawVector(name, dimension, max_vector_size, root_path),
       AsyncFlusher(name) {
   root_path_ = root_path;
@@ -28,7 +23,7 @@ RocksRawVector::RocksRawVector(const std::string &name, int dimension,
   store_params_ = new StoreParams(store_params);
 }
 
-RocksRawVector::~RocksRawVector() {
+RocksDBRawVector::~RocksDBRawVector() {
   if (db_) {
     delete db_;
   }
@@ -38,7 +33,7 @@ RocksRawVector::~RocksRawVector() {
     delete store_params_;
 }
 
-int RocksRawVector::Init() {
+int RocksDBRawVector::Init() {
   block_cache_size_ = store_params_->cache_size_ * 1024 * 1024;
 
   raw_vector_io_ = new RawVectorIO(this);
@@ -76,7 +71,7 @@ int RocksRawVector::Init() {
   return 0;
 }
 
-const float *RocksRawVector::GetVector(long vid) const {
+const float *RocksDBRawVector::GetVector(long vid) const {
   if (vid >= ntotal_ || vid < 0) {
     return nullptr;
   }
@@ -93,7 +88,7 @@ const float *RocksRawVector::GetVector(long vid) const {
   return vector;
 }
 
-int RocksRawVector::FlushOnce() {
+int RocksDBRawVector::FlushOnce() {
   int num = ntotal_ - nflushed_;
   if (num > 0) {
     raw_vector_io_->Dump(nflushed_, num);
@@ -101,7 +96,7 @@ int RocksRawVector::FlushOnce() {
   return num;
 }
 
-int RocksRawVector::AddToStore(float *v, int len) {
+int RocksDBRawVector::AddToStore(float *v, int len) {
   if (v == nullptr || len != dimension_)
     return -1;
 
@@ -116,7 +111,7 @@ int RocksRawVector::AddToStore(float *v, int len) {
   return 0;
 }
 
-const float *RocksRawVector::GetVectorHeader(int start, int end) {
+const float *RocksDBRawVector::GetVectorHeader(int start, int end) {
   if (start < 0 || start >= ntotal_ || start >= end) {
     return nullptr;
   }
@@ -152,20 +147,22 @@ const float *RocksRawVector::GetVectorHeader(int start, int end) {
   return vectors;
 }
 
-void RocksRawVector::Destroy(std::vector<const float *> &results) {
+void RocksDBRawVector::Destroy(std::vector<const float *> &results) {
   for (const float *p : results) {
     delete[] p;
   }
 }
 
-void RocksRawVector::Destroy(const float *result, bool header) {
+void RocksDBRawVector::Destroy(const float *result, bool header) {
   delete[] result;
 }
 
-void RocksRawVector::ToRowKey(int vid, string &key) const {
+void RocksDBRawVector::ToRowKey(int vid, string &key) const {
   char data[11];
   snprintf(data, 11, "%010d", vid);
   key.assign(data, 10);
 }
 
 } // namespace tig_gamma
+
+#endif // WITH_ROCKSDB

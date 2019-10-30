@@ -34,8 +34,7 @@ VectorInfo **CopyVectorInfos(VectorInfo **vectors_info, int vector_info_num) {
         CopyByteArray(vectors_info[i]->name), vectors_info[i]->data_type,
         vectors_info[i]->dimension, CopyByteArray(vectors_info[i]->model_id),
         CopyByteArray(vectors_info[i]->retrieval_type),
-        CopyByteArray(vectors_info[i]->store_type),
-        store_param);
+        CopyByteArray(vectors_info[i]->store_type), store_param);
     ret_vector_infos[i] = vector_info;
   }
   return ret_vector_infos;
@@ -106,13 +105,17 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
                                vectors_info[i]->store_type->len);
 
     VectorStorageType store_type = default_store_type_;
-    if (!strcasecmp("Mmap", store_type_str.c_str())) {
-      store_type = VectorStorageType::Mmap;
-    } else if (!strcasecmp("RocksDB", store_type_str.c_str())) {
-      store_type = VectorStorageType::RocksDB;
-    } else {
-      LOG(WARNING) << "NO support for store type " << store_type_str
-                   << ", default to " << default_store_type_;
+    if (store_type_str != "") {
+      if (!strcasecmp("Mmap", store_type_str.c_str())) {
+        store_type = VectorStorageType::Mmap;
+#ifdef WITH_ROCKSDB
+      } else if (!strcasecmp("RocksDB", store_type_str.c_str())) {
+        store_type = VectorStorageType::RocksDB;
+#endif // WITH_ROCKSDB
+      } else {
+        LOG(WARNING) << "NO support for store type " << store_type_str;
+        return -1;
+      }
     }
 
     std::string store_param;
