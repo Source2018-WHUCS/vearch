@@ -39,8 +39,8 @@ make shared_lib
 mkdir -p /env/app/rocksdb_install/lib
 cp librocksdb.so.6.2.2 /env/app/rocksdb_install/lib
 cd /env/app/rocksdb_install/lib
-ln -s librocksdb.so.6.2.2 librocksdb.so.6
-ln -s librocksdb.so.6 librocksdb.so
+ln -s librocksdb.so.6.2.2 librocksdb.so.6.2
+ln -s librocksdb.so.6.2 librocksdb.so
 cp -r /env/app/rocksdb-6.2.2/include /env/app/rocksdb_install/
 
 cd /env/app/
