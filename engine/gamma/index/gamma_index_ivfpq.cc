@@ -1003,6 +1003,7 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
       }
     }
   } // parallel
+  raw_vec_->Destroy(vectors, true);
 }
 
 int GammaIVFPQIndex::Search(const VectorQuery *query,
