@@ -1,14 +1,27 @@
 # Raw Vector User Guide for Gamma Engine
 
 
-This module is responsible for storing raw vectors. RawVector is the base class and has multiple sub-classes depending on the implementations. Currently, the implementations base on mmap and RocksDB are supported.
+This module is responsible for storing raw vectors. Raw Vector is the base class, it may has different implementations according to the storage media. Currently, Only in-memory implementation is supported, it is called Memory Raw Vector.
 
-## Mmap Raw Vector
+## Memory Raw Vector
 
-When the MmapRawVector is initialized, a buffer queue is created and a disk file is mapped to the virtual address space in memory via mmap. When a vector is inserted, it is first inserted into the buffer queue and then written asynchronously to the disk file by a flushing thread. When a vector is read, it is first fetched from the buffer queue, if it does not exist, and then from the address space mapped by mmap.
+### Memory Structure
 
-## RocksDB Raw Vector
 
-RocksDBRawVector integrates RocksDB and it creates a database in RocksDB. Vectors are inserted directly into the database, and the key inserted is the vector id, and value is the vector itself. When read, it is also read directly from the database through a vector id.
+vector\_mem: stores all vectors in sequential memory space, Each vector has fixed dimension. If the dimension is 512, so v\_1's begining address is 0, v\_2's begining address is 512, as shown in the figure below. The begining address of each vector can be derived by it's id and dimension. 
 
+source\_mem: stores all sources in sequential memory space too, but source's length is not fixed.
+
+source\_pos: stores the begining address of each source in source_mem. Combine source\_pos and source\_mem, it can find any source of vector, just need the id of vector.
+ 
+![memory_struct](/docs/img/gamma/vector/memory_structure.png)
+
+### File Structure
+
+Dump to two files
+
+name| usage
+----|----|----
+.fet|storage of all vectors
+.src|storage of all sources of vector
 

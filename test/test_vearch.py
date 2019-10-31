@@ -76,56 +76,6 @@ def test_dbspace():
     print("space_search---\n" + response.text)
     assert response.status_code == 200
 
-def test_print():
-    data = {
-        "name": space_name,
-        "dynamic_schema": "strict",
-        "partition_num": 1,  # "partition_num": 2-6之间
-        "replica_num": 1,
-        "engine": {"name": "gamma", "index_size": 9999, "max_size": 100000},
-        "properties": {
-            "string": {
-                "type": "keyword",
-                "index": "true"
-            },
-            "int": {
-                "type": "integer",
-                "index": "true"
-            },
-            "float": {
-                "type": "float",
-                "index": "true"
-            },
-            "vector": {
-                "type": "vector",
-                "model_id": "img",
-                "dimension": 128,
-                "format": "normalization"
-            },
-            "string_tags": {
-                "type": "string",
-                "array": True,
-                "index": "true"
-            },
-            "int_tags": {
-                "type": "integer",
-                "array": True,
-                "index": "true"
-            },
-            "float_tags": {
-                "type": "float",
-                "array": True,
-                "index": "true"
-            }
-        },
-        "models": [{
-            "model_id": "vgg16",
-            "fields": ["string"],
-            "out": "feature"
-        }]
-    }
-    print(json.dumps(data))
-
 def test_createspace():
     url = "http://" + ip_db + "/space/" + db_name + "/_create"
     headers = {"content-type": "application/json"}
@@ -204,145 +154,145 @@ def test_insertWithId():
             assert response.status_code == 200
 
 
-# def test_searchById():
-#     logger.info("test_searchById")
-#     # fileData = "/home/vearch/test/data/test_data.json"
-#     with open(fileData, "r") as dataLine1:
-#         for dataLine in dataLine1:
-#             idStr = dataLine.split(',', 1)[0].replace('{', '')
-#             id = eval(idStr.split(':')[1])
-#             url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
-#             response = requests.get(url)
-#             print("searchById:" + response.text)
-#             assert response.status_code == 200
-#
-#
-# def test_insterNoId():
-#     logger.info("insertDataNoId")
-#     headers = {"content-type": "application/json"}
-#     # fileData = "/home/vearch/test/data/test_data.json"
-#     with open(fileData, "r") as dataLine1:
-#         for dataLine in dataLine1:
-#             idStr = dataLine.split(',', 1)[0].replace('{', '')
-#             id = eval(idStr.split(':')[1])
-#             data = "{" + dataLine.split(',', 1)[1]
-#             url = "http://" + ip_data + "/" + db_name + "/" + space_name
-#             response = requests.post(url, headers=headers, data=data)
-#             print("insertNoID:" + response.text)
-#             assert response.status_code == 200
-#
-#
-# def test_searchByFeature():
-#     headers = {"content-type": "application/json"}
-#     url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/_search?size=100"
-#     # fileData = "/home/vearch/test/data/test_data.json"
-#     with open(fileData, "r") as dataLine1:
-#         for dataLine in dataLine1:
-#             print(dataLine)
-#             idStr = dataLine.split(',', 1)[0].replace('{', '')
-#             id = eval(idStr.split(':')[1])
-#             feature = "{" + dataLine.split(',', 1)[1]
-#             print("_id:" + id)
-#             print("_data:" + feature)
-#             feature = json.loads(feature)
-#             feature = feature["vector"]["feature"]
-#             data = {
-#                 "query": {
-#                     "sum": [{
-#                         "field": "vector",
-#                         "feature": feature,
-#                         "format": "normalization"
-#                     }]
-#                 }
-#             }
-#             print(json.dumps(data))
-#             response = requests.post(url, headers=headers, data=json.dumps(data))
-#             print("searchByFeature---\n" + response.text)
-#             assert response.status_code == 200
-#
-#
-# def test_searchByFeatureandFilter():
-#     url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/_search"
-#     headers = {"content-type": "application/json"}
-#     # fileData = "/home/vearch/test/data/test_data.json"
-#     with open(fileData, "r") as dataLine1:
-#         for dataLine in dataLine1:
-#             idStr = dataLine.split(',', 1)[0].replace('{', '')
-#             id = eval(idStr.split(':')[1])
-#             feature = "{" + dataLine.split(',', 1)[1]
-#             feature = json.loads(feature)
-#             string_tags = feature["string_tags"]
-#             feature = feature["vector"]["feature"]
-#             data = {
-#                 "query": {
-#                     "filter": [{
-#                         "string_tags": string_tags
-#                     }],
-#                     "sum": [{
-#                         "field": "vector",
-#                         "feature": feature,
-#                         "format": "normalization"
-#                     }]
-#                 }
-#             }
-#             response = requests.post(url, headers=headers, data=json.dumps(data))
-#             print("searchByFeature---\n" + response.text)
-#             assert response.status_code == 200
-#
-#
-# def test_updateDoc():
-#     logger.info("updateDoc")
-#     headers = {"content-type": "application/json"}
-#     # fileData = "/home/vearch/test/data/test_data.json"
-#     with open(fileData, "r") as dataLine1:
-#         for dataLine in dataLine1:
-#             idStr = dataLine.split(',', 1)[0].replace('{', '')
-#             id = eval(idStr.split(':')[1])
-#             data = "{" + dataLine.split(',', 1)[1]
-#             url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
-#             response = requests.post(url, headers=headers, data=data)
-#             print("updateDoc:" + response.text)
-#             assert response.status_code == 200
-#
-#
-# def test_insertBulk():
-#     logger.info("insertBulk")
-#     url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/_bulk"
-#     headers = {"content-type": "application/json"}
-#     # fileData = "/home/vearch/test/data/test_data.json"
-#     with open(fileData, "r") as dataLine1:
-#         for dataLine in dataLine1:
-#             idStr = dataLine.split(',', 1)[0].replace('{', '')
-#             id = eval(idStr.split(':')[1])
-#             data = "{" + dataLine.split(',', 1)[1]
-#             response = requests.post(url, headers=headers, data=data)
-#             print("insertBulk:" + response.text)
-#             assert response.status_code == 200
+def test_searchById():
+    logger.info("test_searchById")
+    # fileData = "/home/vearch/test/data/test_data.json"
+    with open(fileData, "r") as dataLine1:
+        for dataLine in dataLine1:
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
+            response = requests.get(url)
+            print("searchById:" + response.text)
+            assert response.status_code == 200
 
 
-# def test_deleteDoc():
-#     logger.info("test_deleteDoc")
-#     # fileData = "/home/vearch/test/data/test_data.json"
-#     with open(fileData, "r") as dataLine1:
-#         for dataLine in dataLine1:
-#             idStr = dataLine.split(',', 1)[0].replace('{', '')
-#             id = eval(idStr.split(':')[1])
-#             data = "{" + dataLine.split(',', 1)[1]
-#             url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
-#             response = requests.delete(url)
-#             print("deleteDoc:" + response.text)
-#             assert response.status_code == 200
-#
-#
-# def test_deleteSpace():
-#     url = "http://" + ip_db + "/space/" + db_name + "/" + space_name
-#     response = requests.delete(url)
-#     print("deleteSpace:" + response.text)
-#     assert response.status_code == 200
-#
-#
-# def test_deleteDB():
-#     url = "http://" + ip_db + "/db/" + db_name
-#     response = requests.delete(url)
-#     print("deleteDB:" + response.text)
-#     assert response.status_code == 200
+def test_insterNoId():
+    logger.info("insertDataNoId")
+    headers = {"content-type": "application/json"}
+    # fileData = "/home/vearch/test/data/test_data.json"
+    with open(fileData, "r") as dataLine1:
+        for dataLine in dataLine1:
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            data = "{" + dataLine.split(',', 1)[1]
+            url = "http://" + ip_data + "/" + db_name + "/" + space_name
+            response = requests.post(url, headers=headers, data=data)
+            print("insertNoID:" + response.text)
+            assert response.status_code == 200
+
+
+def test_searchByFeature():
+    headers = {"content-type": "application/json"}
+    url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/_search?size=100"
+    # fileData = "/home/vearch/test/data/test_data.json"
+    with open(fileData, "r") as dataLine1:
+        for dataLine in dataLine1:
+            print(dataLine)
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            feature = "{" + dataLine.split(',', 1)[1]
+            print("_id:" + id)
+            print("_data:" + feature)
+            feature = json.loads(feature)
+            feature = feature["vector"]["feature"]
+            data = {
+                "query": {
+                    "sum": [{
+                        "field": "vector",
+                        "feature": feature,
+                        "format": "normalization"
+                    }]
+                }
+            }
+            print(json.dumps(data))
+            response = requests.post(url, headers=headers, data=json.dumps(data))
+            print("searchByFeature---\n" + response.text)
+            assert response.status_code == 200
+
+
+def test_searchByFeatureandFilter():
+    url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/_search"
+    headers = {"content-type": "application/json"}
+    # fileData = "/home/vearch/test/data/test_data.json"
+    with open(fileData, "r") as dataLine1:
+        for dataLine in dataLine1:
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            feature = "{" + dataLine.split(',', 1)[1]
+            feature = json.loads(feature)
+            string_tags = feature["string_tags"]
+            feature = feature["vector"]["feature"]
+            data = {
+                "query": {
+                    "filter": [{
+                        "string_tags": string_tags
+                    }],
+                    "sum": [{
+                        "field": "vector",
+                        "feature": feature,
+                        "format": "normalization"
+                    }]
+                }
+            }
+            response = requests.post(url, headers=headers, data=json.dumps(data))
+            print("searchByFeature---\n" + response.text)
+            assert response.status_code == 200
+
+
+def test_updateDoc():
+    logger.info("updateDoc")
+    headers = {"content-type": "application/json"}
+    # fileData = "/home/vearch/test/data/test_data.json"
+    with open(fileData, "r") as dataLine1:
+        for dataLine in dataLine1:
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            data = "{" + dataLine.split(',', 1)[1]
+            url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
+            response = requests.post(url, headers=headers, data=data)
+            print("updateDoc:" + response.text)
+            assert response.status_code == 200
+
+
+def test_insertBulk():
+    logger.info("insertBulk")
+    url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/_bulk"
+    headers = {"content-type": "application/json"}
+    # fileData = "/home/vearch/test/data/test_data.json"
+    with open(fileData, "r") as dataLine1:
+        for dataLine in dataLine1:
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            data = "{" + dataLine.split(',', 1)[1]
+            response = requests.post(url, headers=headers, data=data)
+            print("insertBulk:" + response.text)
+            assert response.status_code == 200
+
+
+def test_deleteDoc():
+    logger.info("test_deleteDoc")
+    # fileData = "/home/vearch/test/data/test_data.json"
+    with open(fileData, "r") as dataLine1:
+        for dataLine in dataLine1:
+            idStr = dataLine.split(',', 1)[0].replace('{', '')
+            id = eval(idStr.split(':')[1])
+            data = "{" + dataLine.split(',', 1)[1]
+            url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + id
+            response = requests.delete(url)
+            print("deleteDoc:" + response.text)
+            assert response.status_code == 200
+
+
+def test_deleteSpace():
+    url = "http://" + ip_db + "/space/" + db_name + "/" + space_name
+    response = requests.delete(url)
+    print("deleteSpace:" + response.text)
+    assert response.status_code == 200
+
+
+def test_deleteDB():
+    url = "http://" + ip_db + "/db/" + db_name
+    response = requests.delete(url)
+    print("deleteDB:" + response.text)
+    assert response.status_code == 200
