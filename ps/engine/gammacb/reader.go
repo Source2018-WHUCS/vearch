@@ -81,6 +81,11 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 	ri.engine.counter.Incr()
 	defer ri.engine.counter.Decr()
 
+	gamma := ri.engine.gamma
+	if gamma == nil {
+		return response.SearchResponses{response.NewSearchResponseErr(vearchlog.LogErrAndReturn(pkg.ErrPartitionClosed))}
+	}
+
 	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
 
 	req := C.MakeRequest(C.int(*request.Size),
@@ -142,11 +147,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 		return response.NewSearchResponseErr(vearchlog.LogErrAndReturn(fmt.Errorf("parse query has err:[%s] query:[%s]", err.Error(), string(request.Query))))
 	}
 
-	if len(request.Fields) == 0 {
-		req.fields = C.MakeByteArrays(C.int(1))
-		C.SetByteArray(req.fields, 0, byteArrayStr("_source"))
-		req.fields_num = C.int(1)
-	} else {
+	if len(request.Fields) > 0 {
 		req.fields = C.MakeByteArrays(C.int(len(request.Fields)))
 		fs := make([]*C.struct_ByteArray, len(request.Fields))
 		for i, f := range request.Fields {

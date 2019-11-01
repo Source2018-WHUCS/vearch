@@ -137,7 +137,7 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 	switch tempEngine.Name {
 	case Gamma:
 		if tempEngine.MaxSize <= 0 {
-			tempEngine.MaxSize = 10000000
+			tempEngine.MaxSize = 100000
 		}
 
 		defVal := util.PInt(-1)
