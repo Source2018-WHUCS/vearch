@@ -359,7 +359,7 @@ func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*
 				Option: fm.Options(),
 			}, nil
 		} else {
-			return nil, fmt.Errorf("string mismatch field type %s", fm.FieldType())
+			return nil, fmt.Errorf("string mismatch field:[%s] type:[%s] ", fieldName, fm.FieldType())
 		}
 	case pspb.FieldType_FLOAT:
 		numericFM := fm.FieldMappingI.(*NumericFieldMapping)
@@ -412,7 +412,7 @@ func processNumber(ctx *walkContext, fm *FieldMapping, fieldName string, val flo
 		i := int64(val)
 		e := val - float64(i)
 		if e > 0 || e < 0 {
-			return nil, fmt.Errorf("field value %f mismatch field type interger", val)
+			return nil, fmt.Errorf("string mismatch field:[%s] type:[%s] ", fieldName, fm.FieldType())
 		}
 		return &pspb.Field{
 			Name:   fieldName,
@@ -435,7 +435,7 @@ func processNumber(ctx *walkContext, fm *FieldMapping, fieldName string, val flo
 			Option: fm.Options(),
 		}, nil
 	default:
-		return nil, fmt.Errorf("field value %f mismatch field type %s", val, fm.FieldType())
+		return nil, fmt.Errorf("string mismatch field:[%s] value:[%s] type:[%s] ", fieldName,val, fm.FieldType())
 	}
 }
 
@@ -457,7 +457,7 @@ func processGeoPoint(ctx *walkContext, fm *FieldMapping, fieldName string, lon, 
 			Option: fm.Options(),
 		}, nil
 	default:
-		return nil, fmt.Errorf("field value [%f,%f] mismatch field type %s", lon, lat, fm.FieldType())
+		return nil, fmt.Errorf("string mismatch field:[%s] value:[%f,%f] type:[%s] ", fieldName,lon, lat, fm.FieldType())
 	}
 }
 
@@ -474,7 +474,7 @@ func processBool(ctx *walkContext, fm *FieldMapping, fieldName string, val bool)
 			Option: fm.Options(),
 		}, nil
 	default:
-		return nil, fmt.Errorf("field value %v mismatch field type %s", val, fm.FieldType())
+		return nil, fmt.Errorf("string mismatch field:[%s] type:[%s] ", fieldName, fm.FieldType())
 	}
 }
 
