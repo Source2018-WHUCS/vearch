@@ -98,7 +98,7 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
 * replica_num: how many replica has , recommend `3`
 * engine
 * max_size : max documents for each partition 
-* index_size : if document >= index_size , it will auto indexed 
+* index_size : if document >= index_size , it will auto indexed; if not set the parameter, it will not build index forever.
 * nprobe : scan clustered buckets, default 10, it should be less than ncentroids
 * metric_type : inner product or L2 
 * ncentroids : coarse cluster center number, default 256
