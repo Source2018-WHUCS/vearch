@@ -125,10 +125,6 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 			fieldMapping.(*VectortFieldMapping).StoreParam = tmp.StoreParam
 		}
 
-		if tmp.Index == nil {
-			tmp.Index = util.PStr("yes")
-		}
-
 	default:
 		return errors.New("invalid field type")
 	}
