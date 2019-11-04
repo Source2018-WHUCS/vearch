@@ -34,9 +34,5 @@ go build -a -tags="vector" -ldflags "$flags" -o $BUILDOUT/vearch $ROOT/startup.g
 
 
 
-if [ -n "$1" ]; then
-  echo "build deploy tool"
-  go build -a -ldflags "$flags" -o $BUILDOUT/batch_deployment $ROOT/tools/deployment/batch_deployment.go
-else
-  echo "build deploy tool default skip"
-fi
+echo "build deploy tool"
+go build -a -ldflags "$flags" -o $BUILDOUT/batch_deployment $ROOT/tools/deployment/batch_deployment.go

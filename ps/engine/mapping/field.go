@@ -143,7 +143,7 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 		case "no", "false":
 			fieldMapping.Base().Option = fieldMapping.Base().Option & withOutIndex
 		default:
-			return fmt.Errorf("tmp index param has err only support [yes , no true false] but got:[]%s", *tmp.Index)
+			return fmt.Errorf("tmp index param has err only support [yes , no true false] but got:[%s]", *tmp.Index)
 		}
 	}
 
