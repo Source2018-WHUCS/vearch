@@ -815,8 +815,8 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
                                      const GammaSearchCondition *condition,
                                      float *distances, idx_t *labels,
                                      int *total) {
+  const float *vectors = raw_vec_->GetVector(0);
   int num_vectors = raw_vec_->GetVectorNum();
-  const float *vectors = raw_vec_->GetVectorHeader(0, 0 + num_vectors);
 
   long k = condition->topn; // topK
 
@@ -1003,7 +1003,6 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
       }
     }
   } // parallel
-  raw_vec_->Destroy(vectors, true);
 }
 
 int GammaIVFPQIndex::Search(const VectorQuery *query,

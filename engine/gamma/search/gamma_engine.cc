@@ -7,19 +7,19 @@
 
 #include "gamma_engine.h"
 
-#include "log.h"
-#include <chrono>
-#include <cstring>
 #include <fcntl.h>
-#include <fstream>
-#include <iomanip>
 #include <locale.h>
-#include <mutex>
 #include <sys/mman.h>
-#include <thread>
 #include <time.h>
 #include <unistd.h>
+#include <chrono>
+#include <cstring>
+#include <fstream>
+#include <iomanip>
+#include <mutex>
+#include <thread>
 #include <vector>
+#include "log.h"
 
 #include "bitmap.h"
 #include "cJSON.h"
@@ -32,8 +32,7 @@ namespace tig_gamma {
 
 #ifdef DEBUG
 static string float_array_to_string(float *data, int len) {
-  if (data == nullptr)
-    return "";
+  if (data == nullptr) return "";
   std::stringstream ss;
   ss << "[";
   for (int i = 0; i < len; i++) {
@@ -71,7 +70,7 @@ static string RequestToString(const Request *request) {
   ss << "}";
   return ss.str();
 }
-#endif // DEBUG
+#endif  // DEBUG
 
 GammaEngine::GammaEngine(const string &index_root_path)
     : index_root_path_(index_root_path),
@@ -155,8 +154,8 @@ int GammaEngine::Setup(int max_doc_size) {
   }
 
   if (!vec_manager_) {
-    vec_manager_ = new VectorManager(IVFPQ, Mmap, docids_bitmap_, max_doc_size,
-                                     index_root_path_);
+    vec_manager_ = new VectorManager(IVFPQ, Memory, docids_bitmap_,
+                                     max_doc_size, index_root_path_);
     if (!vec_manager_) {
       LOG(ERROR) << "Cannot create vec_manager!";
       return -3;
@@ -243,9 +242,9 @@ Response *GammaEngine::Search(const Request *request) {
   gamma_query.vec_num = request->vec_fields_num;
   GammaSearchCondition condition;
   condition.topn = request->topn;
-  condition.parallel_mode = 1; // default to parallelize over inverted list
-  condition.recall_num = request->topn; // TODO: recall number should be
-                                        // transmitted from search request
+  condition.parallel_mode = 1;  // default to parallelize over inverted list
+  condition.recall_num = request->topn;  // TODO: recall number should be
+                                         // transmitted from search request
   condition.has_rank = request->has_rank == 1 ? true : false;
   condition.use_direct_search = use_direct_search;
 
@@ -354,17 +353,17 @@ Response *GammaEngine::Search(const Request *request) {
         }
       }
     }
-    response_results->req_num = 1; // only one result
+    response_results->req_num = 1;  // only one result
     PackResults(&gamma_result, response_results);
   }
 
 #ifdef PERFORMANCE_TESTING
   double search_time = utils::getmillisecs();
-  if (++search_num_ % 1000 == 0) {
-    ss << "search cost [" << search_time - numeric_filter_time
-       << "]ms, total cost [" << search_time - start << "]ms";
-    LOG(INFO) << ss.str();
-  }
+  // if (++search_num_ % 1000 == 0) {
+  ss << "search cost [" << search_time - numeric_filter_time
+     << "]ms, total cost [" << search_time - start << "]ms";
+  LOG(INFO) << ss.str();
+  // }
 #endif
 
   const char *log_message = logger.Data();
@@ -462,13 +461,11 @@ int GammaEngine::AddOrUpdate(const Doc *doc) {
   profile_->GetDocIDByKey(key, docid);
   if (docid == -1) {
     int ret = profile_->Add(fields_profile, max_docid_, false);
-    if (ret != 0)
-      return -1;
+    if (ret != 0) return -1;
   } else {
     Del(key);
     int ret = profile_->Add(fields_profile, max_docid_, true);
-    if (ret != 0)
-      return -1;
+    if (ret != 0) return -1;
   }
 
   for (int i = 0; i < doc->fields_num; ++i) {
@@ -533,8 +530,7 @@ int GammaEngine::Update(const Doc *doc) {
 int GammaEngine::Del(const std::string &key) {
   int docid = -1, ret = 0;
   ret = profile_->GetDocIDByKey(key, docid);
-  if (ret != 0 || docid < 0)
-    return -1;
+  if (ret != 0 || docid < 0) return -1;
 
   if (bitmap::test(docids_bitmap_, docid)) {
     return ret;
@@ -554,7 +550,7 @@ int GammaEngine::DelDocByQuery(Request *request) {
     LOG(ERROR) << "no range filter";
     return 1;
   }
-  MultiRangeQueryResults range_query_result; // Note its scope
+  MultiRangeQueryResults range_query_result;  // Note its scope
 
   std::vector<FilterInfo> filters;
   filters.resize(request->range_filters_num);
@@ -621,7 +617,7 @@ int GammaEngine::BuildIndex() {
       break;
     }
     index_status_ = IndexStatus::INDEXED;
-    usleep(5000 * 1000); // sleep 5000ms
+    usleep(5000 * 1000);  // sleep 5000ms
   }
   running_cv_.notify_one();
   return ret;
@@ -878,4 +874,4 @@ void GammaEngine::PackResults(const GammaResult *gamma_results,
 
   return;
 }
-} // namespace tig_gamma
+}  // namespace tig_gamma

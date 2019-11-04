@@ -7,14 +7,14 @@
 
 #include "gamma_api.h"
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <chrono>
+#include <iostream>
+#include <sstream>
 #include "gamma_engine.h"
 #include "log.h"
 #include "utils.h"
-#include <chrono>
-#include <fcntl.h>
-#include <iostream>
-#include <sstream>
-#include <sys/stat.h>
 
 INITIALIZE_EASYLOGGINGPP
 
@@ -86,7 +86,7 @@ VectorInfo **MakeVectorInfos(int num) {
 }
 
 VectorInfo *MakeVectorInfo(ByteArray *name, enum DataType data_type,
-                           int dimension, ByteArray *model_id,
+                           BOOL is_index, int dimension, ByteArray *model_id,
                            ByteArray *retrieval_type, ByteArray *store_type,
                            ByteArray *store_param) {
   VectorInfo *vectorInfo =
@@ -94,6 +94,7 @@ VectorInfo *MakeVectorInfo(ByteArray *name, enum DataType data_type,
   memset(vectorInfo, 0, sizeof(VectorInfo));
   vectorInfo->name = name;
   vectorInfo->data_type = data_type;
+  vectorInfo->is_index = is_index;
   vectorInfo->dimension = dimension;
   vectorInfo->model_id = model_id;
   vectorInfo->retrieval_type = retrieval_type;
@@ -286,7 +287,7 @@ enum ResponseCode SetLogDictionary(ByteArray *log_dir) {
                           "%level %datetime %fbase:%line %msg");
   defaultConf.setGlobally(el::ConfigurationType::ToFile, "true");
   defaultConf.setGlobally(el::ConfigurationType::MaxLogFileSize,
-                          "209715200"); // 200MB
+                          "209715200");  // 200MB
   defaultConf.setGlobally(el::ConfigurationType::Filename, dir + "/gamma.log");
   el::Loggers::reconfigureLogger("default", defaultConf);
   el::Helpers::installPreRollOutCallback(
@@ -591,8 +592,7 @@ ResultItem *GetResultItem(SearchResult *search_result, int idx) {
 }
 
 Field *GetField(const Doc *doc, int idx) {
-  if (idx >= doc->fields_num)
-    return NULL;
+  if (idx >= doc->fields_num) return NULL;
   return doc->fields[idx];
 }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright 2019 The Gamma Authors.
+ * Copyright (c) The Gamma Authors.
  *
  * This source code is licensed under the Apache License, Version 2.0 license
  * found in the LICENSE file in the root directory of this source tree.
@@ -21,7 +21,8 @@ public:
   MmapRawVector(const std::string &name, int dimension, int max_vector_size,
                 const std::string &root_path, const StoreParams &store_params);
   ~MmapRawVector();
-  int Init() override;
+  int Init() override; // malloc memory and mmap file, if file is not existed,
+                       // create it
   const float *GetVector(long vid) const override;
   int AddToStore(float *v, int len) override;
   const float *GetVectorHeader(int start, int end) override;

@@ -21,6 +21,8 @@ struct VectorResult {
     topn = 0;
     dists = nullptr;
     docids = nullptr;
+    sources = nullptr;
+    source_lens = nullptr;
     total.resize(n);
     idx.resize(n);
     idx.assign(n, 0);
