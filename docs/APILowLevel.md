@@ -202,7 +202,9 @@ curl -H "content-type: application/json" -XPOST -d'
   "size":10,
    "sort" : [
        { "_score" : {"order" : "asc"} }
-   ]
+   ],
+   "quick":false, 
+   "vector_value":false
 }
 ' {{ROUTER}}/test_vector_db/vector_space/_search
 ````
@@ -247,8 +249,10 @@ curl -H "content-type: application/json" -XPOST -d'
 
 > url: [ip]:[port]/[dbName]/[tableName]/_search
 * filter->term-> operator [`and`, `or`] default `or` 
-* direct_search_type : default 0 ; -1: no direct search, 0: auto, 1: always direct
-* "online_log_level":"debug" , is print debug info 
+* `direct_search_type` : default 0 ; -1: no direct search, 0: auto, 1: always direct
+* `online_log_level`:"debug" , is print debug info 
+* `quick` :default is false, if quick=true it not use precision sorting
+* `vector_value` :default is false, is return vector value
  
 
 ### delete Document
