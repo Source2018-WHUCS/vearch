@@ -102,6 +102,8 @@ void printDoc(const Doc *doc, std::string &msg) {
       string str_vec;
       int d = -1;
       memcpy((void *)&d, field_value->value->value, sizeof(int));
+
+      d /= sizeof(float);
       int cur = sizeof(int);
 
       float *feature =

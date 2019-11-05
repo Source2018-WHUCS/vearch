@@ -360,8 +360,6 @@ int VectorManager::GetVector(
     std::map<std::string, GammaIndex *>::iterator iter =
         vector_indexes_.find(field);
     if (iter == vector_indexes_.end()) {
-      LOG(ERROR) << "Query name " << field
-                 << " not exist in created vector table";
       continue;
     }
     GammaIndex *gamma_index = iter->second;
@@ -387,7 +385,7 @@ int VectorManager::GetVector(
     // }
 
     int vid = vids_list[1];
-    // LOG(INFO) << "vid [" << vid << "]";
+
     char *source = nullptr;
     int len = -1;
     int ret = raw_vec->GetSource(vid, source, len);
@@ -401,17 +399,20 @@ int VectorManager::GetVector(
     string str_vec;
     if (is_bytearray) {
       int d = raw_vec->GetDimension();
-      char feat_source[sizeof(int) + d * sizeof(float) + len];
-      memcpy((void *)feat_source, &d, sizeof(int));
-      int cur = sizeof(int);
+      int d_byte = d * sizeof(float);
 
-      memcpy((void *)(feat_source + cur), feature, d * sizeof(float));
-      cur += d * sizeof(float);
+      char feat_source[sizeof(d) + d_byte + len];
+
+      memcpy((void *)feat_source, &d_byte, sizeof(int));
+      int cur = sizeof(d_byte);
+
+      memcpy((void *)(feat_source + cur), feature, d_byte);
+      cur += d_byte;
 
       memcpy((void *)(feat_source + cur), source, len);
 
-      str_vec = string((char *)feat_source,
-                       sizeof(unsigned int) + d * sizeof(float) + len);
+      str_vec =
+          string((char *)feat_source, sizeof(unsigned int) + d_byte + len);
     } else {
       for (int i = 0; i < raw_vec->GetDimension(); ++i) {
         str_vec += std::to_string(feature[i]) + ",";

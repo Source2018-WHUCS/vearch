@@ -869,10 +869,18 @@ void GammaEngine::PackResults(const GammaResult *gamma_results,
       // add vector into result
       if (request->fields_num != 0) {
         std::vector<std::pair<string, int>> fields_ids;
+
+        const std::map<std::string, GammaIndex *> &vector_indexes =
+            vec_manager_->GetVectorIndexes();
+
         for (int i = 0; i < request->fields_num; ++i) {
           ByteArray *field = request->fields[i];
-          fields_ids.emplace_back(
-              std::make_pair(string(field->value, field->len), docid));
+          string name = string(field->value, field->len);
+          auto ret = vector_indexes.find(name);
+          if (ret == vector_indexes.end()) {
+            continue;
+          }
+          fields_ids.emplace_back(std::make_pair(name, docid));
         }
         std::vector<string> vec;
         int ret = vec_manager_->GetVector(fields_ids, vec, true);
