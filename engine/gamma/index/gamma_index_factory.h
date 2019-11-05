@@ -10,7 +10,6 @@
 
 #include "gamma_common_data.h"
 #include "gamma_index_ivfpq.h"
-#include "pacins_index.h"
 #include "raw_vector.h"
 
 #include "faiss/IndexFlat.h"
@@ -35,15 +34,6 @@ public:
           ivfpq_param->nsubvector, ivfpq_param->nbits_per_idx, docids_bitmap,
           raw_vec, ivfpq_param->nprobe);
       break;
-    }
-
-    case SPTAG: {
-      ;
-      break;
-    }
-
-    case PACINS: {
-      return (new pacins::PacinsIndex(dimension, docids_bitmap, raw_vec));
     }
 
     default: {

@@ -247,8 +247,7 @@ bool GammaIVFPQIndex::Add(int n, const float *vec) {
 
 void GammaIVFPQIndex::SearchIVFPQ(int n, const float *x,
                                   const GammaSearchCondition *condition,
-                                  float *distances, idx_t *labels, int *total,
-                                  char compute_rawvalue) {
+                                  float *distances, idx_t *labels, int *total) {
   idx_t *idx = new idx_t[n * nprobe];
   faiss::ScopeDeleter<idx_t> del(idx);
   float *coarse_dis = new float[n * nprobe];
@@ -259,14 +258,13 @@ void GammaIVFPQIndex::SearchIVFPQ(int n, const float *x,
   this->invlists->prefetch_lists(idx, n * nprobe);
 
   search_preassigned(n, x, condition, idx, coarse_dis, distances, labels, total,
-                     false, compute_rawvalue);
+                     false);
 }
 
 void GammaIVFPQIndex::search_preassigned(
     int n, const float *x, const GammaSearchCondition *condition,
     const idx_t *keys, const float *coarse_dis, float *distances, idx_t *labels,
-    int *total, bool store_pairs, char compute_rawvalue,
-    const faiss::IVFSearchParameters *params) {
+    int *total, bool store_pairs, const faiss::IVFSearchParameters *params) {
   int nprobe = params ? params->nprobe : this->nprobe;
   long max_codes = params ? params->max_codes : this->max_codes;
 
@@ -306,7 +304,7 @@ void GammaIVFPQIndex::search_preassigned(
   std::function<void(const float *, float *, idx_t *, float *, idx_t *)>
       compute_dis;
 
-  if (compute_rawvalue == 1) {
+  if (condition->has_rank) {
     // calculate inner product for selected possible vectors
     compute_dis = [&](const float *xi, float *simi, idx_t *idxi,
                       float *recall_simi, idx_t *recall_idxi) {
@@ -899,7 +897,7 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
 
 int GammaIVFPQIndex::Search(const VectorQuery *query,
                             const GammaSearchCondition *condition,
-                            VectorResult &result, char compute_rawvalue) {
+                            VectorResult &result) {
   float *x = reinterpret_cast<float *>(query->value->value);
   int n = query->value->len / (d * sizeof(float));
 
@@ -912,8 +910,7 @@ int GammaIVFPQIndex::Search(const VectorQuery *query,
   if (condition->use_direct_search) {
     SearchDirectly(n, x, condition, result.dists, idx, result.total.data());
   } else {
-    SearchIVFPQ(n, x, condition, result.dists, idx, result.total.data(),
-                compute_rawvalue);
+    SearchIVFPQ(n, x, condition, result.dists, idx, result.total.data());
   }
 
   for (int i = 0; i < n; i++) {

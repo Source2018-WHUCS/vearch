@@ -118,7 +118,7 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
 #ifdef WITH_ROCKSDB
       } else if (!strcasecmp("RocksDB", store_type_str.c_str())) {
         store_type = VectorStorageType::RocksDB;
-#endif // WITH_ROCKSDB
+#endif  // WITH_ROCKSDB
       } else {
         LOG(WARNING) << "NO support for store type " << store_type_str;
         return -1;
@@ -220,8 +220,7 @@ int VectorManager::AddRTVecsToIndex() {
   return ret;
 }
 
-int VectorManager::Search(const GammaQuery &query, GammaResult *results,
-                          char compute_rawvalue) {
+int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
   int ret = 0, n = 0;
 
   VectorResult all_vector_results[query.vec_num];
@@ -252,7 +251,7 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results,
     condition.min_dist = query.vec_query[i]->min_score;
     condition.max_dist = query.vec_query[i]->max_score;
     int ret_vec = iter->second->Search(query.vec_query[i], &condition,
-                                       all_vector_results[i], compute_rawvalue);
+                                       all_vector_results[i]);
     if (ret_vec != 0) {
       ret = ret_vec;
     }

@@ -600,7 +600,6 @@ typedef struct Request {
   int direct_search_type;  // -1: no direct search, 0: auto, 1: always direct
                            // search, default 0
 
-  int has_rank;  // default 0, has not rank; 1, has rank
   VectorQuery **vec_fields;
   int vec_fields_num;
 
@@ -617,7 +616,7 @@ typedef struct Request {
   // online log level: debug|info|warn|error|none
   ByteArray *online_log_level;
 
-  BOOL compute_rawvalue;
+  int has_rank;  // default 0, has not rank; 1, has rank
 } Request;
 
 /** make a Request
@@ -634,7 +633,7 @@ typedef struct Request {
  * @param req_num             request number
  * @param direct_search_type  1 : direct search; 0 : normal search
  * @param online_log_level    DEBUG, INFO, WARN, ERROR
- * @param compute_rawvalue    TRUE: result will compute with raw vector
+ * @param has_rank            default 0, has not rank; 1, has rank
  * @return  a request pointer
  */
 Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
@@ -642,7 +641,7 @@ Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
                      RangeFilter **range_filters, int range_filters_num,
                      TermFilter **term_filters, int term_filters_num,
                      int req_num, int direct_search_type,
-                     ByteArray *online_log_level, BOOL compute_rawvalue);
+                     ByteArray *online_log_level, int has_rank);
 
 /** destroy Request
  *

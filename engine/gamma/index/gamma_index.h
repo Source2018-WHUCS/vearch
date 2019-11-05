@@ -130,7 +130,7 @@ struct GammaIndex {
   /** assign the vectors, then call search_preassign */
   virtual int Search(const VectorQuery *query,
                      const GammaSearchCondition *condition,
-                     VectorResult &result, char compute_rawvalue) = 0;
+                     VectorResult &result) = 0;
 
   virtual long GetTotalMemBytes() = 0;
 

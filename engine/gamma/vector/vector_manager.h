@@ -37,7 +37,7 @@ class VectorManager {
   int AddRTVecsToIndex();
 
   // int Add(int docid, const std::vector<Field *> &field_vecs);
-  int Search(const GammaQuery &query, GammaResult *results, char compute_rawvalue);
+  int Search(const GammaQuery &query, GammaResult *results);
 
   int GetVector(const std::vector<std::pair<std::string, int>> &fields_ids,
                 std::vector<std::string> &vec, bool is_bytearray = false);

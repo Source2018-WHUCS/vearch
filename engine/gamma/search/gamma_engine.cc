@@ -319,8 +319,7 @@ Response *GammaEngine::Search(const Request *request) {
     for (int i = 0; i < request->req_num; ++i) {
       gamma_results[i].total = this->GetDocsNum();
     }
-    ret = vec_manager_->Search(gamma_query, gamma_results,
-                               request->compute_rawvalue);
+    ret = vec_manager_->Search(gamma_query, gamma_results);
     if (ret != 0) {
       string msg = "search error [" + std::to_string(ret) + "]";
       for (int i = 0; i < response_results->req_num; i++) {
