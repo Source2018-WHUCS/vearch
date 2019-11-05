@@ -98,7 +98,7 @@ func (this *docService) mSearchDoc(ctx context.Context, dbName string, spaceName
 	}
 	searchRequest.Aggregations = nil
 
-	searchSpaces, nameCache, err := this.parseDBSpacePair(dbName, spaceName)
+	searchSpaces, nameCache, err := this.parseDBSpacePair(ctx, dbName, spaceName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -112,7 +112,7 @@ func (this *docService) mSearchDoc(ctx context.Context, dbName string, spaceName
 
 func (this *docService) deleteByQuery(ctx context.Context, dbName string, spaceName string, searchRequest *request.SearchRequest) (*response.Response, response.NameCache, error) {
 
-	searchSpaces, nameCache, err := this.parseDBSpacePair(dbName, spaceName)
+	searchSpaces, nameCache, err := this.parseDBSpacePair(ctx, dbName, spaceName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -130,7 +130,7 @@ func (this *docService) searchDoc(ctx context.Context, dbName string, spaceName 
 	}
 	searchRequest.Aggregations = nil
 
-	searchSpaces, nameCache, err := this.parseDBSpacePair(dbName, spaceName)
+	searchSpaces, nameCache, err := this.parseDBSpacePair(ctx, dbName, spaceName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -143,7 +143,7 @@ func (this *docService) searchDoc(ctx context.Context, dbName string, spaceName 
 }
 
 //it make uri to db space pair like db1,db2/s1,s1  it will return db1/s1 , db2/s1
-func (this *docService) parseDBSpacePair(dbName string, spaceName string) ([][2]string, response.NameCache, error) {
+func (this *docService) parseDBSpacePair(ctx context.Context, dbName string, spaceName string) ([][2]string, response.NameCache, error) {
 	var searchSpaces [][2]string
 	dbNames := strings.Split(dbName, ",")
 	spaceNames := strings.Split(spaceName, ",")
