@@ -24,6 +24,7 @@ import "C"
 import (
 	"context"
 	"fmt"
+	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/request"
@@ -88,16 +89,31 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 
 	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
 
+	var hasRank C.BOOL = C.int(1)
+	if request.Quick {
+		hasRank = C.int(0)
+	}
+
 	req := C.MakeRequest(C.int(*request.Size),
 		nil, C.int(0),
 		nil, C.int(0),
 		nil, C.int(0),
 		nil, C.int(0),
-		C.int(1), C.int(0), nil)
+		C.int(1), C.int(0),
+		nil, hasRank,
+	)
 
 	defer C.DestroyRequest(req)
 	if err := builder.parseQuery(request.Query, req); err != nil {
 		return response.SearchResponses{response.NewSearchResponseErr(vearchlog.LogErrAndReturn(fmt.Errorf("parse query has err:[%s] query:[%s]", err.Error(), string(request.Query))))}
+	}
+
+	if len(request.Fields) == 0 && request.VectorValue {
+		request.Fields = make([]string, 0, 10)
+		_ = ri.engine.indexMapping.RangeField(func(key string, value *mapping.DocumentMapping) error {
+			request.Fields = append(request.Fields, key)
+			return nil
+		})
 	}
 
 	if len(request.Fields) > 0 {
@@ -135,16 +151,31 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 
 	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
 
+	var hasRank C.BOOL = C.int(1)
+	if request.Quick {
+		hasRank = C.int(0)
+	}
+
 	req := C.MakeRequest(C.int(*request.Size),
 		nil, C.int(0),
 		nil, C.int(0),
 		nil, C.int(0),
 		nil, C.int(0),
-		C.int(1), C.int(0), nil)
+		C.int(1), C.int(0),
+		nil, hasRank,
+	)
 
 	defer C.DestroyRequest(req)
 	if err := builder.parseQuery(request.Query, req); err != nil {
 		return response.NewSearchResponseErr(vearchlog.LogErrAndReturn(fmt.Errorf("parse query has err:[%s] query:[%s]", err.Error(), string(request.Query))))
+	}
+
+	if len(request.Fields) == 0 && request.VectorValue {
+		request.Fields = make([]string, 0, 10)
+		_ = ri.engine.indexMapping.RangeField(func(key string, value *mapping.DocumentMapping) error {
+			request.Fields = append(request.Fields, key)
+			return nil
+		})
 	}
 
 	if len(request.Fields) > 0 {
