@@ -89,7 +89,7 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 
 	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
 
-	var hasRank C.BOOL = C.int(1)
+	hasRank := C.int(1)
 	if request.Quick {
 		hasRank = C.int(0)
 	}
@@ -151,7 +151,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 
 	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
 
-	var hasRank C.BOOL = C.int(1)
+	hasRank := C.int(1)
 	if request.Quick {
 		hasRank = C.int(0)
 	}

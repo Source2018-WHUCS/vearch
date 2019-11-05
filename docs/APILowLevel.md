@@ -6,6 +6,8 @@
 
 ## database 
 
+----
+
 ### create database
 
 ````$xslt
@@ -35,6 +37,8 @@ curl -XDELETE {{MASTER}}/db/test_vector_db
 ````
 
 ## space
+
+----
 
 ### create space
 
@@ -144,6 +148,8 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPOST -d'
 
 
 ## document 
+
+----
 
 ### insert document
 
@@ -364,6 +370,8 @@ curl -H "content-type: application/json" -XPOST -d'
 
 ## space in router
 
+----
+
 ### get space mapping
 ````$xslt
 curl -XGET {{ROUTER}}/test_vector_db/_mapping/vector_space
@@ -380,6 +388,8 @@ curl -XPOST {{ROUTER}}/test_vector_db/vector_space/_forcemerge
 ````
 
 ## cluster API
+
+----
 
 ### password_encrypt
 ````$xslt
