@@ -388,11 +388,30 @@ int VectorManager::GetVector(
 
     int vid = vids_list[1];
     // LOG(INFO) << "vid [" << vid << "]";
+    char *source = nullptr;
+    int len = -1;
+    int ret = raw_vec->GetSource(vid, source, len);
+
+    if (ret != 0 || len < 0) {
+      LOG(ERROR) << "Get source failed!";
+      return -1;
+    }
+
     const float *feature = raw_vec->GetVector(vid);
     string str_vec;
     if (is_bytearray) {
-      str_vec =
-          string((char *)feature, raw_vec->GetDimension() * sizeof(float));
+      int d = raw_vec->GetDimension();
+      char feat_source[sizeof(int) + d * sizeof(float) + len];
+      memcpy((void *)feat_source, &d, sizeof(int));
+      int cur = sizeof(int);
+
+      memcpy((void *)(feat_source + cur), feature, d * sizeof(float));
+      cur += d * sizeof(float);
+
+      memcpy((void *)(feat_source + cur), source, len);
+
+      str_vec = string((char *)feat_source,
+                       sizeof(unsigned int) + d * sizeof(float) + len);
     } else {
       for (int i = 0; i < raw_vec->GetDimension(); ++i) {
         str_vec += std::to_string(feature[i]) + ",";

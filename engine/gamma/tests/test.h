@@ -100,16 +100,30 @@ void printDoc(const Doc *doc, std::string &msg) {
              "], type [" + std::to_string(field_value->data_type) + "], ";
     } else if (field_value->data_type == VECTOR) {
       string str_vec;
-      float *feature = reinterpret_cast<float *>(field_value->value->value);
-  
-      for (int i = 0; i < 512; ++i) {
+      int d = -1;
+      memcpy((void *)&d, field_value->value->value, sizeof(int));
+      int cur = sizeof(int);
+
+      float *feature =
+          reinterpret_cast<float *>(field_value->value->value + cur);
+
+      cur += d * sizeof(float);
+      int len = field_value->value->len;
+      char source[len - cur];
+
+      memcpy(source, field_value->value->value + cur, len - cur);
+
+      for (int i = 0; i < d; ++i) {
         str_vec += std::to_string(feature[i]) + ",";
       }
       str_vec.pop_back();
+
+      std::string source_str = std::string(source, len - cur);
       msg += "field name [" +
              string(field_value->name->value, field_value->name->len) +
              "], value [" + str_vec + "], type [" +
-             std::to_string(field_value->data_type) + "], ";
+             std::to_string(field_value->data_type) + "], source [" + source_str +
+             "]";
     }
   }
 }
