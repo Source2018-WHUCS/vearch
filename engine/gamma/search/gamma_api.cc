@@ -543,7 +543,7 @@ Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
                      RangeFilter **range_filters, int range_filters_num,
                      TermFilter **term_filters, int term_filters_num,
                      int req_num, int direct_search_type,
-                     ByteArray *online_log_level) {
+                     ByteArray *online_log_level, BOOL compute_rawvalue) {
   Request *request = static_cast<Request *>(malloc(sizeof(Request)));
   memset(request, 0, sizeof(Request));
   request->topn = topn;
@@ -558,6 +558,7 @@ Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
   request->req_num = req_num;
   request->direct_search_type = direct_search_type;
   request->online_log_level = online_log_level;
+  request->compute_rawvalue = compute_rawvalue;
   return request;
 }
 

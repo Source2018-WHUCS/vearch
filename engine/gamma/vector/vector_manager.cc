@@ -220,7 +220,8 @@ int VectorManager::AddRTVecsToIndex() {
   return ret;
 }
 
-int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
+int VectorManager::Search(const GammaQuery &query, GammaResult *results,
+                          char compute_rawvalue) {
   int ret = 0, n = 0;
 
   VectorResult all_vector_results[query.vec_num];
@@ -251,7 +252,7 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
     condition.min_dist = query.vec_query[i]->min_score;
     condition.max_dist = query.vec_query[i]->max_score;
     int ret_vec = iter->second->Search(query.vec_query[i], &condition,
-                                       all_vector_results[i]);
+                                       all_vector_results[i], compute_rawvalue);
     if (ret_vec != 0) {
       ret = ret_vec;
     }
@@ -349,6 +350,59 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
   }
 
   return ret;
+}
+
+int VectorManager::GetVector(
+    const std::vector<std::pair<string, int>> &fields_ids,
+    std::vector<string> &vec, bool is_bytearray) {
+  for (const auto &pair : fields_ids) {
+    const string &field = pair.first;
+    const int id = pair.second;
+    std::map<std::string, GammaIndex *>::iterator iter =
+        vector_indexes_.find(field);
+    if (iter == vector_indexes_.end()) {
+      LOG(ERROR) << "Query name " << field
+                 << " not exist in created vector table";
+      continue;
+    }
+    GammaIndex *gamma_index = iter->second;
+    RawVector *raw_vec = gamma_index->raw_vec_;
+    if (raw_vec == nullptr) {
+      LOG(ERROR) << "raw_vec is null!";
+      return -1;
+    }
+    int *vids_list = raw_vec->docid2vid_[id];
+    if (vids_list == nullptr) {
+      LOG(ERROR) << "vids_list is null!";
+      return -1;
+    }
+    int vid_num = vids_list[0];
+    if (vid_num <= 0) {
+      LOG(ERROR) << "vid num [" << vid_num << "]";
+      return -1;
+    }
+    // if (vid_num != fields_ids.size()) {
+    //   LOG(ERROR) << "vid num [" << vid_num << "] fields_ids size [" <<
+    //   fields_ids.size() << "]";
+    //   return -1;
+    // }
+
+    int vid = vids_list[1];
+    // LOG(INFO) << "vid [" << vid << "]";
+    const float *feature = raw_vec->GetVector(vid);
+    string str_vec;
+    if (is_bytearray) {
+      str_vec =
+          string((char *)feature, raw_vec->GetDimension() * sizeof(float));
+    } else {
+      for (int i = 0; i < raw_vec->GetDimension(); ++i) {
+        str_vec += std::to_string(feature[i]) + ",";
+      }
+      str_vec.pop_back();
+    }
+    vec.emplace_back(std::move(str_vec));
+  }
+  return 0;
 }
 
 int VectorManager::Dump(const string &path, int dump_docid, int max_docid) {

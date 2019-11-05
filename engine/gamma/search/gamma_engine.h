@@ -92,8 +92,8 @@ class GammaEngine {
   bool b_running_;
   std::condition_variable running_cv_;
 
-  void PackResults(const GammaResult *gamma_results,
-                   Response *response_results);
+  void PackResults(const GammaResult *gamma_results, Response *response_results,
+                   const Request *request);
 
   enum IndexStatus index_status_;
 

@@ -160,29 +160,43 @@ static int ReverseEndian(const unsigned char *in, unsigned char *out,
 int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
   BtDb *bt = bt_open(cache_mgr_, main_mgr_);
   unsigned char key2[key_len];
+
+  std::function<void(unsigned char *, uint)> insert_to_bt =
+      [&](unsigned char *key_to_add, uint key_len) {
+        NodeList list[1];
+        int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)list,
+                             sizeof(NodeList));
+        list->Add(value);
+        if (ret < 0) {
+          BTERR bterr =
+              bt_insertkey(bt->main, key_to_add, key_len, 0,
+                           static_cast<void *>(list), sizeof(NodeList), Unique);
+          if (bterr) {
+            LOG(ERROR) << "Error " << bt->mgr->err;
+          }
+        } else {
+          BTERR bterr =
+              bt_insertkey(bt->main, key_to_add, key_len, 0,
+                           static_cast<void *>(list), sizeof(NodeList), Update);
+          if (bterr) {
+            LOG(ERROR) << "Error " << bt->mgr->err;
+          }
+        }
+      };
+
   if (is_numeric_) {
     ReverseEndian(key, key2, key_len);
+    insert_to_bt(key2, key_len);
   } else {
     memcpy(key2, key, key_len);
-  }
-
-  NodeList list[1];
-  int ret =
-      bt_findkey(bt, key2, key_len, (unsigned char *)list, sizeof(NodeList));
-  list->Add(value);
-  if (ret < 0) {
-    BTERR bterr =
-        bt_insertkey(bt->main, key2, key_len, 0, static_cast<void *>(list),
-                     sizeof(NodeList), Unique);
-    if (bterr) {
-      LOG(ERROR) << "Error " << bt->mgr->err;
-    }
-  } else {
-    BTERR bterr =
-        bt_insertkey(bt->main, key2, key_len, 0, static_cast<void *>(list),
-                     sizeof(NodeList), Update);
-    if (bterr) {
-      LOG(ERROR) << "Error " << bt->mgr->err;
+    string tags = string(reinterpret_cast<char *>(key), key_len);
+    std::vector<string> items = utils::Split(tags, kDelim_);
+    for (string item : items) {
+      unsigned char key_to_add[item.length()];
+      memcpy(key_to_add,
+             reinterpret_cast<unsigned char *>(const_cast<char *>(item.data())),
+             item.length());
+      insert_to_bt(key_to_add, item.length());
     }
   }
 
@@ -361,7 +375,7 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
     RangeQueryResult tmp(out.Flags());
     const auto &iter = fields_.find(_.field);
     if (iter == fields_.end()) {
-      return 0;
+      return -1;
     }
 
     FieldRangeIndex *index = iter->second;

@@ -10,6 +10,7 @@
 
 #include "gamma_common_data.h"
 #include "gamma_index_ivfpq.h"
+#include "pacins_index.h"
 #include "raw_vector.h"
 
 #include "faiss/IndexFlat.h"
@@ -28,11 +29,21 @@ public:
     switch (model) {
     case IVFPQ: {
       faiss::IndexFlatL2 *coarse_quantizer = new faiss::IndexFlatL2(dimension);
+      int ncentroids = 256;
       return (GammaIndex *)new GammaIVFPQIndex(
           coarse_quantizer, dimension, ivfpq_param->ncentroids,
           ivfpq_param->nsubvector, ivfpq_param->nbits_per_idx, docids_bitmap,
           raw_vec, ivfpq_param->nprobe);
       break;
+    }
+
+    case SPTAG: {
+      ;
+      break;
+    }
+
+    case PACINS: {
+      return (new pacins::PacinsIndex(dimension, docids_bitmap, raw_vec));
     }
 
     default: {

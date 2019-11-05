@@ -616,6 +616,8 @@ typedef struct Request {
 
   // online log level: debug|info|warn|error|none
   ByteArray *online_log_level;
+
+  BOOL compute_rawvalue;
 } Request;
 
 /** make a Request
@@ -630,6 +632,9 @@ typedef struct Request {
  * @param term_filters        termFilters array
  * @param term_filters_num    termFilters array length
  * @param req_num             request number
+ * @param direct_search_type  1 : direct search; 0 : normal search
+ * @param online_log_level    DEBUG, INFO, WARN, ERROR
+ * @param compute_rawvalue    TRUE: result will compute with raw vector
  * @return  a request pointer
  */
 Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
@@ -637,7 +642,7 @@ Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
                      RangeFilter **range_filters, int range_filters_num,
                      TermFilter **term_filters, int term_filters_num,
                      int req_num, int direct_search_type,
-                     ByteArray *online_log_level);
+                     ByteArray *online_log_level, BOOL compute_rawvalue);
 
 /** destroy Request
  *
@@ -677,8 +682,6 @@ typedef struct Response {
  * @return response, need to call @DestroyResponse to destroy
  */
 Response *Search(void *engine, Request *request);
-// enum ResponseCode Search(void *engine, int n, struct Request *request,
-//                        struct Response **response);
 
 /** delete docs from table by query
  *
@@ -712,7 +715,7 @@ ResultItem *GetResultItem(SearchResult *search_result, int idx);
  */
 Field *GetField(const Doc *doc, int idx);
 
-/**
+/** destroy response
  *
  * @param response  response to destroy
  * @return ResponseCode

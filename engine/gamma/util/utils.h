@@ -33,13 +33,7 @@ int isFolderExist(const char *path);
 
 int remove_dir(const char *dir);
 
-#ifdef _WIN32
-
-inline char file_sepator() { return '\\'; }
-#else
-
 inline char file_sepator() { return '/'; }
-#endif
 
 using file_filter_type = std::function<bool(const char *, const char *)>;
 
