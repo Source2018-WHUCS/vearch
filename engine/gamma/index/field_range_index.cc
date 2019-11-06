@@ -117,13 +117,15 @@ class FieldRangeIndex {
   static const uint mainpool_ = 500;
   static const uint mainbits_ = 16;
   static const uint bits_ = 16;
-  static const char kDelim_ = '';
+  static const char *kDelim_;
 
  private:
   BtMgr *main_mgr_;
   BtMgr *cache_mgr_;
   bool is_numeric_;
 };
+
+const char *FieldRangeIndex::kDelim_ = "\001";
 
 FieldRangeIndex::FieldRangeIndex(const string &name, enum DataType field_type) {
   string cache_file = string("cache_") + name + ".dis";
@@ -161,7 +163,7 @@ int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
   BtDb *bt = bt_open(cache_mgr_, main_mgr_);
   unsigned char key2[key_len];
 
-  std::function<void(unsigned char *, uint)> insert_to_bt =
+  std::function<void(unsigned char *, uint)> InsertToBt =
       [&](unsigned char *key_to_add, uint key_len) {
         NodeList list[1];
         int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)list,
@@ -186,17 +188,17 @@ int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
 
   if (is_numeric_) {
     ReverseEndian(key, key2, key_len);
-    insert_to_bt(key2, key_len);
+    InsertToBt(key2, key_len);
   } else {
-    memcpy(key2, key, key_len);
-    string tags = string(reinterpret_cast<char *>(key), key_len);
-    std::vector<string> items = utils::Split(tags, kDelim_);
-    for (string item : items) {
-      unsigned char key_to_add[item.length()];
-      memcpy(key_to_add,
-             reinterpret_cast<unsigned char *>(const_cast<char *>(item.data())),
-             item.length());
-      insert_to_bt(key_to_add, item.length());
+    char key_s[key_len + 1];
+    memcpy(key_s, key, key_len);
+    key_s[key_len] = 0;
+
+    char *p, *k;
+    k = strtok_r(key_s, kDelim_, &p);
+    while (k != nullptr) {
+      InsertToBt(reinterpret_cast<unsigned char*>(k), strlen(k));
+      k = strtok_r(NULL, kDelim_, &p);
     }
   }
 
@@ -277,7 +279,7 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
 }
 
 int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
-  std::vector<string> items = utils::Split(tags, kDelim_);
+  std::vector<string> items = utils::split(tags, kDelim_);
 
   RangeQueryResult results_union[items.size()];
 

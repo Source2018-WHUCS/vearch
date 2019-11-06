@@ -66,8 +66,8 @@ class Profile {
 
   long GetMemoryBytes();
 
-  Doc *Get(const std::string &id, Doc *doc = nullptr);
-  Doc *Get(const int docid, Doc *doc = nullptr);
+  int GetDocInfo(const std::string &id, Doc *&doc);
+  int GetDocInfo(const int docid, Doc *&doc);
 
   template <typename T>
   bool GetField(const int docid, const int field_id, T &value) const {

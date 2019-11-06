@@ -463,16 +463,13 @@ long Profile::GetMemoryBytes() {
   return max_profile_size_ * item_length_ + max_str_size_;
 }
 
-Doc *Profile::Get(const int docid, Doc *d) {
-  Doc *doc = nullptr;
-  if (d == nullptr) {
+int Profile::GetDocInfo(const int docid, Doc *&doc) {
+  if (doc == nullptr) {
     doc = static_cast<Doc *>(malloc(sizeof(Doc)));
     doc->fields_num = attr_type_map_.size();
     doc->fields =
         static_cast<Field **>(malloc(doc->fields_num * sizeof(Field *)));
     memset(doc->fields, 0, doc->fields_num * sizeof(Field *));
-  } else {
-    doc = d;
   }
 
   int i = 0;
@@ -518,17 +515,16 @@ Doc *Profile::Get(const int docid, Doc *d) {
     ++i;
   }
 
-  return doc;
+  return 0;
 }
 
-Doc *Profile::Get(const std::string &key, Doc *doc) {
+int Profile::GetDocInfo(const std::string &key, Doc *&doc) {
   int doc_id = 0;
   int ret = GetDocIDByKey(key, doc_id);
   if (ret < 0) {
-    return nullptr;
+    return ret;
   }
-  Doc *d = Get(doc_id, doc);
-  return d;
+  return GetDocInfo(doc_id, doc);
 }
 
 int Profile::GetField(int docid, const std::string &field, char **value) const {

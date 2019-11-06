@@ -60,8 +60,10 @@ class VectorManager {
   int Dump(const std::string &path, int dump_docid, int max_docid);
   int Load(const std::vector<std::string> &path);
 
-  const std::map<std::string, GammaIndex *> &GetVectorIndexes() {
-    return vector_indexes_;
+  int GetVectorIndexes(
+      std::map<std::string, GammaIndex *> &vector_indexes) const {
+    vector_indexes = vector_indexes_;
+    return 0;
   }
 
  private:
