@@ -191,7 +191,7 @@ func (handler *DocumentHandler) handleAuth(ctx context.Context, w http.ResponseW
 		return ctx, false
 	}
 	if user.Password != password {
-		log.Error("auth password not matched. password from master:%s, password from request:%s", user.Password, password)
+		log.Error("auth password not matched")
 		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, resp.ErrTypeAuthException, resp.ErrReasonAuthFailed, handler.monitor)
 		return ctx, false
 	}
