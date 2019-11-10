@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/chubaodb/chubaodb/master/utils/hack"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/util"
 	"unicode"
@@ -119,7 +120,7 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 
 	tempEngine := &struct {
 		Name         string `json:"name"`
-		IndexSize    int64  `json:"index_size"`
+		IndexSize    *int64 `json:"index_size"`
 		MaxSize      int64  `json:"max_size"`
 		ZoneField    string ` json:"zone_field"`
 		ExpireMinute int64  `json:"expire_minute"`
@@ -138,6 +139,10 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 	case Gamma:
 		if tempEngine.MaxSize <= 0 {
 			tempEngine.MaxSize = 100000
+		}
+
+		if tempEngine.IndexSize == nil {
+			tempEngine.IndexSize = hack.PInt64(100000)
 		}
 
 		defVal := util.PInt(-1)
@@ -167,7 +172,7 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 
 	*engine = Engine{
 		Name:        tempEngine.Name,
-		IndexSize:   tempEngine.IndexSize,
+		IndexSize:   *tempEngine.IndexSize,
 		MaxSize:     tempEngine.MaxSize,
 		Nprobe:      tempEngine.Nprobe,
 		MetricType:  tempEngine.MetricType,
