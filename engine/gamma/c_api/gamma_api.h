@@ -99,8 +99,8 @@ typedef struct VectorInfo {
   BOOL is_index;              // whether index to be trained
   int dimension;              // dimension
   ByteArray *model_id;        // model_id, temporarily useless
-  ByteArray *retrieval_type;  // "IVFPQ", "PACINS", ...
-  ByteArray *store_type;      // "Memory", "Mmap", "RocksDB"
+  ByteArray *retrieval_type;  // "IVFPQ",...
+  ByteArray *store_type;      // "Mmap", "RocksDB"
   ByteArray *store_param;     // parameters of store, json format
 } VectorInfo;
 
