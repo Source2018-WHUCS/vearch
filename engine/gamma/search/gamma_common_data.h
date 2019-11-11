@@ -29,7 +29,7 @@ enum class ResultCode : std::uint16_t {
   Undefined
 };
 
-enum VectorStorageType { Memory, Mmap, RocksDB};
+enum VectorStorageType {Mmap, RocksDB};
 enum RetrievalModel { IVFPQ };
 
 struct VectorDocField {
