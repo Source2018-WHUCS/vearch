@@ -28,7 +28,6 @@ public:
     switch (model) {
     case IVFPQ: {
       faiss::IndexFlatL2 *coarse_quantizer = new faiss::IndexFlatL2(dimension);
-      int ncentroids = 256;
       return (GammaIndex *)new GammaIVFPQIndex(
           coarse_quantizer, dimension, ivfpq_param->ncentroids,
           ivfpq_param->nsubvector, ivfpq_param->nbits_per_idx, docids_bitmap,

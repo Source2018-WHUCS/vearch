@@ -154,7 +154,7 @@ int GammaEngine::Setup(int max_doc_size) {
   }
 
   if (!vec_manager_) {
-    vec_manager_ = new VectorManager(IVFPQ, Memory, docids_bitmap_,
+    vec_manager_ = new VectorManager(IVFPQ, Mmap, docids_bitmap_,
                                      max_doc_size, index_root_path_);
     if (!vec_manager_) {
       LOG(ERROR) << "Cannot create vec_manager!";

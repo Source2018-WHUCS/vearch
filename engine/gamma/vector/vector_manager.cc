@@ -111,9 +111,7 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
 
     VectorStorageType store_type = default_store_type_;
     if (store_type_str != "") {
-      if (!strcasecmp("Memory", store_type_str.c_str())) {
-        store_type = VectorStorageType::Memory;
-      } else if (!strcasecmp("Mmap", store_type_str.c_str())) {
+      if (!strcasecmp("Mmap", store_type_str.c_str())) {
         store_type = VectorStorageType::Mmap;
 #ifdef WITH_ROCKSDB
       } else if (!strcasecmp("RocksDB", store_type_str.c_str())) {
@@ -160,12 +158,6 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
     RetrievalModel model = default_model_;
     if (!strcasecmp("IVFPQ", retrieval_type_str.c_str())) {
       model = RetrievalModel::IVFPQ;
-    } else if (!strcasecmp("GPU_IVFPQ", retrieval_type_str.c_str())) {
-      model = RetrievalModel::GPU_IVFPQ;
-    } else if (!strcasecmp("SPTAG", retrieval_type_str.c_str())) {
-      model = RetrievalModel::SPTAG;
-    } else if (!strcasecmp("PACINS", retrieval_type_str.c_str())) {
-      model = RetrievalModel::PACINS;
     } else {
       LOG(WARNING) << "NO support for retrieval type " << retrieval_type_str
                    << ", default to " << default_model_;
