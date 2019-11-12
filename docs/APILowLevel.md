@@ -112,6 +112,11 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
 * array : whether the tags for each document is multi-valued, `true` or `false` default is false
 * index : supporting numeric field filter default `false`
 
+** Vector field params
+    format : default "normalization", "normal" if set "no" it will not normalized
+    retrieval_type ： default "IVFPQ"
+    store_type : "RocksDB" or "Mmap" default "Mmap"  
+    store_param : example {"cache_size":2592} 
 
 ### get space
 
