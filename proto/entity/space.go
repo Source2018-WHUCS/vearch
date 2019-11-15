@@ -118,16 +118,16 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 	}
 
 	tempEngine := &struct {
-		Name         string `json:"name"`
-		IndexSize    *int64 `json:"index_size"`
-		MaxSize      int64  `json:"max_size"`
-		ZoneField    string ` json:"zone_field"`
-		ExpireMinute int64  `json:"expire_minute"`
-		Nprobe       *int   `json:"nprobe"`
-		MetricType   *int   `json:"metric_type"`
-		Ncentroids   *int   `json:"ncentroids"`
-		Nsubvector   *int   `json:"nsubvector"`
-		NbitsPerIdx  *int   `json:"nbits_per_idx"`
+		Name        string  `json:"name"`
+		IndexSize   *int64  `json:"index_size"`
+		MaxSize     int64   `json:"max_size"`
+		Nprobe      *int    `json:"nprobe"`
+		MetricType  *string `json:"metric_type"`
+		Ncentroids  *int    `json:"ncentroids"`
+		Nsubvector  *int    `json:"nsubvector"`
+		NbitsPerIdx *int    `json:"nbits_per_idx"`
+		//set temp value
+		metricType int
 	}{}
 
 	if err := json.Unmarshal(bs, tempEngine); err != nil {
@@ -151,7 +151,17 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 		}
 
 		if tempEngine.MetricType == nil {
-			tempEngine.MetricType = defVal
+			//if InnerProduct=0, L2=1
+			switch *tempEngine.MetricType {
+			case "InnerProduct":
+				tempEngine.metricType = 0
+			case "L2":
+				tempEngine.metricType = 1
+			default:
+				return fmt.Errorf("metric_type only support `InnerProduct` ,`L2`")
+			}
+		} else {
+			tempEngine.metricType = 1
 		}
 
 		if tempEngine.Ncentroids == nil {
@@ -174,7 +184,7 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 		IndexSize:   *tempEngine.IndexSize,
 		MaxSize:     tempEngine.MaxSize,
 		Nprobe:      tempEngine.Nprobe,
-		MetricType:  tempEngine.MetricType,
+		MetricType:  &tempEngine.metricType,
 		Ncentroids:  tempEngine.Ncentroids,
 		Nsubvector:  tempEngine.Nsubvector,
 		NbitsPerIdx: tempEngine.NbitsPerIdx,

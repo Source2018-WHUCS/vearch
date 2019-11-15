@@ -153,7 +153,7 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 	}
 
 	//set model id
-	if tmp.Dimension != 0 {
+	if tmp.ModelId != "" {
 		if mapping, ok := fieldMapping.(*VectortFieldMapping); ok {
 			mapping.ModelId = tmp.ModelId
 		} else {
@@ -169,10 +169,6 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 			mapping.Format = tmp.Format
 		} else {
 			return fmt.Errorf("type:[%s] can not set format", fieldMapping.FieldType().String())
-		}
-	} else {
-		if mapping, ok := fieldMapping.(*VectortFieldMapping); ok {
-			mapping.Format = util.PStr("normalization")
 		}
 	}
 
