@@ -125,7 +125,17 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*C.struc
 
 	engine := cfg.Space.Engine
 
-	table.ivfpq_param = C.MakeIVFPQParameters(C.int(*engine.MetricType), C.int(*engine.Nprobe), C.int(*engine.Ncentroids), C.int(*engine.Nsubvector), C.int(*engine.NbitsPerIdx))
+	metricType := 1;
+	switch engine.MetricType {
+	case "InnerProduct":
+		metricType = 0
+	case "L2":
+		metricType = 1
+	default:
+		return nil, fmt.Errorf("metric_type only support `InnerProduct` ,`L2`")
+	}
+
+	table.ivfpq_param = C.MakeIVFPQParameters(C.int(metricType), C.int(*engine.Nprobe), C.int(*engine.Ncentroids), C.int(*engine.Nsubvector), C.int(*engine.NbitsPerIdx))
 
 	return table, nil
 }

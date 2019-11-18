@@ -32,7 +32,7 @@ type Engine struct {
 	IndexSize   int64  `json:"index_size"`
 	MaxSize     int64  `json:"max_size"`
 	Nprobe      *int   `json:"nprobe,omitempty"`
-	MetricType  *int   `json:"metric_type,omitempty"`
+	MetricType  string `json:"metric_type,omitempty"`
 	Ncentroids  *int   `json:"ncentroids,omitempty"`
 	Nsubvector  *int   `json:"nsubvector,omitempty"`
 	NbitsPerIdx *int   `json:"nbits_per_idx,omitempty"`
@@ -126,54 +126,37 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 		Ncentroids  *int    `json:"ncentroids"`
 		Nsubvector  *int    `json:"nsubvector"`
 		NbitsPerIdx *int    `json:"nbits_per_idx"`
-		//set temp value
-		metricType int
 	}{}
 
 	if err := json.Unmarshal(bs, tempEngine); err != nil {
 		return err
 	}
-
 	switch tempEngine.Name {
 	case Gamma:
 		if tempEngine.MaxSize <= 0 {
 			tempEngine.MaxSize = 100000
 		}
-
 		if tempEngine.IndexSize == nil {
 			tempEngine.IndexSize = util.PInt64(100000)
 		}
 
-		defVal := util.PInt(-1)
-
 		if tempEngine.Nprobe == nil {
-			tempEngine.Nprobe = defVal
+			tempEngine.Nprobe = util.PInt(-1)
 		}
-
-		if tempEngine.MetricType == nil {
-			//if InnerProduct=0, L2=1
-			switch *tempEngine.MetricType {
-			case "InnerProduct":
-				tempEngine.metricType = 0
-			case "L2":
-				tempEngine.metricType = 1
-			default:
-				return fmt.Errorf("metric_type only support `InnerProduct` ,`L2`")
-			}
-		} else {
-			tempEngine.metricType = 1
+		if tempEngine.MetricType == nil || *tempEngine.MetricType == ""{
+			tempEngine.MetricType = util.PStr("L2")
 		}
 
 		if tempEngine.Ncentroids == nil {
-			tempEngine.Ncentroids = defVal
+			tempEngine.Ncentroids = util.PInt(-1)
 		}
 
 		if tempEngine.Nsubvector == nil {
-			tempEngine.Nsubvector = defVal
+			tempEngine.Nsubvector = util.PInt(-1)
 		}
 
 		if tempEngine.NbitsPerIdx == nil {
-			tempEngine.NbitsPerIdx = defVal
+			tempEngine.NbitsPerIdx = util.PInt(-1)
 		}
 	default:
 		return pkg.ErrPartitionEngineNameInvalid
@@ -184,7 +167,7 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 		IndexSize:   *tempEngine.IndexSize,
 		MaxSize:     tempEngine.MaxSize,
 		Nprobe:      tempEngine.Nprobe,
-		MetricType:  &tempEngine.metricType,
+		MetricType:  *tempEngine.MetricType,
 		Ncentroids:  tempEngine.Ncentroids,
 		Nsubvector:  tempEngine.Nsubvector,
 		NbitsPerIdx: tempEngine.NbitsPerIdx,
