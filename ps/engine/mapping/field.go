@@ -485,14 +485,16 @@ func processVector(ctx *walkContext, fm *FieldMapping, fieldName string, val []f
 			return nil, fmt.Errorf("field:[%s] vector_length err ,schema is:[%d] but input :[%d]", fieldName, fm.FieldMappingI.(*VectortFieldMapping).Dimension, len(val))
 		}
 
-		switch *fm.FieldMappingI.(*VectortFieldMapping).Format {
-		case "normalization", "normal":
-			if err := util.Normalization(val); err != nil {
-				return nil, err
+		if fm.FieldMappingI.(*VectortFieldMapping).Format != nil {
+			switch *fm.FieldMappingI.(*VectortFieldMapping).Format {
+			case "normalization", "normal":
+				if err := util.Normalization(val); err != nil {
+					return nil, err
+				}
+			case "no":
+			default:
+				return nil, fmt.Errorf("unknow vector process method:[%s]", *fm.FieldMappingI.(*VectortFieldMapping).Format)
 			}
-		case "no":
-		default:
-			return nil, fmt.Errorf("unknow vector process method:[%s]", *fm.FieldMappingI.(*VectortFieldMapping).Format)
 		}
 
 		bs, err := cbbytes.VectorToByte(val, source)
