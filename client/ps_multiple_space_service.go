@@ -17,10 +17,10 @@ package client
 import (
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
+	"github.com/vearch/vearch/util/log"
 	"sync"
 	"time"
 )
@@ -59,10 +59,10 @@ func (this *multipleSpaceSender) MSearch(req *request.SearchRequest) (result res
 		var err error
 
 		if len(result) < len(r) {
-			err = mergeResultArr(r, result, req)
+			err = this.senders[0].mergeResultArr(r, result, req)
 			result = r
 		} else {
-			err = mergeResultArr(result, r, req)
+			err = this.senders[0].mergeResultArr(result, r, req)
 		}
 
 		if err != nil {
@@ -70,33 +70,6 @@ func (this *multipleSpaceSender) MSearch(req *request.SearchRequest) (result res
 		}
 	}
 	return result
-}
-
-func mergeResultArr(dest response.SearchResponses, src response.SearchResponses, req *request.SearchRequest) error {
-
-	sortOrder, err := req.SortOrder()
-	if err != nil {
-		return fmt.Errorf("sort err [%s]", string(req.Sort))
-	}
-
-	if len(dest) == len(src) {
-		for index := range dest {
-			err := dest[index].Merge(src[index], sortOrder, req.From, *req.Size)
-			if err != nil {
-				return fmt.Errorf("merge err [%s]")
-			}
-		}
-	} else {
-		for index := range dest {
-			err := dest[index].Merge(src[0], sortOrder, req.From, *req.Size)
-			if err != nil {
-				return fmt.Errorf("merge err [%s]")
-			}
-		}
-	}
-
-	return nil
-
 }
 
 func (this *multipleSpaceSender) DeleteByQuery(req *request.SearchRequest) *response.Response {

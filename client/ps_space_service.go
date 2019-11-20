@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
+	"github.com/vearch/vearch/ps/engine/sortorder"
 	"sync"
 	"time"
 
@@ -205,10 +206,10 @@ func (this *spaceSender) MSearchByPartitions(partitions []*entity.Partition, req
 		var err error
 
 		if len(result) < len(r) {
-			err = mergeResultArr(r, result, req)
+			err = this.mergeResultArr(r, result, req)
 			result = r
 		} else {
-			err = mergeResultArr(result, r, req)
+			err = this.mergeResultArr(result, r, req)
 		}
 
 		if err != nil {
@@ -323,10 +324,18 @@ func (this *spaceSender) SearchByPartitions(partitions []*entity.Partition, req 
 	wg.Wait()
 	close(respChain)
 
-	sortOrder, err := req.SortOrder()
-
+	space, err := this.ps.Client().Master().Cache().SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
 	if err != nil {
 		return nil, err
+	}
+
+	sortOrder, err := req.SortOrder()
+	if err != nil {
+		return nil, err
+	}
+
+	if space.Engine.MetricType == "L2" {
+		sortOrder = sortorder.SortOrder{&sortorder.SortScore{Desc: false}}
 	}
 
 	var maxTook int64
@@ -659,4 +668,40 @@ func (this *spaceSender) Slot(docID string) uint32 {
 
 func Slot(routingValue string) uint32 {
 	return murmur3.Sum32WithSeed(cbbytes.StringToByte(routingValue), 0)
+}
+
+func (this *spaceSender) mergeResultArr(dest response.SearchResponses, src response.SearchResponses, req *request.SearchRequest) error {
+
+	sortOrder, err := req.SortOrder()
+	if err != nil {
+		return fmt.Errorf("sort err [%s]", string(req.Sort))
+	}
+
+	space, err := this.ps.Client().Master().Cache().SpaceByCache(this.Ctx.GetContext(), req.Space, req.Space)
+	if err != nil {
+		return err
+	}
+
+	if space.Engine.MetricType == "L2" { //if has sort it will err
+		sortOrder = sortorder.SortOrder{&sortorder.SortScore{Desc: false}}
+	}
+
+	if len(dest) == len(src) {
+		for index := range dest {
+			err := dest[index].Merge(src[index], sortOrder, req.From, *req.Size)
+			if err != nil {
+				return fmt.Errorf("merge err [%s]")
+			}
+		}
+	} else {
+		for index := range dest {
+			err := dest[index].Merge(src[0], sortOrder, req.From, *req.Size)
+			if err != nil {
+				return fmt.Errorf("merge err [%s]")
+			}
+		}
+	}
+
+	return nil
+
 }

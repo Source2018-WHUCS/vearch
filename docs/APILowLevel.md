@@ -212,7 +212,10 @@ curl -H "content-type: application/json" -XPOST -d'
   },
   "size":10,
    "quick":false, 
-   "vector_value":false
+   "vector_value":false,
+    "sort" : [
+       { "_score" : {"order" : "asc"} }
+   ]
 }
 ' {{ROUTER}}/test_vector_db/vector_space/_search
 ````
