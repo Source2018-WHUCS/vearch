@@ -87,8 +87,19 @@ func (handler *RpcHandler) Search(ctx context.Context, req *pspb.RpcSearchReques
 		searchRequest.Size = util.PInt(20)
 	}
 
+	var clientType client.ClientType
+
+	switch req.ClientType {
+	case "leader", "":
+		clientType = client.LEADER
+	case "random":
+		clientType = client.RANDOM
+	default:
+		return &pspb.RpcSearchResponse{Head: handler.newErrHead(fmt.Errorf("client_type err param:[%s] , it use `leader` or `random`", req.ClientType))}, nil
+	}
+
 	t1 := time.Now()
-	searchResponse, nameCache, err := handler.docService.searchDoc(ctx, req.DbName, req.SpaceName, searchRequest)
+	searchResponse, nameCache, err := handler.docService.searchDoc(ctx, req.DbName, req.SpaceName, searchRequest, clientType)
 	if err != nil {
 		return &pspb.RpcSearchResponse{Head: handler.newErrHead(err)}, nil
 	}

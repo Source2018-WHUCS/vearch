@@ -67,7 +67,7 @@ const (
 	StatsHandler           = "StatsHandler"
 	IsLiveHandler          = "IsLiveHandler"
 	PartitionInfoHandler   = "PartitionInfoHandler"
-	ChangeMemberHandler   = "ChangeMemberHandler"
+	ChangeMemberHandler    = "ChangeMemberHandler"
 )
 
 type psClient struct {
@@ -117,6 +117,14 @@ func (this *sender) MultipleSpace(dbSpaces [][2]string) *multipleSpaceSender {
 	senders := make([]*spaceSender, 0, len(dbSpaces))
 	for _, item := range dbSpaces {
 		senders = append(senders, &spaceSender{sender: this, db: item[0], space: item[1]})
+	}
+	return &multipleSpaceSender{senders: senders}
+}
+
+func (this *sender) MultipleSpaceByType(dbSpaces [][2]string, clientType ClientType) *multipleSpaceSender {
+	senders := make([]*spaceSender, 0, len(dbSpaces))
+	for _, item := range dbSpaces {
+		senders = append(senders, &spaceSender{sender: this, db: item[0], space: item[1], clientType: clientType})
 	}
 	return &multipleSpaceSender{senders: senders}
 }

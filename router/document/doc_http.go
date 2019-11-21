@@ -50,6 +50,7 @@ const (
 	UrlQueryRefresh         = "refresh"
 	UrlQueryURISort         = "sort"
 	UrlQueryTimeout         = "timeout"
+	ClientTypeValue         = "client_type"
 )
 
 const (
@@ -282,7 +283,6 @@ func (handler *DocumentHandler) handleGetSpaceMapping(ctx context.Context, w htt
 	return ctx, true
 }
 
-
 func (handler *DocumentHandler) handleReplaceDoc(ctx context.Context, w http.ResponseWriter, r *http.Request, params netutil.UriParams) (context.Context, bool) {
 
 	method := r.Method
@@ -389,7 +389,7 @@ func (handler *DocumentHandler) handleUpdateDoc(ctx context.Context, w http.Resp
 		resp.SendError(ctx, w, http.StatusBadRequest, err.Error(), handler.monitor)
 		return ctx, false
 	}
-	
+
 	doc, err := jsonMap.GetJsonValBytes("doc")
 	if err != nil {
 		resp.SendError(ctx, w, http.StatusBadRequest, err.Error(), handler.monitor)
@@ -653,8 +653,20 @@ func (handler *DocumentHandler) handleSearchDoc(ctx context.Context, w http.Resp
 		searchRequest.Size = &size
 	}
 
+	var clientType client.ClientType
+
+	switch reqArgs[ClientTypeValue] {
+	case "leader", "":
+		clientType = client.LEADER
+	case "random":
+		clientType = client.RANDOM
+	default:
+		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", fmt.Sprintf("client_type err param:[%s] , it use `leader` or `random`", reqArgs[ClientTypeValue]), handler.monitor)
+		return ctx, true
+	}
+
 	t1 := time.Now()
-	searchResponse, nameCache, err := handler.docService.searchDoc(ctx, dbName, spaceName, searchRequest)
+	searchResponse, nameCache, err := handler.docService.searchDoc(ctx, dbName, spaceName, searchRequest, clientType)
 	if err != nil {
 		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error(), handler.monitor)
 		return ctx, true

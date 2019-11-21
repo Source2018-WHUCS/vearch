@@ -124,7 +124,7 @@ func (this *docService) deleteByQuery(ctx context.Context, dbName string, spaceN
 	return this.client.PS().Be(ctx).MultipleSpace(searchSpaces).DeleteByQuery(searchRequest), nameCache, nil
 }
 
-func (this *docService) searchDoc(ctx context.Context, dbName string, spaceName string, searchRequest *request.SearchRequest) (*response.SearchResponse, response.NameCache, error) {
+func (this *docService) searchDoc(ctx context.Context, dbName string, spaceName string, searchRequest *request.SearchRequest, clientType client.ClientType) (*response.SearchResponse, response.NameCache, error) {
 	if searchRequest.Aggs == nil {
 		searchRequest.Aggs = searchRequest.Aggregations
 	}
@@ -139,7 +139,7 @@ func (this *docService) searchDoc(ctx context.Context, dbName string, spaceName 
 		return nil, nil, pkg.ErrMasterSpaceNotExists
 	}
 
-	return this.client.PS().Be(ctx).MultipleSpace(searchSpaces).Search(searchRequest), nameCache, nil
+	return this.client.PS().Be(ctx).MultipleSpaceByType(searchSpaces, clientType).Search(searchRequest), nameCache, nil
 }
 
 //it make uri to db space pair like db1,db2/s1,s1  it will return db1/s1 , db2/s1
