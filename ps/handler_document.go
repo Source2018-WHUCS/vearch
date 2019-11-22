@@ -245,11 +245,7 @@ type ForceMergeHandler struct {
 func (wh *ForceMergeHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
 	reqs := req.Arg.(request.Request)
 	store := reqs.Context().GetStore().(PartitionStore)
-	err := store.GetEngine().Optimize()
-	if err != nil {
-		return err
-	}
-
+	resp.Result = store.GetEngine().Optimize()
 	return nil
 }
 

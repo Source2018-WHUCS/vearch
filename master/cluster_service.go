@@ -890,9 +890,11 @@ func (this *masterService) ChangeMember(ctx context.Context, cm *entity.ChangeMe
 
 	spacePartition := space.GetPartition(cm.PartitionID)
 
-	for _, nodeID := range spacePartition.Replicas {
-		if nodeID == cm.NodeID {
-			return fmt.Errorf("partition:[%d] already has this server:[%d] in replicas:[%v]", cm.PartitionID, cm.NodeID, spacePartition.Replicas)
+	if cm.Method != 1 {
+		for _, nodeID := range spacePartition.Replicas {
+			if nodeID == cm.NodeID {
+				return fmt.Errorf("partition:[%d] already has this server:[%d] in replicas:[%v]", cm.PartitionID, cm.NodeID, spacePartition.Replicas)
+			}
 		}
 	}
 

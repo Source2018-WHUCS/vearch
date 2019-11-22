@@ -205,6 +205,7 @@ func (mm *PartitionSizeHandler) Execute(req *handler.RpcRequest, resp *handler.R
 		return err
 	}
 
+	store.GetEngine().Optimize()
 	value := &entity.PartitionInfo{
 		PartitionID: pid,
 		DocNum:      docNum,
@@ -212,6 +213,8 @@ func (mm *PartitionSizeHandler) Execute(req *handler.RpcRequest, resp *handler.R
 		Path:        store.GetPartition().Path,
 		Unreachable: store.GetUnreachable(uint64(pid)),
 		Status:      store.GetPartition().GetStatus(),
+		Replicas:    store.GetPartition().Replicas,
+		IndexStatus: store.GetEngine().IndexStatus(),
 	}
 
 	resp.Result, err = response.NewObjResponse(value)

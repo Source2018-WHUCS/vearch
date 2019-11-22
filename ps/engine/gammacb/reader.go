@@ -197,7 +197,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 
 	result := ri.singleSearchResult(reps, 0)
 
-	result.Took = end.Nanoseconds()
+	result.MaxTook = end.Nanoseconds()
 
 	return result
 

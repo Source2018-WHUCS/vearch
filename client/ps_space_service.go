@@ -338,14 +338,8 @@ func (this *spaceSender) SearchByPartitions(partitions []*entity.Partition, req 
 		sortOrder = sortorder.SortOrder{&sortorder.SortScore{Desc: false}}
 	}
 
-	var maxTook int64
-	var maxPID uint32
 	var first *response.SearchResponse
 	for r := range respChain {
-		if r.Took > maxTook {
-			maxTook = r.Took
-			maxPID = r.PID
-		}
 		if first == nil {
 			first = r
 			continue
@@ -355,8 +349,6 @@ func (this *spaceSender) SearchByPartitions(partitions []*entity.Partition, req 
 			return nil, err
 		}
 	}
-
-	log.Debug("Max search partitionID:[%d] use time:[%d]", maxPID, maxTook/1000000)
 
 	return first, nil
 }

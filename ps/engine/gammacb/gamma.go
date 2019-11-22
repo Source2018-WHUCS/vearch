@@ -189,7 +189,7 @@ func (ge *gammaEngine) MapDocument(doc *pspb.DocCmd) ([]*pspb.Field, map[string]
 	return ge.indexMapping.MapDocument(doc.Source)
 }
 
-func (ge *gammaEngine) Optimize() error {
+func (ge *gammaEngine) Optimize() int {
 	go func() {
 		ge.buildIndexOnce.Do(func() {
 			log.Info("build index:[%d] begin", ge.partitionID)
@@ -199,7 +199,13 @@ func (ge *gammaEngine) Optimize() error {
 			log.Info("build index:[%d] end", ge.partitionID)
 		})
 	}()
-	return nil
+	return int(C.GetIndexStatus(ge.gamma))
+}
+
+func (ge *gammaEngine) IndexStatus() int {
+	indexLocker.Lock()
+	defer indexLocker.Unlock()
+	return int(C.GetIndexStatus(ge.gamma))
 }
 
 func (ge *gammaEngine) BuildIndex() error {
@@ -266,12 +272,16 @@ func (ge *gammaEngine) autoCreateIndex() {
 	}
 
 	for {
+		select {
+		case <-ge.ctx.Done():
+			return
+		default:
+		}
+
 		if u, err := ge.reader.DocCount(ge.ctx); err != nil {
 			log.Error("auto create index err :[%s]", err.Error())
 		} else if int64(u) >= ge.space.Engine.IndexSize {
-			if err := ge.Optimize(); err != nil {
-				log.Error("auto create index err :[%s]", err.Error())
-			}
+			log.Info("auto create index status :[%d]", int(ge.Optimize()))
 			break
 		}
 		time.Sleep(1 * time.Second)

@@ -74,4 +74,6 @@ type PartitionInfo struct {
 	Color       string          `json:"color,omitempty"`
 	Ip          string          `json:"ip,omitempty"`
 	NodeID      uint64          `json:"node_id,omitempty"`
+	Replicas    []NodeID        `json:"replicas,omitempty"`
+	IndexStatus int             `json:"index_status"`
 }
