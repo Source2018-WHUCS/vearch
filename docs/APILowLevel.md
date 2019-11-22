@@ -113,10 +113,10 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
 * index : supporting numeric field filter default `false`
 
 * Vector field params
-    ** format : default not normalized . if you set "normalization", "normal" it will normalized  
-    ** retrieval_type ： default "IVFPQ"
-    ** store_type : "RocksDB" or "Mmap" default "Mmap"  
-    ** store_param : example {"cache_size":2592} 
+    * * format : default not normalized . if you set "normalization", "normal" it will normalized  
+    * * retrieval_type ： default "IVFPQ"
+    * * store_type : "RocksDB" or "Mmap" default "Mmap"  
+    * * store_param : example {"cache_size":2592} 
 
 ### get space
 
