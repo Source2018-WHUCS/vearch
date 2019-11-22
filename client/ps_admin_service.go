@@ -57,6 +57,15 @@ func (this *adminSender) UpdatePartition(space *entity.Space, pid entity.Partiti
 	return err
 }
 
+func (this *adminSender) DeleteReplica(partitionId uint32) error {
+	reqs, err := request.NewObjRequest(this.Ctx, partitionId, partitionId)
+	if err != nil {
+		return err
+	}
+	_, _, e := Execute(this.addr, DeleteReplicaHandler, reqs)
+	return e
+}
+
 func (this *adminSender) DeletePartition(partitionId uint32) error {
 	reqs, err := request.NewObjRequest(this.Ctx, partitionId, partitionId)
 	if err != nil {

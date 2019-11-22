@@ -48,6 +48,10 @@ func ExportToRpcAdminHandler(server *Server) {
 		panic(err)
 	}
 
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.DeleteReplicaHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initAdminHandler, &DeleteReplicaHandler{server: server}), ""); err != nil {
+		panic(err)
+	}
+
 	if err := server.rpcServer.RegisterName(handler.NewChain(client.UpdatePartitionHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initAdminHandler, storeHandler, new(UpdatePartitionHandler)), ""); err != nil {
 		panic(err)
 	}
@@ -154,6 +158,23 @@ func (d *DeletePartitionHandler) Execute(req *handler.RpcRequest, resp *handler.
 	return nil
 }
 
+type DeleteReplicaHandler struct {
+	server *Server
+}
+
+func (d *DeleteReplicaHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
+
+	log.Debug("DeletePartitionHandler method start, req: %v", req)
+	defer func() {
+		log.Debug("DeletePartitionHandler method end, req: %v, resp: %v", req, resp)
+	}()
+	reqs := req.GetArg().(*request.ObjRequest)
+	d.server.DeleteReplica(reqs.PartitionID)
+	log.Info("replica delete partitionID: %v", reqs.PartitionID)
+
+	return nil
+}
+
 type UpdatePartitionHandler int
 
 func (*UpdatePartitionHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
@@ -205,7 +226,6 @@ func (mm *PartitionSizeHandler) Execute(req *handler.RpcRequest, resp *handler.R
 		return err
 	}
 
-	store.GetEngine().Optimize()
 	value := &entity.PartitionInfo{
 		PartitionID: pid,
 		DocNum:      docNum,
@@ -213,7 +233,7 @@ func (mm *PartitionSizeHandler) Execute(req *handler.RpcRequest, resp *handler.R
 		Path:        store.GetPartition().Path,
 		Unreachable: store.GetUnreachable(uint64(pid)),
 		Status:      store.GetPartition().GetStatus(),
-		Replicas:    store.GetPartition().Replicas,
+		RaftStatus:  store.Status(),
 		IndexStatus: store.GetEngine().IndexStatus(),
 	}
 
@@ -260,11 +280,16 @@ func (ch *ChangeMemberHandler) Execute(req *handler.RpcRequest, resp *handler.Rp
 
 	if reqObj.Method == proto.ConfAddNode {
 		ch.server.raftResolver.AddNode(reqObj.NodeID, server.Replica())
-	} else if reqObj.Method == proto.ConfRemoveNode {
-		ch.server.raftResolver.DeleteNode(reqObj.NodeID)
 	}
 
-	return store.ChangeMember(reqObj.Method, server)
+	if err := store.ChangeMember(reqObj.Method, server); err != nil {
+		return err
+	}
+
+	if reqObj.Method == proto.ConfRemoveNode {
+		ch.server.raftResolver.DeleteNode(reqObj.NodeID)
+	}
+	return nil
 }
 
 // it when has happen , redirect some other to response and send err to status

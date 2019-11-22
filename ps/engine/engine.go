@@ -80,7 +80,7 @@ type Engine interface {
 	MapDocument(doc *pspb.DocCmd) ([]*pspb.Field, map[string]pspb.FieldType, error)
 	NewSnapshot() (proto.Snapshot, error)
 	ApplySnapshot(peers []proto.Peer, iter proto.SnapIterator) error
-	Optimize() int
+	Optimize() error
 	IndexStatus() int
 	Close()
 

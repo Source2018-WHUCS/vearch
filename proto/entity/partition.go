@@ -15,6 +15,7 @@
 package entity
 
 import (
+	"github.com/tiglabs/raft"
 	"sync"
 )
 
@@ -74,6 +75,6 @@ type PartitionInfo struct {
 	Color       string          `json:"color,omitempty"`
 	Ip          string          `json:"ip,omitempty"`
 	NodeID      uint64          `json:"node_id,omitempty"`
-	Replicas    []NodeID        `json:"replicas,omitempty"`
+	RaftStatus  *raft.Status    `json:"raft_status,omitempty"`
 	IndexStatus int             `json:"index_status"`
 }

@@ -245,8 +245,7 @@ type ForceMergeHandler struct {
 func (wh *ForceMergeHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
 	reqs := req.Arg.(request.Request)
 	store := reqs.Context().GetStore().(PartitionStore)
-	resp.Result = store.GetEngine().Optimize()
-	return nil
+	return store.GetEngine().Optimize()
 }
 
 func fullFieldAndUpdateSchema(server *Server, ctx context.Context, engine engine.Engine, space entity.Space, doc *pspb.DocCmd) error {

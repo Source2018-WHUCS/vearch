@@ -896,9 +896,17 @@ func (this *masterService) ChangeMember(ctx context.Context, cm *entity.ChangeMe
 				return fmt.Errorf("partition:[%d] already has this server:[%d] in replicas:[%v]", cm.PartitionID, cm.NodeID, spacePartition.Replicas)
 			}
 		}
-	}
+		spacePartition.Replicas = append(spacePartition.Replicas, cm.NodeID)
+	} else {
+		tempIDs := make([]entity.NodeID, 0, len(spacePartition.Replicas)-1)
 
-	spacePartition.Replicas = append(spacePartition.Replicas, cm.NodeID)
+		for _, id := range spacePartition.Replicas {
+			if id != cm.NodeID {
+				tempIDs = append(tempIDs, id)
+			}
+		}
+		spacePartition.Replicas = tempIDs
+	}
 
 	masterNode, err := this.Master().QueryServer(ctx, partition.LeaderID)
 	if err != nil {
@@ -923,12 +931,18 @@ func (this *masterService) ChangeMember(ctx context.Context, cm *entity.ChangeMe
 			return fmt.Errorf("create partiiton has err:[%s] addr:[%s]", err.Error(), targetNode.RpcAddr())
 		}
 	} else if cm.Method == proto.ConfRemoveNode {
-		if err := this.PS().Be(ctx).Admin(targetNode.RpcAddr()).DeletePartition(cm.PartitionID); err != nil {
-			return fmt.Errorf("create partiiton has err:[%s] addr:[%s]", err.Error(), targetNode.RpcAddr())
-		}
+
 	} else {
 		return fmt.Errorf("change member only support addNode:[%d] removeNode:[%d] not support:[%d]", proto.ConfAddNode, proto.ConfRemoveNode, cm.Method)
 	}
 
-	return this.PS().Be(ctx).Admin(masterNode.RpcAddr()).ChangeMember(cm)
+	if err := this.PS().Be(ctx).Admin(masterNode.RpcAddr()).ChangeMember(cm); err != nil {
+		return err
+	}
+	if cm.Method == proto.ConfRemoveNode {
+		if err := this.PS().Be(ctx).Admin(targetNode.RpcAddr()).DeleteReplica(cm.PartitionID); err != nil {
+			return fmt.Errorf("create partiiton has err:[%s] addr:[%s]", err.Error(), targetNode.RpcAddr())
+		}
+	}
+	return nil
 }

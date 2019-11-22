@@ -63,6 +63,7 @@ const (
 	//admin handler
 	CreatePartitionHandler = "CreatePartitionHandler"
 	DeletePartitionHandler = "DeletePartitionHandler"
+	DeleteReplicaHandler   = "DeleteReplicaHandler"
 	UpdatePartitionHandler = "UpdatePartitionHandler"
 	StatsHandler           = "StatsHandler"
 	IsLiveHandler          = "IsLiveHandler"
