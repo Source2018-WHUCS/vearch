@@ -119,7 +119,13 @@ func (qb *queryBuilder) parseTerm(data []byte) (*C.struct_TermFilter, error) {
 
 	for field, rv := range tmp {
 
-		if qb.mapping.GetField(field).Options()&pspb.FieldOption_Index != pspb.FieldOption_Index {
+		field := qb.mapping.GetField(field)
+
+		if field == nil {
+			return nil, fmt.Errorf("field:[%d] not found in mapping", field)
+		}
+
+		if field.Options()&pspb.FieldOption_Index != pspb.FieldOption_Index {
 			return nil, fmt.Errorf("field:[%d] not open index", field)
 		}
 
