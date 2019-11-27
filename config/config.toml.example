@@ -34,6 +34,7 @@
 [router]
     # port for server
     port = 9001
+    # rpc_port = 9002
     pprof_port = 6061
     plugin_path = "plugin"
 
