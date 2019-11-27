@@ -297,7 +297,7 @@ type VectortFieldMapping struct {
 	Dimension     int     `json:"dimension"`
 	ModelId       string  `json:"model_id"`
 	Format        *string `json:"format,omitempty"`         //default is "normalization", "normal" , if set "no" others it will not format
-	RetrievalType string  `json:"retrieval_type,omitempty"` // "IVFPQ", "PACINS", ...
+	RetrievalType string  `json:"retrieval_type,omitempty"` // "IVFPQ", "PACINS","GPU" ...
 	StoreType     string  `json:"store_type,omitempty"`     // "Mmap", "RocksDB"
 	StoreParam    []byte  `json:"store_param,omitempty"`
 }
