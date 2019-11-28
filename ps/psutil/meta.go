@@ -90,7 +90,7 @@ func readMeta(cluster, metaPath string) entity.NodeID {
 func createMeta(client *client.Client, cluster, metaPath string) entity.NodeID {
 	id, err := client.Master().NewIDGenerate(context.Background(), entity.NodeIdSequence, 1, 3*time.Second)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("master generate id has err:[%s]", err.Error()))
 	}
 
 	temp := meta{ClusterName: cluster, Id: entity.NodeID(id)}
