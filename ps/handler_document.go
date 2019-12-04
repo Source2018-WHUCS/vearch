@@ -96,7 +96,7 @@ type InitHandler struct {
 
 func (i *InitHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
 	if i.server.stopping.Get() {
-		return pkg.ErrGeneralServiceUnavailable
+		return pkg.CodeErr(pkg.ERRCODE_SERVICE_UNAVAILABLE)
 	}
 
 	arg := req.Arg.(request.Request)
@@ -111,7 +111,7 @@ func (i *InitHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse
 
 	if store := i.server.GetPartition(arg.GetPartitionID()); store == nil {
 		log.Error("partition not found, partitionId:[%d]", arg.GetPartitionID())
-		return pkg.ErrPartitionNotExist
+		return pkg.CodeErr(pkg.ERRCODE_PARTITION_NOT_EXIST)
 	} else {
 		rCtx.SetStore(store)
 	}
@@ -191,7 +191,7 @@ func (wh *WriteHandler) Execute(req *handler.RpcRequest, resp *handler.RpcRespon
 
 	if wh.limitPlugin.limit.Load() > wh.limitPlugin.size {
 		log.Warn("too many routine:[%d] for limt so skip pre read request", wh.limitPlugin.limit.Load())
-		return pkg.ErrGeneralSysBusy
+		return pkg.CodeErr(pkg.ERRCODE_SYSBUSY)
 	}
 
 	reqs := req.GetArg().(*request.ObjRequest)
@@ -405,7 +405,7 @@ func (ssh *StreamSearchHandler) Execute(req *handler.RpcRequest, resp *handler.R
 
 	conn := req.Ctx.Value(server.RemoteConnContextKey).(net.Conn)
 	if conn == nil {
-		return pkg.ErrGeneralServiceUnavailable
+		return pkg.CodeErr(pkg.ERRCODE_SERVICE_UNAVAILABLE)
 	}
 
 	defer func() {

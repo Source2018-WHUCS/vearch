@@ -276,11 +276,21 @@ func (this *partitionSender) initPartition() (*entity.Partition, error) {
 
 func (this *partitionSender) getOrCreate(partition *entity.Partition, clientType ClientType) *partitionSender {
 	this.nodeIds = make([]entity.NodeID, 0)
-	if clientType == LEADER {
+	switch clientType {
+	case LEADER:
 		this.nodeIds = append(this.nodeIds, partition.LeaderID)
-	} else if clientType == RANDOM {
+	case NOT_LEADER:
+		if len(this.nodeIds) == 1 {
+			log.Warn("partition:[%d] NO_LEADER model by client_type , but only has leader ", partition.Id)
+		}
+		noLeaderIDs := make([]entity.NodeID, 0, len(this.nodeIds)-1)
+		for _, id := range partition.Replicas {
+			noLeaderIDs = append(noLeaderIDs, id)
+		}
+		this.nodeIds = append(this.nodeIds, noLeaderIDs[rand.Intn(len(noLeaderIDs))])
+	case RANDOM:
 		this.nodeIds = append(this.nodeIds, partition.Replicas[rand.Intn(len(partition.Replicas))])
-	} else if clientType == ALL {
+	case ALL:
 		this.nodeIds = partition.Replicas
 	}
 	return this
@@ -315,7 +325,7 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 			rpcClient.lock.RLock()
 			defer rpcClient.lock.RUnlock()
 			if rpcClient.client == nil {
-				resp := response.Response{Resp: nil, Status: pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING, Err: pkg.ErrMasterServerIsNotRunning}
+				resp := response.Response{Resp: nil, Status: pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING, Err: pkg.VErr(pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING)}
 				respChain <- &resp
 				return
 			}
@@ -376,7 +386,7 @@ func (this *partitionSender) StreamExecute(servicePath string, request request.R
 	rpcClient.lock.RLock()
 	defer rpcClient.lock.RUnlock()
 	if rpcClient.client == nil {
-		return nil, pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING, pkg.ErrMasterServerIsNotRunning
+		return nil, pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING, pkg.CodeErr(pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING)
 	}
 	sleepTime := baseSleepTime
 

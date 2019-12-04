@@ -84,7 +84,7 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 
 	gamma := ri.engine.gamma
 	if gamma == nil {
-		return response.SearchResponses{response.NewSearchResponseErr(vearchlog.LogErrAndReturn(pkg.ErrPartitionClosed))}
+		return response.SearchResponses{response.NewSearchResponseErr(vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)))}
 	}
 
 	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
@@ -146,7 +146,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 
 	gamma := ri.engine.gamma
 	if gamma == nil {
-		return response.NewSearchResponseErr(vearchlog.LogErrAndReturn(pkg.ErrPartitionClosed))
+		return response.NewSearchResponseErr(vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)))
 	}
 
 	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
@@ -267,7 +267,7 @@ func (ri *readerImpl) DocCount(ctx context.Context) (uint64, error) {
 
 	gamma := ri.engine.gamma
 	if gamma == nil {
-		return 0, vearchlog.LogErrAndReturn(pkg.ErrPartitionClosed)
+		return 0, vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED))
 	}
 
 	num := C.GetDocsNum(gamma)

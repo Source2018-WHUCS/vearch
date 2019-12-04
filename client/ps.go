@@ -37,6 +37,7 @@ type ClientType int
 
 const (
 	LEADER ClientType = iota
+	NOT_LEADER
 	RANDOM
 	ALL
 )

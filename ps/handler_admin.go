@@ -80,7 +80,7 @@ type InitAdminHandler struct {
 
 func (i *InitAdminHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
 	if i.server.stopping.Get() {
-		return pkg.ErrGeneralServiceUnavailable
+		return pkg.CodeErr(pkg.ERRCODE_SERVICE_UNAVAILABLE)
 	}
 	arg := req.Arg.(request.Request)
 	rCtx := arg.Context()
@@ -102,7 +102,7 @@ func (s *SetStoreHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResp
 	reqs := req.Arg.(request.Request)
 	store := s.server.GetPartition(reqs.GetPartitionID())
 	if store == nil {
-		return pkg.ErrPartitionNotExist
+		return pkg.CodeErr(pkg.ERRCODE_PARTITION_NOT_EXIST)
 	}
 	reqs.Context().SetStore(store)
 	return nil
@@ -131,7 +131,7 @@ func (c *CreatePartitionHandler) Execute(req *handler.RpcRequest, resp *handler.
 	})
 
 	if partitionStore := c.server.GetPartition(reqObj.PartitionId); partitionStore != nil {
-		return pkg.ErrPartitionDuplicate
+		pkg.CodeErr(pkg.ERRCODE_PARTITION_DUPLICATE)
 	}
 
 	if err := c.server.CreatePartition(req.Ctx, reqObj.Space, reqObj.PartitionId); err != nil {
@@ -269,7 +269,7 @@ func (ch *ChangeMemberHandler) Execute(req *handler.RpcRequest, resp *handler.Rp
 	store := reqs.GetStore().(PartitionStore)
 
 	if !store.IsLeader() {
-		return pkg.ErrPartitionNotLeader
+		return pkg.CodeErr(pkg.ERRCODE_PARTITION_NOT_LEADER)
 	}
 
 	server, err := ch.server.client.Master().QueryServer(reqs.Context().GetContext(), reqObj.NodeID)
@@ -295,7 +295,7 @@ func (ch *ChangeMemberHandler) Execute(req *handler.RpcRequest, resp *handler.Rp
 // it when has happen , redirect some other to response and send err to status
 func psErrorChange(server *Server) handler.ErrorChangeFun {
 	return func(ctx context.Context, err error, req *handler.RpcRequest, response *handler.RpcResponse) error {
-		if err == pkg.ErrPartitionNotLeader || err == raft.ErrNotLeader {
+		if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_NOT_LEADER || err == raft.ErrNotLeader {
 			id, _ := req.Arg.(request.Request).Context().GetStore().(PartitionStore).GetLeader()
 			if id == 0 {
 				response.Status = pkg.ERRCODE_PARTITION_NO_LEADER

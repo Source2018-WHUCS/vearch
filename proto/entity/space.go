@@ -16,7 +16,6 @@ package entity
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/util"
@@ -159,7 +158,7 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 			tempEngine.NbitsPerIdx = util.PInt(-1)
 		}
 	default:
-		return pkg.ErrPartitionEngineNameInvalid
+		return pkg.CodeErr(pkg.ERRCODE_PARTITON_ENGINENAME_INVALID)
 	}
 
 	*engine = Engine{
@@ -182,7 +181,7 @@ func (space *Space) Validate() error {
 	switch space.Engine.Name {
 	case Gamma:
 	default:
-		return errors.New(pkg.ErrMasterInvalidEngine.Error() + " engine name : " + space.Engine.Name)
+		return pkg.CodeErr(pkg.ERRCODE_INVALID_ENGINE)
 	}
 
 	rs := []rune(space.Name)

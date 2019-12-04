@@ -169,7 +169,7 @@ func (this *masterService) deleteDBService(ctx context.Context, dbstr string) (e
 	}
 
 	if len(spaces) > 0 {
-		return pkg.ErrMasterDbNotEmpty
+		return pkg.CodeErr(pkg.ERRCODE_DB_Not_Empty)
 	}
 
 	err = this.Master().STM(context.Background(),
@@ -204,7 +204,7 @@ func (this *masterService) queryDBService(ctx context.Context, dbstr string) (db
 	}
 
 	if bs == nil {
-		return nil, pkg.ErrMasterDbNotExists
+		return nil, pkg.CodeErr(pkg.ERRCODE_DB_NOTEXISTS)
 	}
 
 	if err := json.Unmarshal(bs, db); err != nil {
@@ -243,11 +243,11 @@ func (this *masterService) createSpaceService(ctx context.Context, dbName string
 
 	//spaces is existed
 	if _, err := this.Master().QuerySpaceByName(ctx, space.DBId, space.Name); err != nil {
-		if err != pkg.ErrMasterSpaceNotExists {
+		if pkg.ErrCode(err) != pkg.ERRCODE_SPACE_NOTEXISTS {
 			return err
 		}
 	} else {
-		return pkg.ErrMasterDupSpace
+		return pkg.CodeErr(pkg.ERRCODE_DUP_SPACE)
 	}
 
 	log.Info("create space, db: %s, spaceName: %s ,space :[%s]", dbName, space.Name, cbjson.ToJsonString(space))
@@ -358,7 +358,7 @@ func (this *masterService) createSpaceService(ctx context.Context, dbName string
 			if v%5 == 0 {
 				log.Debug("check the partition:%d status ", space.Partitions[i].Id)
 			}
-			if err != nil && err != pkg.ErrPartitionNotExist {
+			if err != nil && pkg.ErrCode(err) != pkg.ERRCODE_PARTITION_NOT_EXIST {
 				return err
 			}
 			if partition == nil {
@@ -423,7 +423,7 @@ func (this *masterService) generatePartitionsInfo(servers []*entity.Server, serv
 	}
 
 	if replicaNum > 0 {
-		return nil, pkg.ErrMasterPSNotEnoughSelect
+		return nil, pkg.VErrStr(pkg.ERRCODE_MASTER_PS_NOT_ENOUGH_SELECT, "need %d but got %d", partition.Replicas, len(addres))
 	}
 
 	return addres, nil
@@ -843,7 +843,7 @@ func (this *masterService) statsService(ctx context.Context) ([]*mserver.ServerS
 		case s := <-statsChan:
 			result = append(result, s)
 		case <-ctx.Done():
-			return nil, pkg.ErrGeneralTimeoutError
+			return nil, pkg.CodeErr(pkg.ERRCODE_TIMEOUT)
 		default:
 			time.Sleep(time.Millisecond * 10)
 			if len(result) >= len(servers) {

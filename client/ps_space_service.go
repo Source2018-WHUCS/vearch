@@ -587,13 +587,6 @@ func (this *spaceSender) writeAndRetry(doc *pspb.DocCmd) *response.DocResult {
 			}
 			this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
 			time.Sleep(1 * time.Second)
-		} else if pkg.ErrCode(err) == pkg.ERRCODE_PARTITION_FROZEN {
-			sender.pid = 0
-			if tryTimes > 5 {
-				return response.NewErrDocResult(doc.DocId, err)
-			}
-			this.ps.client.master.cliCache.DeleteSpaceCache(this.Ctx.GetContext(), this.db, this.space)
-			time.Sleep(1 * time.Second)
 		} else if pkg.ErrCode(err) == pkg.ERRCODE_PULL_OUT_VERSION_NOT_MATCH {
 			if this.writeTryTimes == 0 {
 				return response.NewErrDocResult(doc.DocId, err)

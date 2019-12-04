@@ -478,7 +478,7 @@ func (this *clusterApi) _auth(ctx context.Context, c *gin.Context) error {
 	headerData := c.GetHeader(headerAuthKey)
 
 	if headerData == "" {
-		return pkg.ErrMasterAuthenticationFailed
+		return pkg.CodeErr(pkg.ERRCODE_AUTHENTICATION_FAILED)
 	}
 
 	username, password, err := util.AuthDecrypt(headerData)
@@ -487,7 +487,7 @@ func (this *clusterApi) _auth(ctx context.Context, c *gin.Context) error {
 	}
 
 	if username != "root" || password != config.Conf().Global.Signkey {
-		return pkg.ErrMasterAuthenticationFailed
+		return pkg.CodeErr(pkg.ERRCODE_AUTHENTICATION_FAILED)
 	}
 
 	return nil

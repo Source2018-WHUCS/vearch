@@ -252,7 +252,7 @@ func (handler *DocumentHandler) handleGetSpaceMapping(ctx context.Context, w htt
 
 	space, err := handler.docService.getSpace(ctx, dbName, spaceName)
 	if err != nil {
-		if err == pkg.ErrMasterSpaceNotExists {
+		if pkg.ErrCode(err) == pkg.ERRCODE_SPACE_NOTEXISTS {
 			resp.SendErrorRootCause(ctx, w, http.StatusNotFound, "", err.Error(), handler.monitor)
 		} else {
 			resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error(), handler.monitor)

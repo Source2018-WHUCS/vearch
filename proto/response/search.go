@@ -27,7 +27,7 @@ func NewSearchResponseErr(err error) *SearchResponse {
 		Status: &SearchStatus{
 			Total:  1,
 			Failed: 1,
-			Errors: map[string]error{pkg.ErrGeneralInternalError.Error(): err},
+			Errors: map[string]error{pkg.FormatErr(err): err},
 		},
 	}
 }
