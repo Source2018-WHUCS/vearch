@@ -130,7 +130,6 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 	}
 	reps := C.Search(ri.engine.gamma, req)
 	defer C.DestroyResponse(reps)
-
 	result := make(response.SearchResponses, int(req.req_num))
 
 	for index := range result {
@@ -192,12 +191,12 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 	}
 	start := time.Now()
 	reps := C.Search(gamma, req)
-	end := time.Now().Sub(start)
 	defer C.DestroyResponse(reps)
-
 	result := ri.singleSearchResult(reps, 0)
+	end := time.Now().Sub(start)
 
-	result.MaxTook = end.Nanoseconds()
+	result.MaxTook = end.Milliseconds()
+	result.MaxTookID = ri.engine.partitionID
 
 	return result
 

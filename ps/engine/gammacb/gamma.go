@@ -93,12 +93,12 @@ func New(cfg register.EngineConfig) (engine.Engine, error) {
 	ge.writer = &writerImpl{engine: ge}
 
 	infos, _ := ioutil.ReadDir(cfg.Path)
-	if len(infos) == 0 {
-		log.Info("to create table for gamma by path:[%s]", cfg.Path)
-		if resp := C.CreateTable(ge.gamma, table); resp != 0 {
-			return nil, fmt.Errorf("create gamma table has err:[%d]", int(resp))
-		}
-	} else {
+
+	log.Info("to create table for gamma by path:[%s]", cfg.Path)
+	if resp := C.CreateTable(ge.gamma, table); resp != 0 {
+		return nil, fmt.Errorf("create gamma table has err:[%d]", int(resp))
+	}
+	if len(infos) > 0 {
 		code := int(C.Load(ge.gamma))
 		if code != 0 {
 			return nil, fmt.Errorf("load gamma data err code:[%d]", code)

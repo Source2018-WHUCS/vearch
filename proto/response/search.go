@@ -42,7 +42,7 @@ type SearchResponse struct {
 	Total     uint64            `json:"total_hits"`
 	MaxScore  float64           `json:"max_score"`
 	MaxTook   int64             `json:"took"`
-	MaxTookID uint32            `json:"took"`
+	MaxTookID uint32            `json:"max_took_id"`
 	Explain   map[uint32]string `json:"explain,omitempty"`
 }
 
