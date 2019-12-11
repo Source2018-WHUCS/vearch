@@ -93,11 +93,6 @@ func (this *docService) getDocs(ctx context.Context, dbName string, spaceName st
 }
 
 func (this *docService) mSearchDoc(ctx context.Context, dbName string, spaceName string, searchRequest *request.SearchRequest) (response.SearchResponses, response.NameCache, error) {
-	if searchRequest.Aggs == nil {
-		searchRequest.Aggs = searchRequest.Aggregations
-	}
-	searchRequest.Aggregations = nil
-
 	searchSpaces, nameCache, err := this.parseDBSpacePair(ctx, dbName, spaceName)
 	if err != nil {
 		return nil, nil, err
@@ -111,7 +106,6 @@ func (this *docService) mSearchDoc(ctx context.Context, dbName string, spaceName
 }
 
 func (this *docService) deleteByQuery(ctx context.Context, dbName string, spaceName string, searchRequest *request.SearchRequest) (*response.Response, response.NameCache, error) {
-
 	searchSpaces, nameCache, err := this.parseDBSpacePair(ctx, dbName, spaceName)
 	if err != nil {
 		return nil, nil, err
@@ -125,11 +119,6 @@ func (this *docService) deleteByQuery(ctx context.Context, dbName string, spaceN
 }
 
 func (this *docService) searchDoc(ctx context.Context, dbName string, spaceName string, searchRequest *request.SearchRequest, clientType client.ClientType) (*response.SearchResponse, response.NameCache, error) {
-	if searchRequest.Aggs == nil {
-		searchRequest.Aggs = searchRequest.Aggregations
-	}
-	searchRequest.Aggregations = nil
-
 	searchSpaces, nameCache, err := this.parseDBSpacePair(ctx, dbName, spaceName)
 	if err != nil {
 		return nil, nil, err

@@ -662,7 +662,7 @@ func (this *spaceSender) mergeResultArr(dest response.SearchResponses, src respo
 		return fmt.Errorf("sort err [%s]", string(req.Sort))
 	}
 
-	space, err := this.ps.Client().Master().Cache().SpaceByCache(this.Ctx.GetContext(), req.Space, req.Space)
+	space, err := this.ps.Client().Master().Cache().SpaceByCache(this.Ctx.GetContext(), this.db, this.space)
 	if err != nil {
 		return err
 	}
