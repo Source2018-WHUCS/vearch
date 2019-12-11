@@ -679,7 +679,7 @@ func (handler *DocumentHandler) handleSearchDoc(ctx context.Context, w http.Resp
 		return ctx, true
 	}
 
-	log.Info("search use time :[%d] . max partition:[%d] use time:[%d]", t2.Sub(t1).Milliseconds(), searchResponse.MaxTookID, searchResponse.MaxTook)
+	log.Info("search use time :[%d] . max partition:[%d] use time:[%d]", (t2.Sub(t1) / time.Millisecond), searchResponse.MaxTookID, searchResponse.MaxTook)
 
 	resp.SendJsonBytes(ctx, w, bs, handler.monitor)
 	return ctx, true
