@@ -258,13 +258,15 @@ func (ps *psClient) getOrCreateRpcClient(ctx context.Context, nodeId entity.Node
 	if ok {
 		return value.(*rpcClient).lastUse()
 	}
-	ps.Client().Master().cliCache.lock.Lock()
-	defer ps.Client().Master().cliCache.lock.Unlock()
+
 
 	value, ok = ps.Client().Master().cliCache.Load(nodeId)
 	if ok {
 		return value.(*rpcClient).lastUse()
 	}
+
+	ps.Client().Master().cliCache.lock.Lock()
+	defer ps.Client().Master().cliCache.lock.Unlock()
 
 	log.Info("psClient not in psClientCache, make new psClient, nodeId:[%d]", nodeId)
 	psServer, err := ps.Client().Master().cliCache.ServerByCache(ctx, nodeId)
