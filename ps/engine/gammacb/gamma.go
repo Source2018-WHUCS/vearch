@@ -265,7 +265,7 @@ func (ge *gammaEngine) Close() {
 				continue
 			}
 			C.Close(ge.gamma)
-			break;
+			break
 		}
 	}()
 
@@ -282,6 +282,13 @@ func (ge *gammaEngine) autoCreateIndex() {
 		case <-ge.ctx.Done():
 			return
 		default:
+		}
+
+		s := C.GetIndexStatus(ge.gamma)
+
+		if int(s) == 2 {
+			log.Info("index:[%d] ok", ge.partitionID)
+			break
 		}
 
 		if u, err := ge.reader.DocCount(ge.ctx); err != nil {

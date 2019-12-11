@@ -196,6 +196,14 @@ func (cliCache *clientCache) reloadSpaceCache(ctx context.Context, sync bool, db
 			return nil
 		}
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					vearchlog.LogErrNotNil(fmt.Errorf(cast.ToString(r)))
+				}
+			}()
+			if key == "" {
+				return
+			}
 			defer spaceReloadWorkder.Delete(key)
 			vearchlog.FunIfNotNil(fun)
 		}()
