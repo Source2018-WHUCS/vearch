@@ -31,10 +31,6 @@ type RpcClient struct {
 	clientPool    *pool.Pool
 }
 
-//func (this *RpcClient) getClient() *client.XClientPool {
-//	return this.client
-//}
-
 func NewRpcClient(serverAddress ...string) (*RpcClient, error) {
 	log.Info("instance client by rpc %s", serverAddress[0])
 
@@ -70,10 +66,11 @@ func (this *RpcClient) Close() error {
 
 func (this *RpcClient) Execute(servicePath string, req *handler.RpcRequest) (*handler.RpcResponse, error) {
 	resp := handler.NewRpcResponse(req.MessageId)
-	if err := this.clientPool.Get().(*client.OneClient).Call(req.Ctx, servicePath, serviceMethod, req, resp); err != nil {
+	cli := this.clientPool.Get().(*client.OneClient)
+	defer this.clientPool.Put(cli)
+	if err := cli.Call(req.Ctx, servicePath, serviceMethod, req, resp); err != nil {
 		return nil, err
 	}
-
 	return resp, nil
 }
 
@@ -81,6 +78,7 @@ func (this *RpcClient) Execute(servicePath string, req *handler.RpcRequest) (*ha
 func (this *RpcClient) GoExecute(servicePath string, req *handler.RpcRequest) (*client.Call, error) {
 	resp := handler.NewRpcResponse(req.MessageId)
 	oneClient := this.clientPool.Get().(*client.OneClient)
+	defer this.clientPool.Put(oneClient)
 	return oneClient.Go(req.Ctx, servicePath, serviceMethod, req, resp, nil)
 }
 
