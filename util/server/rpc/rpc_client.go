@@ -16,63 +16,61 @@ package server
 
 import (
 	"context"
+	"github.com/smallnest/pool"
 	"github.com/smallnest/rpcx/protocol"
 	"github.com/vearch/vearch/util/vearchlog"
 	"strings"
 
 	"github.com/smallnest/rpcx/client"
 	"github.com/vearch/vearch/util/log"
-	"github.com/vearch/vearch/util/atomic"
 	"github.com/vearch/vearch/util/server/rpc/handler"
 )
 
 type RpcClient struct {
 	serverAddress []string
-	client        *client.OneClient
-	used          atomic.AtomicInt64
+	clientPool    *pool.Pool
 }
 
-func (this *RpcClient) getClient() *client.OneClient {
-	return this.client
-}
+//func (this *RpcClient) getClient() *client.XClientPool {
+//	return this.client
+//}
 
-func (this *RpcClient) GetPoolUsed() int64 {
-	return this.used.Get()
-}
-
-//client        *client.OneClient
 func NewRpcClient(serverAddress ...string) (*RpcClient, error) {
-
 	log.Info("instance client by rpc %s", serverAddress[0])
+
 	var d client.ServiceDiscovery
 	if len(serverAddress) == 1 {
 		d = client.NewPeer2PeerDiscovery("tcp@"+serverAddress[0], "")
 	} else {
 		arr := make([]*client.KVPair, len(serverAddress))
-
 		for i, addr := range serverAddress {
 			arr[i] = &client.KVPair{Key: addr}
 		}
-
 		d = client.NewMultipleServersDiscovery(arr)
 	}
-	one := client.NewOneClient(client.Failtry, client.RandomSelect, d, client.DefaultOption)
 
-	return &RpcClient{serverAddress: serverAddress, client: one}, nil
+	clientPool := &pool.Pool{New: func() interface{} {
+		return client.NewOneClient(client.Failtry, client.RandomSelect, d, client.DefaultOption)
+	}}
+
+	return &RpcClient{serverAddress: serverAddress, clientPool: clientPool}, nil
 }
 
 func (this *RpcClient) Close() error {
-	return this.client.Close()
+	var e error
+	this.clientPool.Range(func(v interface{}) bool {
+		if err := v.(*client.OneClient).Close(); err != nil {
+			log.Error("close client has err:[%s]", err.Error())
+			e = err
+		}
+		return true
+	})
+	return e
 }
 
 func (this *RpcClient) Execute(servicePath string, req *handler.RpcRequest) (*handler.RpcResponse, error) {
-
 	resp := handler.NewRpcResponse(req.MessageId)
-
-	oneClient := this.getClient()
-	this.used.Incr()
-
-	if err := oneClient.Call(req.Ctx, servicePath, serviceMethod, req, resp); err != nil {
+	if err := this.clientPool.Get().(*client.OneClient).Call(req.Ctx, servicePath, serviceMethod, req, resp); err != nil {
 		return nil, err
 	}
 
@@ -82,7 +80,7 @@ func (this *RpcClient) Execute(servicePath string, req *handler.RpcRequest) (*ha
 //execute rpc method , with whie callback
 func (this *RpcClient) GoExecute(servicePath string, req *handler.RpcRequest) (*client.Call, error) {
 	resp := handler.NewRpcResponse(req.MessageId)
-	oneClient := this.getClient()
+	oneClient := this.clientPool.Get().(*client.OneClient)
 	return oneClient.Go(req.Ctx, servicePath, serviceMethod, req, resp, nil)
 }
 

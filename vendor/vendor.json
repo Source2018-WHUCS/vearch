@@ -614,6 +614,12 @@
 			"revisionTime": "2018-12-10T08:02:29Z"
 		},
 		{
+			"checksumSHA1": "huQ4ux6A74EPRkLKR1/1yjjG4q4=",
+			"path": "github.com/smallnest/pool",
+			"revision": "4f76a6d6402e093b1a6e15e8ac3fd41612fca9f6",
+			"revisionTime": "2017-09-26T02:53:34Z"
+		},
+		{
 			"checksumSHA1": "dgJTQ00JX4VMt8qJKnELRszrHEE=",
 			"path": "github.com/smallnest/rpcx/client",
 			"revision": "28d08d166104f645f1e6af9283d1ed81513ac654",
