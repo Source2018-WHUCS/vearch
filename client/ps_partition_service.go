@@ -348,7 +348,7 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 					rpcClient = this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), addrs.NodeID)
 					log.Debug("%s invoke not leader retry, PartitionID: %d, PartitionRpcAddr: %s", servicePath, request.GetPartitionID(), rpcClient.client.GetAddress(0))
 					continue
-				} else if status == pkg.ERRCODE_MASTER_PS_CAN_NOT_SELECT {
+				} else if status == pkg.ERRCODE_PARTITION_CANNOT_SEARCH {
 					var partition *entity.Partition
 
 					if partition, e = this.spaceSender.ps.Client().Master().Cache().PartitionByCache(this.spaceSender.Ctx.GetContext(), this.spaceSender.space, this.pid); e != nil {
@@ -377,7 +377,7 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 					}
 
 					if nodeId == 0 {
-						e = fmt.Errorf("select all nodes:[%s] has err:[%s]", partition.Replicas, pkg.CodeErr(pkg.ERRCODE_MASTER_PS_CAN_NOT_SELECT))
+						e = fmt.Errorf("select all nodes:[%s] has err:[%s]", partition.Replicas, pkg.CodeErr(pkg.ERRCODE_PARTITION_CANNOT_SEARCH))
 						break
 					}
 
