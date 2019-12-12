@@ -59,90 +59,27 @@ int Profile::Load(const std::vector<string> &folders, int &doc_num) {
   char *cur_str_mem = nullptr;
   int head_length = 0;
 
-  for (const string &path : folders) {
-    if (not table_created_) {
-      const std::vector<string> files = utils::ls(path);
-      for (const auto file : files) {
-        auto strs = utils::split(file, ".");
-        if (strs.size() == 2 && strs[1] == "prf") {
-          name_ = strs[0];
-          strs = utils::split(name_, "/");
-          name_ = strs[strs.size() - 1];
-          LOG(INFO) << "profile name [" << name_ << "]";
-          break;
-        }
-      }
-    }
+  if (mem_ != nullptr) {
+    delete[] mem_;
+  }
+  mem_ = new char[(uint64_t)max_profile_size_ * item_length_];
+  cur_mem = mem_;
 
+  if (str_mem_ != nullptr) {
+    delete[] str_mem_;
+  }
+  str_mem_ = new char[max_str_size_];
+  memset(str_mem_, 0, max_str_size_);
+  cur_str_mem = str_mem_;
+
+  for (const string &path : folders) {
     const string prf_name = path + "/" + name_ + ".prf";
     const string prf_str_name = path + "/" + name_ + ".str.prf";
-
-    if (not table_created_) {
-      FILE *fp_prf = fopen(prf_name.c_str(), "rb");
-      if (fp_prf == nullptr) {
-        LOG(ERROR) << "Cannot open file " << prf_name;
-        return -1;
-      }
-      fread((void *)(&field_num_), sizeof(uint8_t), 1, fp_prf);
-      LOG(INFO) << "field_num [" << static_cast<int>(field_num_) << "]";
-      head_length += 1;
-      for (int i = 0; i < field_num_; ++i) {
-        idx_attr_offset_.push_back(item_length_);
-
-        int8_t is_index = -1;
-        fread((void *)(&is_index), sizeof(int8_t), 1, fp_prf);
-
-        uint8_t a = 0;
-        fread((void *)(&a), sizeof(uint8_t), 1, fp_prf);
-
-        uint8_t type = a & 0x07;
-        enum DataType ftype = static_cast<enum DataType>(type);
-        attrs_.push_back(ftype);
-
-        uint8_t len = ((a >> 3) & 0x1F) + 1;
-        char name_c[len];
-        fread((void *)(name_c), sizeof(char), len, fp_prf);
-
-        string name = string(name_c, len);
-        item_length_ += FTypeSize(ftype);
-        idx_attr_map_.insert(std::pair<int, string>(i, name));
-        attr_idx_map_.insert(std::pair<string, int>(name, i));
-        attr_type_map_.insert(std::pair<string, enum DataType>(name, ftype));
-        attr_is_index_map_.insert(std::pair<string, int>(name, is_index));
-
-        head_length += 2 + len;
-        LOG(INFO) << "attr name [" << name << "], type ["
-                  << static_cast<int>(type) << "]";
-      }
-
-      long profile_size = utils::get_file_size(prf_name.c_str()) - head_length;
-      if (profile_size % item_length_ != 0) {
-        LOG(ERROR) << "File [" << prf_name << "] error!";
-        return -1;
-      }
-      if (mem_ != nullptr) {
-        delete mem_;
-      }
-      mem_ = new char[(uint64_t)max_profile_size_ * item_length_];
-      fclose(fp_prf);
-
-      cur_mem = mem_;
-      if (str_mem_ != nullptr) {
-        delete str_mem_;
-      }
-
-      str_mem_ = new char[max_str_size_];
-      memset(str_mem_, 0, max_str_size_);
-      cur_str_mem = str_mem_;
-      table_created_ = true;
-      LOG(INFO) << "Read table [" << name_ << "] success, item_length ["
-                << item_length_ << "]";
-    }
 
     FILE *fp_prf = fopen(prf_name.c_str(), "rb");
     if (fp_prf == nullptr) {
       LOG(INFO) << "Cannot open file " << prf_name;
-      break;
+      return -1;
     }
 
     long profile_size = utils::get_file_size(prf_name.c_str()) - head_length;
@@ -163,7 +100,7 @@ int Profile::Load(const std::vector<string> &folders, int &doc_num) {
     FILE *fp_str = fopen(prf_str_name.c_str(), "rb");
     if (fp_str == nullptr) {
       LOG(ERROR) << "Cannot open file " << prf_str_name;
-      break;
+      return -1;
     }
     long profile_str_size = utils::get_file_size(prf_str_name.c_str());
     total_str_size += profile_str_size;
@@ -378,7 +315,6 @@ int Profile::Update(const std::vector<Field *> &fields, int doc_id) {
 }
 
 int Profile::Dump(const string &path, int max_docid, int dump_docid) {
-  int head_length = 0;
   const string prf_name = path + "/" + name_ + ".prf";
   FILE *fp_output = fopen(prf_name.c_str(), "wb");
   if (fp_output == nullptr) {
@@ -386,25 +322,7 @@ int Profile::Dump(const string &path, int max_docid, int dump_docid) {
     return -1;
   }
 
-  fwrite((void *)(&field_num_), sizeof(uint8_t), 1, fp_output);
-  head_length += 1;
-  for (const auto &it : idx_attr_map_) {
-    int idx = it.first;
-    string name = it.second;
-    uint8_t type = static_cast<uint8_t>(attrs_[idx]);
-    int8_t is_index = attr_is_index_map_[name];
-    fwrite((void *)(&is_index), sizeof(uint8_t), 1, fp_output);
-    const char *n = name.data();
-    uint8_t len = name.length() - 1;
-    uint8_t a = (len << 3) | type;
-    fwrite((void *)(&a), sizeof(uint8_t), 1, fp_output);
-
-    fwrite((void *)(n), sizeof(char), name.length(), fp_output);
-    head_length += 2 + name.length();
-  }
-
-  LOG(INFO) << "head_length = " << head_length
-            << " item_length = " << item_length_ << " start [" << dump_docid
+  LOG(INFO) << " item_length = " << item_length_ << " start [" << dump_docid
             << "] num [" << max_docid - dump_docid + 1 << "]";
 
   fwrite((void *)(mem_ + (uint64_t)dump_docid * item_length_), sizeof(char),

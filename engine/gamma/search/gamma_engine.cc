@@ -72,6 +72,137 @@ static string RequestToString(const Request *request) {
 }
 #endif  // DEBUG
 
+static void FWriteByteArray(utils::FileIO *fio, ByteArray *ba) {
+  fio->Write((void *)&ba->len, sizeof(ba->len), 1);
+  fio->Write((void *)ba->value, ba->len, 1);
+}
+
+static void FReadByteArray(utils::FileIO *fio, ByteArray *&ba) {
+  int len = 0;
+  fio->Read((void *)&len, sizeof(len), 1);
+  char *data = new char[len];
+  fio->Read((void *)data, sizeof(char), len);
+  ba = static_cast<ByteArray *>(malloc(sizeof(ByteArray)));
+  ba->len = len;
+  ba->value = data;
+}
+
+static const char *kPlaceHolder = "NULL";
+
+struct TableIO {
+  utils::FileIO *fio;
+
+  TableIO(std::string &file_path) { fio = new utils::FileIO(file_path); }
+  ~TableIO() {
+    if (fio) {
+      delete fio;
+      fio = nullptr;
+    }
+  }
+
+  int Write(const Table *table) {
+    if (!fio->IsOpen() && fio->Open("wb")) {
+      LOG(INFO) << "open error, file path=" << fio->Path();
+      return -1;
+    }
+    WriteFieldInfos(table);
+    WriteVectorInfos(table);
+    WriteIVFPQParam(table);
+    return 0;
+  }
+
+  void WriteFieldInfos(const Table *table) {
+    fio->Write((void *)&table->fields_num, sizeof(int), 1);
+    for (int i = 0; i < table->fields_num; i++) {
+      FieldInfo *fi = table->fields[i];
+      FWriteByteArray(fio, fi->name);
+      fio->Write((void *)&fi->data_type, sizeof(fi->data_type), 1);
+      fio->Write((void *)&fi->is_index, sizeof(fi->is_index), 1);
+    }
+  }
+
+  void WriteVectorInfos(const Table *table) {
+    fio->Write((void *)&table->vectors_num, sizeof(int), 1);
+    for (int i = 0; i < table->vectors_num; i++) {
+      VectorInfo *vi = table->vectors_info[i];
+      FWriteByteArray(fio, vi->name);
+      fio->Write((void *)&vi->data_type, sizeof(vi->data_type), 1);
+      fio->Write((void *)&vi->is_index, sizeof(vi->is_index), 1);
+      fio->Write((void *)&vi->dimension, sizeof(vi->dimension), 1);
+      FWriteByteArray(fio, vi->model_id);
+      FWriteByteArray(fio, vi->retrieval_type);
+      FWriteByteArray(fio, vi->store_type);
+      if (vi->store_param && vi->store_param->len > 0) {
+        FWriteByteArray(fio, vi->store_param);
+      } else {
+        ByteArray *ba = MakeByteArray(kPlaceHolder, strlen(kPlaceHolder));
+        FWriteByteArray(fio, ba);
+        DestroyByteArray(ba);
+      }
+    }
+  }
+
+  void WriteIVFPQParam(const Table *table) {
+    fio->Write((void *)table->ivfpq_param, sizeof(*table->ivfpq_param), 1);
+  }
+
+  int Read(std::string &name, Table *&table) {
+    if (!fio->IsOpen() && fio->Open("rb")) {
+      LOG(INFO) << "open error, file path=" << fio->Path();
+      return -1;
+    }
+    table = static_cast<Table *>(malloc(sizeof(Table)));
+    memset(table, 0, sizeof(Table));
+    table->name = MakeByteArray(name.c_str(), name.size());
+    ReadFieldInfos(table);
+    ReadVectorInfos(table);
+    ReadIVFPQParam(table);
+    return 0;
+  }
+
+  void ReadFieldInfos(Table *&table) {
+    fio->Read((void *)&table->fields_num, sizeof(int), 1);
+    table->fields = MakeFieldInfos(table->fields_num);
+    for (int i = 0; i < table->fields_num; i++) {
+      FieldInfo *fi = static_cast<FieldInfo *>(malloc(sizeof(FieldInfo)));
+      FReadByteArray(fio, fi->name);
+      fio->Read((void *)&fi->data_type, sizeof(fi->data_type), 1);
+      fio->Read((void *)&fi->is_index, sizeof(fi->is_index), 1);
+      table->fields[i] = fi;
+    }
+  }
+
+  void ReadVectorInfos(Table *&table) {
+    fio->Read((void *)&table->vectors_num, sizeof(int), 1);
+    table->vectors_info = MakeVectorInfos(table->vectors_num);
+    for (int i = 0; i < table->vectors_num; i++) {
+      VectorInfo *vi = static_cast<VectorInfo *>(malloc(sizeof(VectorInfo)));
+      FReadByteArray(fio, vi->name);
+      fio->Read((void *)&vi->data_type, sizeof(vi->data_type), 1);
+      fio->Read((void *)&vi->is_index, sizeof(vi->is_index), 1);
+      fio->Read((void *)&vi->dimension, sizeof(vi->dimension), 1);
+      FReadByteArray(fio, vi->model_id);
+      FReadByteArray(fio, vi->retrieval_type);
+      FReadByteArray(fio, vi->store_type);
+      FReadByteArray(fio, vi->store_param);
+      int plen = strlen(kPlaceHolder);
+      if (vi->store_param->len == plen &&
+          !strncasecmp(vi->store_param->value, kPlaceHolder, plen)) {
+        DestroyByteArray(vi->store_param);
+        vi->store_param = nullptr;
+      }
+      table->vectors_info[i] = vi;
+    }
+  }
+
+  void ReadIVFPQParam(Table *&table) {
+    table->ivfpq_param =
+        static_cast<IVFPQParameters *>(malloc(sizeof(IVFPQParameters)));
+    memset(table->ivfpq_param, 0, sizeof(IVFPQParameters));
+    fio->Read((void *)table->ivfpq_param, sizeof(*table->ivfpq_param), 1);
+  }
+};
+
 GammaEngine::GammaEngine(const string &index_root_path)
     : index_root_path_(index_root_path),
       date_time_format_("%Y-%m-%d-%H:%M:%S") {
@@ -84,6 +215,7 @@ GammaEngine::GammaEngine(const string &index_root_path)
   dump_docid_ = 0;
   bitmap_bytes_size_ = 0;
   field_range_index_ = nullptr;
+  created_table_ = false;
 #ifdef PERFORMANCE_TESTING
   search_num_ = 0;
 #endif
@@ -138,6 +270,16 @@ int GammaEngine::Setup(int max_doc_size) {
 
   dump_path_ = index_root_path_ + "/dump";
 
+  std::string::size_type pos = index_root_path_.rfind('/');
+  pos = pos == std::string::npos ? 0 : pos + 1;
+  string dir_name = index_root_path_.substr(pos);
+  string vearch_backup_path = "/tmp/vearch";
+  string engine_backup_path = vearch_backup_path + "/" + dir_name;
+  dump_backup_path_ = engine_backup_path + "/dump";
+  utils::make_dir(vearch_backup_path.c_str());
+  utils::make_dir(engine_backup_path.c_str());
+  utils::make_dir(dump_backup_path_.c_str());
+
   if (!docids_bitmap_) {
     if (bitmap::create(docids_bitmap_, bitmap_bytes_size_, max_doc_size) != 0) {
       LOG(ERROR) << "Cannot create bitmap!";
@@ -154,8 +296,8 @@ int GammaEngine::Setup(int max_doc_size) {
   }
 
   if (!vec_manager_) {
-    vec_manager_ = new VectorManager(IVFPQ, Mmap, docids_bitmap_,
-                                     max_doc_size, index_root_path_);
+    vec_manager_ = new VectorManager(IVFPQ, Mmap, docids_bitmap_, max_doc_size,
+                                     index_root_path_);
     if (!vec_manager_) {
       LOG(ERROR) << "Cannot create vec_manager!";
       return -3;
@@ -247,6 +389,7 @@ Response *GammaEngine::Search(const Request *request) {
   condition.parallel_mode = 1;  // default to parallelize over inverted list
   condition.recall_num = request->topn;  // TODO: recall number should be
                                          // transmitted from search request
+  condition.multi_vector_rank = request->multi_vector_rank == 1 ? true : false;
   condition.has_rank = request->has_rank == 1 ? true : false;
   condition.use_direct_search = use_direct_search;
 
@@ -327,12 +470,12 @@ Response *GammaEngine::Search(const Request *request) {
           int idx = 0;
           for (const auto &field_id : fields_ids) {
             int id = field_id.second;
-            gamma_result.docs[gamma_result.results_count].docid = id;
+            gamma_result.docs[gamma_result.results_count]->docid = id;
             ByteArray *s = MakeByteArray(vec[idx].c_str(), vec[idx].length());
-            gamma_result.docs[gamma_result.results_count].fields[idx].source =
+            gamma_result.docs[gamma_result.results_count]->fields[idx].source =
                 s->value;
             gamma_result.docs[gamma_result.results_count]
-                .fields[idx]
+                ->fields[idx]
                 .source_len = s->len;
             free(s);
             ++idx;
@@ -348,7 +491,7 @@ Response *GammaEngine::Search(const Request *request) {
             !bitmap::test(docids_bitmap_, docid)) {
           ++gamma_result.total;
           if (gamma_result.results_count < request->topn) {
-            gamma_result.docs[gamma_result.results_count++].docid = docid;
+            gamma_result.docs[gamma_result.results_count++]->docid = docid;
           }
         }
       }
@@ -452,10 +595,15 @@ int GammaEngine::CreateTable(const Table *table) {
     return -3;
   }
 
-  LOG(INFO) << "create table ["
-            << std::string(table->name->value, table->name->len)
-            << "] success!";
+  string table_name = string(table->name->value, table->name->len);
+  string path = index_root_path_ + "/" + table_name + ".schema";
+  TableIO tio(path);  // rewrite it if the path is already existed
+  if (tio.Write(table)) {
+    LOG(ERROR) << "write table schema error, path=" << path;
+  }
 
+  LOG(INFO) << "create table [" << table_name << "] success!";
+  created_table_ = true;
   return 0;
 }
 
@@ -755,7 +903,44 @@ int GammaEngine::Dump() {
   return ret;
 }
 
+int GammaEngine::CreateTableFromLocal(std::string &table_name) {
+  std::vector<string> file_paths = utils::ls(index_root_path_);
+  for (string &file_path : file_paths) {
+    std::string::size_type pos = file_path.rfind(".schema");
+    if (pos == file_path.size() - 7) {
+      std::string::size_type begin = file_path.rfind('/');
+      assert(begin != std::string::npos);
+      begin += 1;
+      table_name = file_path.substr(begin, pos - begin);
+      LOG(INFO) << "local table name=" << table_name;
+      TableIO tio(file_path);
+      Table *table = nullptr;
+      if (tio.Read(table_name, table)) {
+        LOG(ERROR) << "read table schema error, path=" << file_path;
+        return -1;
+      }
+      if (CreateTable(table)) {
+        DestroyTable(table);
+        LOG(ERROR) << "create table error when loading";
+        return -1;
+      }
+      DestroyTable(table);
+      return 0;
+    }
+  }
+  return -1;
+}
+
 int GammaEngine::Load() {
+  if (!created_table_) {
+    string table_name;
+    if (CreateTableFromLocal(table_name)) {
+      LOG(ERROR) << "create table from local error";
+      return -1;
+    }
+    LOG(INFO) << "create table from local success, table name=" << table_name;
+  }
+
   std::map<std::time_t, string> folders_map;
   std::vector<std::time_t> folders_tm;
   std::vector<string> folders = utils::ls_folder(dump_path_);
@@ -770,72 +955,86 @@ int GammaEngine::Load() {
 
   std::sort(folders_tm.begin(), folders_tm.end());
   folders.clear();
+  string not_done_folder = "";
   for (const std::time_t t : folders_tm) {
     const string folder_path = dump_path_ + "/" + folders_map[t];
     const string done_file = folder_path + "/dump.done";
     if (utils::get_file_size(done_file.c_str()) < 0) {
       LOG(ERROR) << "dump.done cannot be found in [" << folder_path << "]";
+      not_done_folder = folder_path;
       break;
     }
     folders.push_back(dump_path_ + "/" + folders_map[t]);
   }
 
-  int ret = profile_->Load(folders, max_docid_);
-  if (ret != 0) {
-    LOG(ERROR) << "load profile error, ret=" << ret;
-    return -1;
+  if (folders_tm.size() == 0) {
+    LOG(INFO) << "no folder is found, skip loading!";
+    return 0;
   }
-  ret = vec_manager_->Load(folders);
+
+  // there is only one folder which is not done
+  if (not_done_folder != "") {
+    int ret = utils::move_dir(not_done_folder.c_str(),
+                              dump_backup_path_.c_str(), true);
+    LOG(INFO) << "move " << not_done_folder << " to " << dump_backup_path_
+              << ", ret=" << ret;
+  }
+
+  int ret = 0;
+  if (folders.size() > 0) {
+    ret = profile_->Load(folders, max_docid_);
+    if (ret != 0) {
+      LOG(ERROR) << "load profile error, ret=" << ret;
+      return -1;
+    }
+    // rebuild numeric index
+    for (int i = 0; i < max_docid_; ++i) {
+      Doc *doc = nullptr;
+      profile_->GetDocInfo(i, doc);
+      for (int j = 0; j < doc->fields_num; ++j) {
+        auto *f = doc->fields[j];
+        field_range_index_->Add(
+            string(f->name->value, f->name->len),
+            reinterpret_cast<unsigned char *>(f->value->value), f->value->len,
+            i);
+      }
+      DestroyDoc(doc);
+    }
+    // load bitmap
+    if (docids_bitmap_ == nullptr) {
+      LOG(ERROR) << "docid bitmap is not initilized";
+      return -1;
+    }
+    string bitmap_file_name = folders[folders.size() - 1] + "/bitmap";
+    FILE *fp_bm = fopen(bitmap_file_name.c_str(), "rb");
+    if (fp_bm == nullptr) {
+      LOG(ERROR) << "Cannot open file " << bitmap_file_name;
+      return -1;
+    }
+    long bm_file_size = utils::get_file_size(bitmap_file_name.c_str());
+    if (bm_file_size > bitmap_bytes_size_) {
+      LOG(ERROR) << "bitmap file size=" << bm_file_size
+                 << " > allocated bitmap bytes size=" << bitmap_bytes_size_
+                 << ", max doc size=" << max_doc_size_;
+      fclose(fp_bm);
+      return -1;
+    }
+    fread((void *)(docids_bitmap_), sizeof(char), bm_file_size, fp_bm);
+    fclose(fp_bm);
+  }
+
+  ret = vec_manager_->Load(folders, max_docid_);
   if (ret != 0) {
     LOG(ERROR) << "load vector error, ret=" << ret;
     return -1;
   }
 
-  field_range_index_ = new MultiFieldsRangeIndex();
-  if ((nullptr == field_range_index_) || (AddNumIndexFields()) < 0) {
-    LOG(ERROR) << "add numeric index fields error!";
-    return -1;
-  }
-
-  for (int i = 0; i < max_docid_; ++i) {
-    Doc *doc = nullptr;
-    profile_->GetDocInfo(i, doc);
-    for (int j = 0; j < doc->fields_num; ++j) {
-      auto *f = doc->fields[j];
-      field_range_index_->Add(
-          string(f->name->value, f->name->len),
-          reinterpret_cast<unsigned char *>(f->value->value), f->value->len, i);
-    }
-    DestroyDoc(doc);
-  }
-
-  if (docids_bitmap_ == nullptr) {
-    LOG(ERROR) << "docid bitmap is not initilized";
-    return -1;
-  }
-  string bitmap_file_name = folders[folders.size() - 1] + "/bitmap";
-  FILE *fp_bm = fopen(bitmap_file_name.c_str(), "rb");
-  if (fp_bm == nullptr) {
-    LOG(ERROR) << "Cannot open file " << bitmap_file_name;
-    return -1;
-  }
-  long bm_file_size = utils::get_file_size(bitmap_file_name.c_str());
-  if (bm_file_size > bitmap_bytes_size_) {
-    LOG(ERROR) << "bitmap file size=" << bm_file_size
-               << " > allocated bitmap bytes size=" << bitmap_bytes_size_
-               << ", max doc size=" << max_doc_size_;
-    fclose(fp_bm);
-    return -1;
-  }
-  fread((void *)(docids_bitmap_), sizeof(char), bm_file_size, fp_bm);
-  fclose(fp_bm);
-
-  LOG(INFO) << "load all success! bitmap file=" << bitmap_file_name
-            << ", folders=" << utils::join(folders, ',');
-
   dump_docid_ = max_docid_;
 
-  return ret;
+  string last_folder = folders.size() > 0 ? folders[folders.size() - 1] : "";
+  LOG(INFO) << "load engine success! max docid=" << max_docid_
+            << ", last folder=" << last_folder;
+  return 0;
 }
 
 int GammaEngine::AddNumIndexFields() {
@@ -872,7 +1071,7 @@ int GammaEngine::PackResults(const GammaResult *gamma_results,
     result->result_items = new ResultItem *[gamma_results[i].results_count];
 
     for (int j = 0; j < gamma_results[i].results_count; ++j) {
-      VectorDoc *vec_doc = gamma_results[i].docs + j;
+      VectorDoc *vec_doc = gamma_results[i].docs[j];
       result->result_items[j] = PackResultItem(vec_doc, request);
     }
 
