@@ -175,7 +175,7 @@ int SearchThread(void *engine, size_t num) {
     vec_fields[0] = vec_name;
     Request *request =
         MakeRequest(10, vector_querys, 1, vec_fields, 1, range_filters, 2,
-                    term_filters, 1, req_num, 0, nullptr, TRUE);
+                    term_filters, 1, req_num, 0, nullptr, TRUE, 0);
     // Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0,
     //                                nullptr, 0, req_num, 0, nullptr, FALSE);
 
@@ -238,7 +238,7 @@ int GetVector(void *engine) {
   SetTermFilter(term_filters, 0, term_filter);
 
   Request *request = MakeRequest(10, nullptr, 0, nullptr, 0, nullptr, 0,
-                                 term_filters, 1, req_num, 0, nullptr, TRUE);
+                                 term_filters, 1, req_num, 0, nullptr, TRUE, 0);
 
   Response *response = Search(engine, request);
   for (int i = 0; i < response->req_num; ++i) {

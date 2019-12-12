@@ -100,7 +100,7 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 		nil, C.int(0),
 		nil, C.int(0),
 		C.int(1), C.int(0),
-		nil, hasRank,
+		nil, hasRank,C.int(0),
 	)
 
 	defer C.DestroyRequest(req)
@@ -161,7 +161,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 		nil, C.int(0),
 		nil, C.int(0),
 		C.int(1), C.int(0),
-		nil, hasRank,
+		nil, hasRank,C.int(0),
 	)
 
 	defer C.DestroyRequest(req)
@@ -194,7 +194,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 	defer C.DestroyResponse(reps)
 	result := ri.singleSearchResult(reps, 0)
 
-	result.MaxTook = int64(time.Now().Sub(start) / time.Microsecond)
+	result.MaxTook = int64(time.Now().Sub(start) / time.Millisecond)
 	result.MaxTookID = ri.engine.partitionID
 
 	return result

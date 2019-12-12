@@ -58,7 +58,7 @@ class VectorManager {
   }
 
   int Dump(const std::string &path, int dump_docid, int max_docid);
-  int Load(const std::vector<std::string> &path);
+  int Load(const std::vector<std::string> &path, int doc_num);
 
   int GetVectorIndexes(
       std::map<std::string, GammaIndex *> &vector_indexes) const {
@@ -76,8 +76,6 @@ class VectorManager {
   int max_doc_size_;
   bool table_created_;
   IVFPQParameters *ivfpq_param_;
-  VectorInfo **vectors_info_;
-  int vectors_num_;
   std::string root_path_;
 
   std::map<std::string, RawVector *> raw_vectors_;
