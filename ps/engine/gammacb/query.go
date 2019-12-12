@@ -350,6 +350,7 @@ func (qb *queryBuilder) parseQuery(data []byte, req *C.struct_Request) error {
 			return err
 		}
 	} else if len(temp.Sum) > 0 {
+		req.multi_vector_rank = C.int(1)
 		if reqNum, vqs, err = qb.parseVectors(reqNum, vqs, temp.Sum); err != nil {
 			return err
 		}
