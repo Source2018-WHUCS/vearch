@@ -100,7 +100,7 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 		nil, C.int(0),
 		nil, C.int(0),
 		C.int(1), C.int(0),
-		nil, hasRank,C.int(0),
+		nil, hasRank, C.int(0),
 	)
 
 	defer C.DestroyRequest(req)
@@ -161,7 +161,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 		nil, C.int(0),
 		nil, C.int(0),
 		C.int(1), C.int(0),
-		nil, hasRank,C.int(0),
+		nil, hasRank, C.int(0),
 	)
 
 	defer C.DestroyRequest(req)
@@ -190,9 +190,15 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 		log.Debug("send request:[%v]", req)
 	}
 	start := time.Now()
+
+	t1 := time.Now()
 	reps := C.Search(gamma, req)
 	defer C.DestroyResponse(reps)
+	fmt.Println("====search use time======", time.Now().Sub(t1))
+
+	t1 = time.Now()
 	result := ri.singleSearchResult(reps, 0)
+	fmt.Println("====to result use time======", time.Now().Sub(t1))
 
 	result.MaxTook = int64(time.Now().Sub(start) / time.Millisecond)
 	result.MaxTookID = ri.engine.partitionID
@@ -212,6 +218,7 @@ func (ri *readerImpl) singleSearchResult(reps *C.struct_Response, index int) *re
 
 	var maxScore float64 = -1
 	size := int(rep.result_num)
+	t1 := time.Now()
 	for i := 0; i < size; i++ {
 		item := C.GetResultItem(rep, C.int(i))
 		result := ri.engine.ResultItem2DocResult(item)
@@ -220,6 +227,7 @@ func (ri *readerImpl) singleSearchResult(reps *C.struct_Response, index int) *re
 		}
 		hits = append(hits, result)
 	}
+	fmt.Println("====to result range use time======", time.Now().Sub(t1))
 	result := response.SearchResponse{
 		Total:    uint64(rep.total),
 		MaxScore: maxScore,
