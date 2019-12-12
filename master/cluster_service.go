@@ -19,23 +19,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/tiglabs/raft/proto"
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/util/cbjson"
-	"github.com/vearch/vearch/util/metrics/mserver"
-	"github.com/vearch/vearch/util/uuid"
 	"math"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/util"
+	"github.com/vearch/vearch/util/log"
 	"go.etcd.io/etcd/clientv3/concurrency"
 )
 
@@ -665,199 +661,6 @@ func (this *masterService) queryDBs(ctx context.Context) ([]*entity.DB, error) {
 	return dbs, err
 }
 
-func (this *masterService) partitionInfo(ctx context.Context, dbName, spaceName string) ([]map[string]interface{}, error) {
-	dbNames := make([]string, 0)
-	if dbName != "" {
-		dbNames = strings.Split(dbName, ",")
-	}
-
-	if len(dbNames) == 0 {
-		dbs, err := this.queryDBs(ctx)
-		if err != nil {
-			return nil, err
-		}
-		dbNames = make([]string, len(dbs))
-		for i, db := range dbs {
-			dbNames[i] = db.Name
-		}
-	}
-
-	color := []string{"green", "yellow", "red"}
-
-	var errors []string
-
-	spaceNames := strings.Split(spaceName, ",")
-
-	resultInsideDbs := make([]map[string]interface{}, 0)
-	for i := range dbNames {
-		dbName := dbNames[i]
-
-		dbId, err := this.Master().QueryDBName2Id(ctx, dbName)
-		if err != nil {
-			errors = append(errors, dbName+" find dbID err: "+err.Error())
-			continue
-		}
-
-		spaces, err := this.Master().QuerySpaces(ctx, dbId)
-		if err != nil {
-			errors = append(errors, dbName+" find space err: "+err.Error())
-			continue
-		}
-
-		dbStatus := 0
-
-		resultInsideSpaces := make([]map[string]interface{}, 0, len(spaces))
-		for _, space := range spaces {
-
-			spaceName := space.Name
-
-			if len(spaceNames) > 1 || spaceNames[0] != "" { //filter spaceName by user define
-				var index = -1
-
-				for i, name := range spaceNames {
-					if name == spaceName {
-						index = i
-						break
-					}
-				}
-
-				if index < 0 {
-					continue
-				}
-			}
-
-			spaceStatus := 0
-			resultInsidePartition := make([]*entity.PartitionInfo, 0)
-			for _, spacePartition := range space.Partitions {
-				p, err := this.Master().QueryPartition(ctx, spacePartition.Id)
-				if err != nil {
-					errors = append(errors, fmt.Sprintf("partition:[%d] not found in space: [%s]", spacePartition.Id, spaceName))
-					continue
-				}
-
-				pStatus := 0
-
-				nodeID := p.LeaderID
-				if nodeID == 0 {
-					errors = append(errors, fmt.Sprintf("partition:[%d] no leader in space: [%s]", spacePartition.Id, spaceName))
-					pStatus = 2
-					nodeID = p.Replicas[0]
-				}
-
-				server, err := this.Master().QueryServer(ctx, nodeID)
-				if err != nil {
-					errors = append(errors, fmt.Sprintf("server:[%d] not found in space: [%s] , partition:[%d]", nodeID, spaceName, spacePartition.Id))
-					pStatus = 2
-					continue
-				}
-
-				partitionInfo, err := this.Client.PS().Beg(ctx, uuid.FlakeUUID()).Admin(server.RpcAddr()).PartitionInfo(p.Id)
-				if err != nil {
-					errors = append(errors, fmt.Sprintf("query space:[%s] server:[%d] partition:[%d] info err :[%s]", spaceName, nodeID, spacePartition.Id, err.Error()))
-					partitionInfo = &entity.PartitionInfo{}
-					pStatus = 2
-				} else {
-					if len(partitionInfo.Unreachable) > 0 {
-						pStatus = 1
-					}
-				}
-
-				//this must from space.Partitions
-				partitionInfo.PartitionID = spacePartition.Id
-				partitionInfo.Color = color[pStatus]
-				partitionInfo.ReplicaNum = len(p.Replicas)
-				partitionInfo.Ip = server.Ip
-				partitionInfo.NodeID = server.ID
-
-				resultInsidePartition = append(resultInsidePartition, partitionInfo)
-
-				if pStatus > spaceStatus {
-					spaceStatus = pStatus
-				}
-			}
-
-			docNum := uint64(0)
-			size := int64(0)
-			for _, p := range resultInsidePartition {
-				docNum += cast.ToUint64(p.DocNum)
-				size += cast.ToInt64(p.Size)
-			}
-			resultSpace := make(map[string]interface{})
-			resultSpace["name"] = spaceName
-			resultSpace["partition_num"] = len(resultInsidePartition)
-			resultSpace["replica_num"] = len(resultInsidePartition) * int(space.ReplicaNum)
-			resultSpace["doc_num"] = docNum
-			resultSpace["size"] = size
-			resultSpace["partitions"] = resultInsidePartition
-			resultSpace["status"] = color[spaceStatus]
-			resultInsideSpaces = append(resultInsideSpaces, resultSpace)
-
-			if spaceStatus > dbStatus {
-				dbStatus = spaceStatus
-			}
-		}
-
-		docNum := uint64(0)
-		size := int64(0)
-		for _, s := range resultInsideSpaces {
-			docNum += cast.ToUint64(s["doc_num"])
-			size += cast.ToInt64(s["size"])
-		}
-		resultDb := make(map[string]interface{})
-		resultDb["db_name"] = dbName
-		resultDb["space_num"] = len(spaces)
-		resultDb["doc_num"] = docNum
-		resultDb["size"] = size
-		resultDb["spaces"] = resultInsideSpaces
-		resultDb["status"] = color[dbStatus]
-		resultDb["errors"] = errors
-		resultInsideDbs = append(resultInsideDbs, resultDb)
-	}
-
-	return resultInsideDbs, nil
-}
-
-func (this *masterService) statsService(ctx context.Context) ([]*mserver.ServerStats, error) {
-	servers, err := this.Master().QueryServers(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	statsChan := make(chan *mserver.ServerStats, len(servers))
-
-	for _, s := range servers {
-		go func(s *entity.Server) {
-			defer func() {
-				if r := recover(); r != nil {
-					statsChan <- mserver.NewErrServerStatus(s.RpcAddr(), errors.New(cast.ToString(r)))
-				}
-			}()
-			statsChan <- this.Client.PS().Beg(ctx, uuid.FlakeUUID()).Admin(s.RpcAddr()).ServerStats()
-		}(s)
-	}
-
-	result := make([]*mserver.ServerStats, 0, len(servers))
-
-	for {
-		select {
-		case s := <-statsChan:
-			result = append(result, s)
-		case <-ctx.Done():
-			return nil, pkg.CodeErr(pkg.ERRCODE_TIMEOUT)
-		default:
-			time.Sleep(time.Millisecond * 10)
-			if len(result) >= len(servers) {
-				close(statsChan)
-				goto out
-			}
-		}
-	}
-
-out:
-
-	return result, nil
-}
-
 func (ms *masterService) updateSpace(ctx context.Context, space *entity.Space) error {
 	space.Version++
 	space.PartitionNum = len(space.Partitions)
@@ -945,8 +748,4 @@ func (this *masterService) ChangeMember(ctx context.Context, cm *entity.ChangeMe
 		}
 	}
 	return nil
-}
-
-func (this *masterService) metrics(ctx context.Context) map[string]interface{} {
-	return nil ;
 }

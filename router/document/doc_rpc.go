@@ -26,7 +26,6 @@ import (
 	"github.com/vearch/vearch/util"
 	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/log"
-	"github.com/vearch/vearch/util/monitoring"
 	"github.com/vearch/vearch/util/uuid"
 	"google.golang.org/grpc"
 	"time"
@@ -36,17 +35,15 @@ type RpcHandler struct {
 	rpcServer  *grpc.Server
 	docService docService
 	client     *client.Client
-	monitor    monitoring.Monitor
 }
 
-func ExportRpcHandler(rpcServer *grpc.Server, client *client.Client, monitor monitoring.Monitor) {
+func ExportRpcHandler(rpcServer *grpc.Server, client *client.Client) {
 	docService := newDocService(client)
 
 	rpcHandler := &RpcHandler{
 		rpcServer:  rpcServer,
 		docService: *docService,
 		client:     client,
-		monitor:    monitor,
 	}
 
 	pspb.RegisterRpcApiServer(rpcServer, rpcHandler)
