@@ -125,6 +125,7 @@ func (s *Store) Start() (err error) {
 		return fmt.Errorf("start partition[%d] create raft error: %s", s.Partition.Id, err)
 	}
 
+
 	// Start Raft Sn Flush worker
 	s.startFlushJob()
 	// Start Raft Truncate Worker

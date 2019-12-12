@@ -64,7 +64,7 @@ func ExportToRpcAdminHandler(server *Server) {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.PartitionInfoHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, storeHandler, new(PartitionSizeHandler)), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.PartitionInfoHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, &PartitionInfoHandler{server:server}), ""); err != nil {
 		panic(err)
 	}
 
@@ -208,37 +208,54 @@ func (*IsLiveHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse
 	return nil
 }
 
-type PartitionSizeHandler int
+type PartitionInfoHandler struct {
+	server *Server
+}
 
-func (mm *PartitionSizeHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
+func (pih *PartitionInfoHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) (err error) {
 
 	pid := req.Arg.(*request.ObjRequest).PartitionID
 
-	store := req.Arg.(*request.ObjRequest).GetStore().(PartitionStore)
+	stores := make([]PartitionStore, 0, 1)
 
-	docNum, err := store.GetEngine().Reader().DocCount(req.Ctx)
-	if err != nil {
+	if pid != 0 {
+		store := pih.server.GetPartition(pid)
+		stores = append(stores, store)
+	} else {
+		pih.server.RangePartition(func(id entity.PartitionID, store PartitionStore) {
+			stores = append(stores, store)
+		})
+	}
+
+	pis := make([]*entity.PartitionInfo, 0, 1)
+	for _, store := range stores {
+		docNum, err := store.GetEngine().Reader().DocCount(req.Ctx)
+		if err != nil {
+			return err
+		}
+
+		size, err := store.GetEngine().Reader().Capacity(req.Ctx)
+		if err != nil {
+			return err
+		}
+
+		value := &entity.PartitionInfo{
+			PartitionID: pid,
+			DocNum:      docNum,
+			Size:        size,
+			Path:        store.GetPartition().Path,
+			Unreachable: store.GetUnreachable(uint64(pid)),
+			Status:      store.GetPartition().GetStatus(),
+			RaftStatus:  store.Status(),
+			IndexStatus: store.GetEngine().IndexStatus(),
+		}
+
+		pis = append(pis, value)
+	}
+
+	if resp.Result, err = response.NewObjResponse(pis); err != nil {
 		return err
 	}
-
-	size, err := store.GetEngine().Reader().Capacity(req.Ctx)
-	if err != nil {
-		return err
-	}
-
-	value := &entity.PartitionInfo{
-		PartitionID: pid,
-		DocNum:      docNum,
-		Size:        size,
-		Path:        store.GetPartition().Path,
-		Unreachable: store.GetUnreachable(uint64(pid)),
-		Status:      store.GetPartition().GetStatus(),
-		RaftStatus:  store.Status(),
-		IndexStatus: store.GetEngine().IndexStatus(),
-	}
-
-	resp.Result, err = response.NewObjResponse(value)
-
 	return nil
 }
 

@@ -102,6 +102,14 @@ func (s *Server) GetPartition(id entity.PartitionID) (partition PartitionStore) 
 	return
 }
 
+func (s *Server) RangePartition(fun func(entity.PartitionID, PartitionStore)) {
+
+	s.partitions.Range(func(key, value interface{}) bool {
+		fun(key.(entity.PartitionID), value.(PartitionStore))
+		return true
+	})
+}
+
 //load partition for in disk
 func (s *Server) LoadPartition(ctx context.Context, pid entity.PartitionID) (PartitionStore, error) {
 

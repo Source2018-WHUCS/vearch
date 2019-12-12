@@ -16,10 +16,12 @@ package master
 
 import "C"
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/vearch/vearch/util/monitoring"
 	"github.com/vearch/vearch/util/server/vearchhttp"
+	"github.com/vearch/vearch/util/uuid"
 	"net/http"
 	"strings"
 	"time"
@@ -93,6 +95,9 @@ func ExportToClusterHandler(router *gin.Engine, masterService *masterService) {
 
 	//partition handler
 	router.Handle(http.MethodPost, "/partition/change_member", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.changeMember, dh.TimeOutEndHandler)
+
+	//metrics
+	router.Handle(http.MethodPost, "/metrics", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.metrics, dh.TimeOutEndHandler)
 
 }
 
@@ -384,7 +389,22 @@ func (this *clusterApi) serverList(c *gin.Context) {
 		servers = temps
 	}
 
-	ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplySuccess(map[string]interface{}{"servers": servers, "count": len(servers)})
+	serverInfos := make([]map[string]interface{}, 0, len(servers))
+
+	for _, server := range servers {
+		serverInfo := make(map[string]interface{})
+		serverInfo["server"] = server
+
+		partitionInfos, err := this.masterService.Client.PS().Beg(ctx.(context.Context), uuid.FlakeUUID()).Admin(server.RpcAddr()).PartitionInfos()
+		if err != nil {
+			serverInfo["error"] = err.Error()
+		} else {
+			serverInfo["partitions"] = partitionInfos
+		}
+		serverInfos = append(serverInfos, serverInfo)
+	}
+
+	ginutil.NewAutoMehtodName(c, this.monitor).SendJsonHttpReplySuccess(map[string]interface{}{"servers": serverInfos, "count": len(servers)})
 }
 
 //list db
@@ -469,6 +489,25 @@ func (this *clusterApi) changeMember(c *gin.Context) {
 	}
 }
 
+func (this *clusterApi) metrics(c *gin.Context) {
+	ctx, _ := c.Get(vearchhttp.Ctx)
+
+	metrics := this.masterService.metrics(ctx.(context.Context))
+
+	buffer := bytes.Buffer{}
+
+	tab, line := []byte("\t"), []byte("\n")
+
+	for k, v := range metrics {
+		buffer.WriteString(k)
+		buffer.Write(tab)
+		buffer.WriteString(v)
+		buffer.Write(line)
+	}
+
+
+}
+
 func (this *clusterApi) _auth(ctx context.Context, c *gin.Context) error {
 
 	if config.Conf().Global.SkipAuth {
@@ -491,5 +530,4 @@ func (this *clusterApi) _auth(ctx context.Context, c *gin.Context) error {
 	}
 
 	return nil
-
 }

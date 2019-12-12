@@ -108,8 +108,22 @@ func (this *adminSender) IsLive() bool {
 	return true
 }
 
-//get partition info about
+//get partition info about partitionID
 func (this *adminSender) PartitionInfo(pid entity.PartitionID) (value *entity.PartitionInfo, err error) {
+	infos, err := this._partitionsInfo(pid)
+	if err != nil {
+		return nil, err
+	}
+	return infos[0], nil
+}
+
+//get all partition info from server
+func (this *adminSender) PartitionInfos() (value []*entity.PartitionInfo, err error) {
+	return this._partitionsInfo(0)
+}
+
+//internal method for partitionInfo and partitionInfos
+func (this *adminSender) _partitionsInfo(pid entity.PartitionID) (value []*entity.PartitionInfo, err error) {
 	objRequest := &request.ObjRequest{
 		RequestContext: this.Ctx,
 		PartitionID:    pid,
@@ -125,7 +139,7 @@ func (this *adminSender) PartitionInfo(pid entity.PartitionID) (value *entity.Pa
 		return
 	}
 
-	value = &entity.PartitionInfo{}
+	value = make([]*entity.PartitionInfo, 0)
 	err = result.(*response.ObjResponse).Decode(&value)
 	if err != nil {
 		return

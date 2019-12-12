@@ -946,3 +946,7 @@ func (this *masterService) ChangeMember(ctx context.Context, cm *entity.ChangeMe
 	}
 	return nil
 }
+
+func (this *masterService) metrics(ctx context.Context) map[string]interface{} {
+	return nil ;
+}
