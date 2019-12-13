@@ -17,24 +17,13 @@ package master
 import "C"
 import (
 	"context"
-	"fmt"
-	"github.com/vearch/vearch/util/server/vearchhttp"
-	"github.com/vearch/vearch/util/uuid"
-	"net/http"
-	"strings"
-	"time"
-	"unicode"
-
-	"github.com/vearch/vearch/proto"
-	"github.com/vearch/vearch/util/netutil"
-
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/cast"
 	"github.com/vearch/vearch/config"
-	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/util"
 	"github.com/vearch/vearch/util/ginutil"
-	"github.com/vearch/vearch/util/log"
+	"github.com/vearch/vearch/util/server/vearchhttp"
+	"net/http"
 )
 
 type monitorApi struct {
@@ -54,6 +43,8 @@ func ExportToMonitorHandler(router *gin.Engine, monitorService *monitorService) 
 	router.Handle(http.MethodGet, "/_cluster/stats", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.stats, dh.TimeOutEndHandler)
 	//metrics
 	router.Handle(http.MethodPost, "/metrics", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.metrics, dh.TimeOutEndHandler)
+
+	monitorService.Register()
 }
 
 //got every partition servers system info
@@ -84,6 +75,20 @@ func (this *monitorApi) health(c *gin.Context) {
 	ginutil.NewAutoMehtodName(c).SendJson(result)
 }
 
+func (this *monitorApi) metrics(c *gin.Context) {
+	//ctx, _ := c.Get(vearchhttp.Ctx)
+
+}
+
+func (this *monitorApi) auth(c *gin.Context) {
+	ctx, _ := c.Get(vearchhttp.Ctx)
+	if err := this._auth(ctx.(context.Context), c); err != nil {
+		defer this.dh.TimeOutEndHandler(c)
+		c.Abort()
+		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+	}
+}
+
 func (this *monitorApi) _auth(ctx context.Context, c *gin.Context) error {
 
 	if config.Conf().Global.SkipAuth {
@@ -106,9 +111,4 @@ func (this *monitorApi) _auth(ctx context.Context, c *gin.Context) error {
 	}
 
 	return nil
-}
-
-func (this *monitorApi) metrics(c *gin.Context) {
-	//ctx, _ := c.Get(vearchhttp.Ctx)
-
 }

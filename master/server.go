@@ -87,6 +87,8 @@ func (s *Server) Start() (err error) {
 		return err
 	}
 
+	monitorService := newMonitorService(service)
+
 	if !log.IsDebugEnabled() {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -96,9 +98,9 @@ func (s *Server) Start() (err error) {
 
 	ExportToClusterHandler(engine, service)
 	ExportToUserHandler(engine, service)
+	ExportToMonitorHandler(engine, monitorService)
 
 	//register monitor
-	newMonitorService(s.client).Register()
 
 	go func() {
 		if err := engine.Run(":" + cast.ToString(config.Conf().Masters.Self().ApiPort)); err != nil {

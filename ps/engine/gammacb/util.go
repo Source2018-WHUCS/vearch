@@ -25,13 +25,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/ps/engine/register"
 	"github.com/vearch/vearch/ps/engine/sortorder"
 	"github.com/vearch/vearch/util/cbbytes"
+	"github.com/vearch/vearch/util/log"
 	"reflect"
 	"strings"
 	"time"
@@ -76,7 +76,7 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*C.struc
 	fs = append(fs, C.MakeFieldInfo(byteArrayStr(mapping.VersionField), LONG, C.char(0)))
 	fs = append(fs, C.MakeFieldInfo(byteArrayStr(mapping.SlotField), INT, C.char(0)))
 
-	err := m.RangeField(func(key string, value *mapping.DocumentMapping) error {
+	err := m.SortRangeField(func(key string, value *mapping.DocumentMapping) error {
 
 		switch value.Field.FieldType() {
 		case pspb.FieldType_STRING:
@@ -114,6 +114,7 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*C.struc
 
 	if len(fs) > 0 {
 		arr := C.MakeFieldInfos(C.int(len(fs)))
+
 		for i, f := range fs {
 			log.Info("add field:[%s] option:[%s]", CbArr2ByteArray(f.name), C.int(f.is_index))
 			C.SetFieldInfo(arr, C.int(i), f)
@@ -125,7 +126,7 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*C.struc
 
 	engine := cfg.Space.Engine
 
-	metricType := 1;
+	metricType := 1
 	switch engine.MetricType {
 	case "InnerProduct":
 		metricType = 0

@@ -78,4 +78,5 @@ type PartitionInfo struct {
 	NodeID      uint64          `json:"node_id,omitempty"`
 	RaftStatus  *raft.Status    `json:"raft_status,omitempty"`
 	IndexStatus int             `json:"index_status"`
+	Error       string          `json:"error,omitempty"`
 }

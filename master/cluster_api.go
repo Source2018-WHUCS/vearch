@@ -428,14 +428,7 @@ func (this *clusterApi) partitionList(c *gin.Context) {
 	}
 }
 
-func (this *clusterApi) auth(c *gin.Context) {
-	ctx, _ := c.Get(vearchhttp.Ctx)
-	if err := this._auth(ctx.(context.Context), c); err != nil {
-		defer this.dh.TimeOutEndHandler(c)
-		c.Abort()
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
-	}
-}
+
 
 func (this *clusterApi) changeMember(c *gin.Context) {
 	ctx, _ := c.Get(vearchhttp.Ctx)
@@ -450,6 +443,15 @@ func (this *clusterApi) changeMember(c *gin.Context) {
 		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
 	} else {
 		ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(nil)
+	}
+}
+
+func (this *clusterApi) auth(c *gin.Context) {
+	ctx, _ := c.Get(vearchhttp.Ctx)
+	if err := this._auth(ctx.(context.Context), c); err != nil {
+		defer this.dh.TimeOutEndHandler(c)
+		c.Abort()
+		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
 	}
 }
 

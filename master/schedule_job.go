@@ -21,9 +21,9 @@ import (
 	"time"
 
 	"github.com/jasonlvhit/gocron"
-	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/util/log"
 	"go.etcd.io/etcd/clientv3/concurrency"
 )
 
@@ -103,10 +103,6 @@ func walkServers(masterServer *Server, servers []*entity.Server) {
 var skipJob = fmt.Errorf("skip job")
 
 func cleanTask(masterServer *Server) {
-
-	if masterServer.monitor != nil {
-		masterServer.monitor.Alive() //add alive monitor
-	}
 
 	var err = masterServer.client.Master().STM(masterServer.ctx, func(stm concurrency.STM) error {
 		timeBytes := stm.Get(entity.ClusterCleanJobKey)

@@ -31,7 +31,7 @@
     etcd_client_port = 2370
     pprof_port = 6062
     # monitor
-    monitor = true
+    monitor_port = 8818
 
 
 [router]

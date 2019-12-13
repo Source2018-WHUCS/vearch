@@ -40,35 +40,35 @@ func ExportToRpcAdminHandler(server *Server) {
 
 	psErrorChange := psErrorChange(server)
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.CreatePartitionHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, &CreatePartitionHandler{server: server}), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.CreatePartitionHandler, handler.DefaultPanicHadler, nil, initAdminHandler, &CreatePartitionHandler{server: server}), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.DeletePartitionHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initAdminHandler, &DeletePartitionHandler{server: server}), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.DeletePartitionHandler, handler.DefaultPanicHadler, psErrorChange, initAdminHandler, &DeletePartitionHandler{server: server}), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.DeleteReplicaHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initAdminHandler, &DeleteReplicaHandler{server: server}), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.DeleteReplicaHandler, handler.DefaultPanicHadler, psErrorChange, initAdminHandler, &DeleteReplicaHandler{server: server}), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.UpdatePartitionHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initAdminHandler, storeHandler, new(UpdatePartitionHandler)), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.UpdatePartitionHandler, handler.DefaultPanicHadler, psErrorChange, initAdminHandler, storeHandler, new(UpdatePartitionHandler)), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.StatsHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, &StatsHandler{server: server}), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.StatsHandler, handler.DefaultPanicHadler, nil, initAdminHandler, &StatsHandler{server: server}), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.IsLiveHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, new(IsLiveHandler)), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.IsLiveHandler, handler.DefaultPanicHadler, nil, initAdminHandler, new(IsLiveHandler)), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.PartitionInfoHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, &PartitionInfoHandler{server:server}), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.PartitionInfoHandler, handler.DefaultPanicHadler, nil, initAdminHandler, &PartitionInfoHandler{server: server}), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.ChangeMemberHandler, server.monitor, handler.DefaultPanicHadler, nil, initAdminHandler, storeHandler, &ChangeMemberHandler{server: server}), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.ChangeMemberHandler, handler.DefaultPanicHadler, nil, initAdminHandler, storeHandler, &ChangeMemberHandler{server: server}), ""); err != nil {
 		panic(err)
 	}
 
@@ -266,6 +266,40 @@ type StatsHandler struct {
 func (sh *StatsHandler) Execute(req *handler.RpcRequest, resp *handler.RpcResponse) error {
 	stats := mserver.NewServerStats()
 	stats.ActiveConn = len(sh.server.rpcServer.ActiveClientConn())
+	stats.PartitionInfos = make([]*entity.PartitionInfo, 0, 1)
+	sh.server.RangePartition(func(pid entity.PartitionID, store PartitionStore) {
+		defer func() {
+			if e := recover(); e != nil {
+				log.Error("go partiton has err:[%v]", e)
+			}
+		}()
+
+		pi := &entity.PartitionInfo{PartitionID: pid}
+		stats.PartitionInfos = append(stats.PartitionInfos, pi)
+
+		docNum, err := store.GetEngine().Reader().DocCount(req.Ctx)
+		if err != nil {
+			err = fmt.Errorf("got docCount form engine err:[%s]", err.Error())
+			pi.Error = err.Error()
+			return
+		}
+
+		size, err := store.GetEngine().Reader().Capacity(req.Ctx)
+		if err != nil {
+			err = fmt.Errorf("got capacity form engine err:[%s]", err.Error())
+			pi.Error = err.Error()
+			return
+		}
+
+		pi.DocNum = docNum
+		pi.Size = size
+		pi.Path = store.GetPartition().Path
+		pi.Unreachable = store.GetUnreachable(uint64(pid))
+		pi.Status = store.GetPartition().GetStatus()
+		pi.RaftStatus = store.Status()
+		pi.IndexStatus = store.GetEngine().IndexStatus()
+	})
+
 	resp.Result = stats
 	return nil
 }

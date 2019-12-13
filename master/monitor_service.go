@@ -15,7 +15,7 @@
 package master
 
 import (
-	"context"
+	context "context"
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/spf13/cast"
@@ -82,10 +82,11 @@ func newMonitorService(masterService *masterService) *monitorService {
 
 func (ms *monitorService) Register() {
 	msConf := config.Conf().Masters.Self()
-	if msConf != nil && msConf.Monitor {
+	if msConf != nil && msConf.MonitorPort > 0 {
+		log.Info("register master monitor")
 		monitoring.RegisterMaster(ms.monitorCallBack)
 	} else {
-		log.Debug("skip register master monitor")
+		log.Info("skip register master monitor")
 	}
 }
 
@@ -241,7 +242,121 @@ func (this *monitorService) partitionInfo(ctx context.Context, dbName, spaceName
 	return resultInsideDbs, nil
 }
 
-
 func (ms *monitorService) monitorCallBack(masterMonitor *monitoring.MasterMonitor) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+	defer cancel()
 
+	ip := config.Conf().Masters.Self().Address
+	stats := mserver.NewServerStats()
+
+	masterMonitor.Mem.WithLabelValues("master", ip).Set(stats.Mem.UsedPercent)
+	masterMonitor.Fs.WithLabelValues("master", ip).Set(float64(stats.Fs.Free))
+	masterMonitor.NetIn.WithLabelValues("master", ip).Set(float64(stats.Net.InPerSec))
+	masterMonitor.NetOut.WithLabelValues("master", ip).Set(float64(stats.Net.OutPerSec))
+	masterMonitor.Gc.WithLabelValues("master", ip).Set(float64(stats.GC.GcCount))
+	masterMonitor.Routines.WithLabelValues("master", ip).Set(float64(stats.GC.Goroutines))
+	servers, err := ms.masterService.Master().QueryServers(ctx)
+	if err != nil {
+		log.Error("got server by prefix err:[%s]", err.Error())
+	}
+	masterMonitor.ServerNum.Set(float64(len(servers)))
+
+	dbs, err := ms.masterService.queryDBs(ctx)
+	if err != nil {
+		log.Error("got db by prefix err:[%s]", err.Error())
+	}
+	masterMonitor.DBNum.Set(float64(len(dbs)))
+	spaces, err := ms.masterService.Master().QuerySpacesByKey(ctx, entity.PrefixSpace)
+	if err != nil {
+		log.Error("got space by prefix err:[%s]", err.Error())
+	}
+	masterMonitor.SpaceNum.Set(float64(len(spaces)))
+	statsChan := make(chan *mserver.ServerStats, len(servers))
+	for _, s := range servers {
+		go func(s *entity.Server) {
+			defer func() {
+				if r := recover(); r != nil {
+					statsChan <- mserver.NewErrServerStatus(s.RpcAddr(), errors.New(cast.ToString(r)))
+				}
+			}()
+			statsChan <- ms.Client.PS().Beg(ctx, uuid.FlakeUUID()).Admin(s.RpcAddr()).ServerStats()
+		}(s)
+	}
+
+	result := make([]*mserver.ServerStats, 0, len(servers))
+
+	for {
+		select {
+		case s := <-statsChan:
+			masterMonitor.Cpu.WithLabelValues("ps", s.Ip).Set(1 - s.Cpu.IdlePercent)
+			masterMonitor.Mem.WithLabelValues("ps", s.Ip).Set(s.Mem.UsedPercent)
+			masterMonitor.Fs.WithLabelValues("ps", s.Ip).Set(float64(s.Fs.Free))
+			masterMonitor.NetIn.WithLabelValues("ps", s.Ip).Set(float64(s.Net.InPerSec))
+			masterMonitor.NetOut.WithLabelValues("ps", s.Ip).Set(float64(s.Net.OutPerSec))
+			masterMonitor.Gc.WithLabelValues("ps", s.Ip).Set(float64(s.GC.GcCount))
+			masterMonitor.Routines.WithLabelValues("ps", s.Ip).Set(float64(s.GC.Goroutines))
+
+			masterMonitor.PartitionNum.WithLabelValues("ps", s.Ip).Set(float64(len(s.PartitionInfos)))
+
+			leaderNum := float64(0)
+			for _, p := range s.PartitionInfos {
+				if p.RaftStatus.Leader == p.RaftStatus.NodeID {
+					leaderNum++
+				}
+			}
+			masterMonitor.PSLeaderNum.WithLabelValues(s.Ip).Set(leaderNum)
+
+			result = append(result, s)
+		case <-ctx.Done():
+			log.Error("monitor timeout")
+			return
+		default:
+			time.Sleep(time.Millisecond * 10)
+			if len(result) >= len(servers) {
+				close(statsChan)
+				goto out
+			}
+		}
+	}
+out:
+	spacePartitionIDMap := make(map[entity.PartitionID]*entity.Space)
+
+	for _, s := range spaces {
+		for _, p := range s.Partitions {
+			spacePartitionIDMap[p.Id] = s
+		}
+	}
+
+	dbMap := make(map[entity.DBID]string)
+	for _, db := range dbs {
+		dbMap[db.Id] = db.Name
+	}
+
+	partitionNum := 0
+	docNumMap := make(map[*entity.Space]uint64)
+	sizeMap := make(map[*entity.Space]int64)
+	for _, s := range result {
+		for _, p := range s.PartitionInfos {
+			if p.RaftStatus.Leader == p.RaftStatus.NodeID {
+				partitionNum++
+				docNumMap[spacePartitionIDMap[p.PartitionID]] += p.DocNum
+				masterMonitor.PSPartitionDoc.WithLabelValues(ip, cast.ToString(p.PartitionID)).Set(float64(p.DocNum))
+				masterMonitor.PSPartitionSize.WithLabelValues(ip, cast.ToString(p.PartitionID)).Set(float64(p.Size))
+			}
+			sizeMap[spacePartitionIDMap[p.PartitionID]] += p.Size
+
+		}
+	}
+
+	masterMonitor.PartitionNum.WithLabelValues("master", ip).Set(float64(partitionNum))
+
+	for space, value := range docNumMap {
+		masterMonitor.SpaceDoc.WithLabelValues(dbMap[space.DBId], space.Name, cast.ToString(space.Id)).Set(float64(value))
+	}
+
+	for space, value := range sizeMap {
+		masterMonitor.SpaceSize.WithLabelValues(dbMap[space.DBId], space.Name, cast.ToString(space.Id)).Set(float64(value))
+	}
+
+	masterMonitor.Cpu.WithLabelValues("master", ip).Set(1 - stats.Cpu.IdlePercent) //set it end  so changed
 }

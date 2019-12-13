@@ -47,43 +47,43 @@ func ExportToRpcHandler(server *Server) {
 	server.rpcServer.AddPlugin(limitPlugin)
 
 	//register search handler
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.SearchHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, new(SearchHandler)), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.SearchHandler, handler.DefaultPanicHadler, psErrorChange, initHandler, new(SearchHandler)), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.DeleteByQueryHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, new(DeleteByQueryHandler)), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.DeleteByQueryHandler, handler.DefaultPanicHadler, psErrorChange, initHandler, new(DeleteByQueryHandler)), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.MSearchHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, new(MSearchHandler)), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.MSearchHandler, handler.DefaultPanicHadler, psErrorChange, initHandler, new(MSearchHandler)), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.StreamSearchHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, streamSearchHandler), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.StreamSearchHandler, handler.DefaultPanicHadler, psErrorChange, initHandler, streamSearchHandler), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.GetDocHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, new(GetDocHandler)), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.GetDocHandler, handler.DefaultPanicHadler, psErrorChange, initHandler, new(GetDocHandler)), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.GetDocsHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, new(GetDocsHandler)), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.GetDocsHandler, handler.DefaultPanicHadler, psErrorChange, initHandler, new(GetDocsHandler)), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.BatchHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, &BatchHandler{server: server}), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.BatchHandler, handler.DefaultPanicHadler, psErrorChange, initHandler, &BatchHandler{server: server}), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.WriteHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, &WriteHandler{server: server, limitPlugin: limitPlugin}), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.WriteHandler, handler.DefaultPanicHadler, psErrorChange, initHandler, &WriteHandler{server: server, limitPlugin: limitPlugin}), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.FlushHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, &FlushHandler{server: server}), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.FlushHandler, handler.DefaultPanicHadler, psErrorChange, initHandler, &FlushHandler{server: server}), ""); err != nil {
 		panic(err)
 	}
 
-	if err := server.rpcServer.RegisterName(handler.NewChain(client.ForceMergeHandler, server.monitor, handler.DefaultPanicHadler, psErrorChange, initHandler, &ForceMergeHandler{server: server}), ""); err != nil {
+	if err := server.rpcServer.RegisterName(handler.NewChain(client.ForceMergeHandler, handler.DefaultPanicHadler, psErrorChange, initHandler, &ForceMergeHandler{server: server}), ""); err != nil {
 		panic(err)
 	}
 

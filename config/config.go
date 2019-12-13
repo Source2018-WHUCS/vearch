@@ -198,7 +198,7 @@ type MasterCfg struct {
 	Self           bool   `json:"-"`
 	SkipAuth       bool   `toml:"skip_auth,omitempty" json:"skip_auth"`
 	PprofPort      uint16 `toml:"pprof_port,omitempty" json:"pprof_port"`
-	Monitor        bool   `toml:"monitor" json:"monitor"`
+	MonitorPort    uint16 `toml:"monitor_port" json:"monitor_port"`
 }
 
 func (m *MasterCfg) ApiUrl() string {

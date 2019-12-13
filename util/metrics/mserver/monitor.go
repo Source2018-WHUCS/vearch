@@ -16,6 +16,7 @@ package mserver
 
 import (
 	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/util/metrics"
 	"github.com/vearch/vearch/util/metrics/sysstat"
 )
@@ -43,17 +44,18 @@ func newServerStats(ip string, lables []metrics.LabelPair, ss *metricServer) *Se
 }
 
 type ServerStats struct {
-	Status     int64               `json:"status"`
-	Ip         string              `json:"ip"`
-	Labels     []metrics.LabelPair `json:"labels"`
-	Mem        *MemStats           `json:"mem,omitempty"`
-	Swap       *SwapStats          `json:"swap,omitempty"`
-	Fs         *FsStats            `json:"fs,omitempty"`
-	Cpu        *CpuStats           `json:"cpu,omitempty"`
-	Net        *NetStats           `json:"net,omitempty"`
-	GC         *GCStats            `json:"gc,omitempty"`
-	Err        string              `json:"err,omitempty"`
-	ActiveConn int                 `json:"active_conn,omitempty"`
+	Status         int64                   `json:"status"`
+	Ip             string                  `json:"ip"`
+	Labels         []metrics.LabelPair     `json:"labels"`
+	Mem            *MemStats               `json:"mem,omitempty"`
+	Swap           *SwapStats              `json:"swap,omitempty"`
+	Fs             *FsStats                `json:"fs,omitempty"`
+	Cpu            *CpuStats               `json:"cpu,omitempty"`
+	Net            *NetStats               `json:"net,omitempty"`
+	GC             *GCStats                `json:"gc,omitempty"`
+	Err            string                  `json:"err,omitempty"`
+	ActiveConn     int                     `json:"active_conn,omitempty"`
+	PartitionInfos []*entity.PartitionInfo `json:"partition_infos,omitempty"`
 }
 
 func NewMemStats(rss *sysstat.RuntimeStatSampler) *MemStats {
