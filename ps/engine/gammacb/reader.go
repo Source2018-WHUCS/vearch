@@ -132,6 +132,8 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 	defer C.DestroyResponse(reps)
 	result := make(response.SearchResponses, int(req.req_num))
 
+	fmt.Println("msearch ================================================================req size" , int(req.req_num))
+
 	for index := range result {
 		result[index] = ri.singleSearchResult(reps, index)
 	}
@@ -196,6 +198,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 	defer C.DestroyResponse(reps)
 	fmt.Println("====search use time======", time.Now().Sub(t1))
 
+	fmt.Println("search ================================================================req size" , int(req.req_num))
 	result := ri.singleSearchResult(reps, 0)
 
 	result.MaxTook = int64(time.Now().Sub(start) / time.Millisecond)
