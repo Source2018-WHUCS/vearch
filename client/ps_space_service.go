@@ -205,14 +205,7 @@ func (this *spaceSender) MSearchByPartitions(partitions []*entity.Partition, req
 		}
 		var err error
 
-		if len(result) < len(r) {
-			err = this.mergeResultArr(r, result, req)
-			result = r
-		} else {
-			err = this.mergeResultArr(result, r, req)
-		}
-
-		if err != nil {
+		if err = this.mergeResultArr(result, r, req); err != nil {
 			return nil, err
 		}
 	}
@@ -671,7 +664,11 @@ func (this *spaceSender) mergeResultArr(dest response.SearchResponses, src respo
 		sortOrder = sortorder.SortOrder{&sortorder.SortScore{Desc: false}}
 	}
 
-	if len(dest) == len(src) {
+	if len(dest) != len(src) {
+		log.Error("dest length:[%d] not equal src length:[%d]", len(dest), len(src))
+	}
+
+	if len(dest) <= len(src) {
 		for index := range dest {
 			err := dest[index].Merge(src[index], sortOrder, req.From, *req.Size)
 			if err != nil {
@@ -679,7 +676,7 @@ func (this *spaceSender) mergeResultArr(dest response.SearchResponses, src respo
 			}
 		}
 	} else {
-		for index := range dest {
+		for index := range src {
 			err := dest[index].Merge(src[0], sortOrder, req.From, *req.Size)
 			if err != nil {
 				return fmt.Errorf("merge err [%s]")
