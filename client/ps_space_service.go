@@ -668,6 +668,10 @@ func (this *spaceSender) mergeResultArr(dest response.SearchResponses, src respo
 		log.Error("dest length:[%d] not equal src length:[%d]", len(dest), len(src))
 	}
 
+	if log.IsDebugEnabled() {
+		log.Debug("dest length:[%d] , src length:[%d]", len(dest), len(src))
+	}
+
 	if len(dest) <= len(src) {
 		for index := range dest {
 			err := dest[index].Merge(src[index], sortOrder, req.From, *req.Size)

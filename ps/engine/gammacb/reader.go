@@ -196,9 +196,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 	defer C.DestroyResponse(reps)
 	fmt.Println("====search use time======", time.Now().Sub(t1))
 
-	t1 = time.Now()
 	result := ri.singleSearchResult(reps, 0)
-	fmt.Println("====to result use time======", time.Now().Sub(t1))
 
 	result.MaxTook = int64(time.Now().Sub(start) / time.Millisecond)
 	result.MaxTookID = ri.engine.partitionID

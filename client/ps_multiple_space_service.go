@@ -31,7 +31,10 @@ type multipleSpaceSender struct {
 
 func (this *multipleSpaceSender) MSearch(req *request.SearchRequest) (result response.SearchResponses) {
 	var wg sync.WaitGroup
-	respChain := make(chan response.SearchResponses, len(this.senders))
+	respChain := make(chan struct {
+		reponse response.SearchResponses
+		sender  *spaceSender
+	}, len(this.senders))
 
 	for _, s := range this.senders {
 		wg.Add(1)
@@ -40,10 +43,16 @@ func (this *multipleSpaceSender) MSearch(req *request.SearchRequest) (result res
 			defer func() {
 				if r := recover(); r != nil {
 					fmt.Println(r)
-					respChain <- response.SearchResponses{newSearchResponseWithError(s.db, s.space, 0, fmt.Errorf(cast.ToString(r)))}
+					respChain <- struct {
+						reponse response.SearchResponses
+						sender  *spaceSender
+					}{reponse: response.SearchResponses{newSearchResponseWithError(s.db, s.space, 0, fmt.Errorf(cast.ToString(r)))}, sender: s}
 				}
 			}()
-			respChain <- s.MSearch(req)
+			respChain <- struct {
+				reponse response.SearchResponses
+				sender  *spaceSender
+			}{reponse: s.MSearch(req), sender: s}
 		}(s)
 	}
 
@@ -52,21 +61,12 @@ func (this *multipleSpaceSender) MSearch(req *request.SearchRequest) (result res
 
 	for r := range respChain {
 		if result == nil {
-			result = r
+			result = r.reponse
 			continue
 		}
 
-		var err error
-
-		if len(result) < len(r) {
-			err = this.senders[0].mergeResultArr(r, result, req)
-			result = r
-		} else {
-			err = this.senders[0].mergeResultArr(result, r, req)
-		}
-
-		if err != nil {
-			return response.SearchResponses{newSearchResponseWithError(this.senders[0].db, this.senders[0].space, 0, err)}
+		if err := r.sender.mergeResultArr(result, r.reponse, req); err != nil {
+			return response.SearchResponses{newSearchResponseWithError(r.sender.db, r.sender.space, 0, err)}
 		}
 	}
 	return result
