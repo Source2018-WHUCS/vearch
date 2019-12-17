@@ -322,13 +322,12 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 				e      error
 			)
 			rpcClient := this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), nodeId)
-			rpcClient.lock.RLock()
-			defer rpcClient.lock.RUnlock()
 			if rpcClient.client == nil {
 				resp := response.Response{Resp: nil, Status: pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING, Err: pkg.VErr(pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING)}
 				respChain <- &resp
 				return
 			}
+			defer this.spaceSender.ps.Client().Master().cliCache.Store(nodeId, rpcClient)
 
 			for i := 0; i < adaptRetry; i++ {
 				resps, status, e = rpcClient.Execute(servicePath, request)
@@ -346,6 +345,7 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 						return
 					}
 					rpcClient = this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), addrs.NodeID)
+					defer this.spaceSender.ps.Client().Master().cliCache.Store(nodeId, rpcClient)
 					log.Debug("%s invoke not leader retry, PartitionID: %d, PartitionRpcAddr: %s", servicePath, request.GetPartitionID(), rpcClient.client.GetAddress(0))
 					continue
 				} else if status == pkg.ERRCODE_PARTITION_CANNOT_SEARCH {
@@ -382,6 +382,7 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 					}
 
 					rpcClient = this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), targetID)
+					defer this.spaceSender.ps.Client().Master().cliCache.Store(nodeId, rpcClient)
 					log.Debug("%s invoke can not search retry, PartitionID: %d, PartitionRpcAddr: %s", servicePath, request.GetPartitionID(), rpcClient.client.GetAddress(0))
 
 					continue
@@ -420,11 +421,10 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 func (this *partitionSender) StreamExecute(servicePath string, request request.Request, sc server.StreamCallback) (interface{}, int64, error) {
 	nodeId := this.nodeIds[0]
 	rpcClient := this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), nodeId)
-	rpcClient.lock.RLock()
-	defer rpcClient.lock.RUnlock()
 	if rpcClient.client == nil {
 		return nil, pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING, pkg.CodeErr(pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING)
 	}
+	defer this.spaceSender.ps.Client().Master().cliCache.Store(nodeId, rpcClient)
 	sleepTime := baseSleepTime
 
 	var (
@@ -449,6 +449,7 @@ func (this *partitionSender) StreamExecute(servicePath string, request request.R
 			}
 			time.Sleep(200 * time.Millisecond)
 			rpcClient = this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), addrs.NodeID)
+			defer this.spaceSender.ps.Client().Master().cliCache.Store(nodeId, rpcClient)
 			log.Debug("%s invoke not leader retry, PartitionID: %d, PartitionRpcAddr: %s", servicePath, request.GetPartitionID(), rpcClient.client.GetAddress(0))
 			continue
 		}

@@ -144,12 +144,12 @@ var nilClient = &rpcClient{}
 type rpcClient struct {
 	client  *server.RpcClient
 	useTime int64
-	lock    sync.RWMutex
+	_lock    sync.RWMutex
 }
 
 func (this *rpcClient) close() {
-	this.lock.Lock()
-	defer this.lock.Unlock()
+	this._lock.Lock()
+	defer this._lock.Unlock()
 	if e := this.client.Close(); e != nil {
 		log.Error(e.Error())
 	}
