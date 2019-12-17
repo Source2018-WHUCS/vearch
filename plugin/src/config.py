@@ -17,8 +17,8 @@ root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 port = 4101
 gpus = '0,1'
-master_address = 'http://127.0.0.1:443'
-router_address = 'http://127.0.0.1:80'
+master_address = 'http://127.0.0.1:8817'
+router_address = 'http://127.0.0.1:9001'
 
 face_config = dict(modelname='face_retrieval.face',
                    model_path=os.path.join(root_path, 'model', '20180402-114759'))
@@ -28,7 +28,7 @@ image_config = dict(modelname='image_retrieval.image_extract.vgg16',
 
 video = dict(db='video',
              space='video',
-             ip='http://127.0.0.1',
+             ip='http://11.3.146.4',
              imagepath=os.path.join(root_path, 'images', 'face_retrieval'),
              videopath='rtmp://58.200.131.2:1935/livetv/hunantv')
 
