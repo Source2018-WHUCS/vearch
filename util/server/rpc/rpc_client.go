@@ -46,6 +46,7 @@ func NewRpcClient(serverAddress ...string) (*RpcClient, error) {
 	}
 
 	clientPool := &pool.Pool{New: func() interface{} {
+		log.Info("to instance client for server:[%s]", serverAddress)
 		return client.NewOneClient(client.Failtry, client.RandomSelect, d, client.DefaultOption)
 	}}
 
