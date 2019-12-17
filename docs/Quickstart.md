@@ -1,6 +1,6 @@
 # Quickstart
 
-*This  Quickstart suit for those people who want to search something but  do not know how to extract image or text to features. Other people please refer to [docs/APILowLevel.md](docs/APILowLevel.md) .* 
+*This  Quickstart suit for those people who want to search something but  do not know how to extract image or text to features. Other people please refer to [APILowLevel.md](APILowLevel.md) .* 
 
 Vearch is aimed to build a simple and fast image retrieval system. Through this system, you can easily build your own image retrieval system, including image object detection,  feature extraction and similarity search. This quickstart demonstrates how to use it.
 
@@ -16,7 +16,7 @@ Vearch is aimed to build a simple and fast image retrieval system. Through this 
 
 ## Different from APILowLevel.md
 
-This API is similar to [docs/APILowLevel.md](docs/APILowLevel.md),  and plugin can perfectly adapt to it, you can use any method defined in docs/APILowLevel.md by plugin. However, if you already have features, I suggest you use docs/APILowLevel.md directly.
+This API is similar to [APILowLevel.md](APILowLevel.md),  and plugin can perfectly adapt to it, you can use any method defined in APILowLevel.md by plugin. However, if you already have features, I suggest you use APILowLevel.md directly.
 
 The difference:
 
