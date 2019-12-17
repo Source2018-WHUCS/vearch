@@ -30,7 +30,8 @@ db_name = "test_vector_db"
 space_name = "vector_space"
 headers = {"content-type": "application/json"}
 plugin_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-image_path = os.path.join(plugin_path, 'images', 'face_retrieval')
+image_path = os.path.join(plugin_path, 'images', 'face_retrieval', 'lfw')
+pool = ThreadPoolExecutor(200)
 
 
 @pytest.mark.author('')
@@ -100,16 +101,12 @@ def test_createspace():
         "replica_num": 1,
         "engine": {"name": "gamma", "index_size": 9999, "max_size": 100000},
         "properties": {
-            "string": {
+            "name": {
                 "type": "keyword",
                 "index": "true"
             },
-            "int": {
-                "type": "integer",
-                "index": "true"
-            },
-            "float": {
-                "type": "float",
+            "path": {
+                "type": "keyword",
                 "index": "true"
             },
             "vector1": {
@@ -117,34 +114,8 @@ def test_createspace():
                 "model_id": "img",
                 "dimension": 512,
                 "format": "normalization"
-            },
-            "vector2": {
-                "type": "vector",
-                "model_id": "text",
-                "dimension": 768,
-                "format": "normalization"
-            },
-            "string_tags": {
-                "type": "string",
-                "array": True,
-                "index": "true"
-            },
-            "int_tags": {
-                "type": "integer",
-                "array": True,
-                "index": "true"
-            },
-            "float_tags": {
-                "type": "float",
-                "array": True,
-                "index": "true"
             }
-        },
-        "models": [{
-            "model_id": "vgg16",
-            "fields": ["string"],
-            "out": "feature"
-        }]
+        }
     }
     print(url + "---" + json.dumps(data))
     response = requests.put(url, headers=headers, data=json.dumps(data))
@@ -165,84 +136,105 @@ logger.info("router(PS)")
 def test_insertWithId():
     logger.info("insert")
 
-    def multi(filename):
-        file_path = os.path.join(image_path, filename)
-        data = dict(string=file_path, vector1=dict(feature=file_path))
-        idx = os.path.splitext(filename)[0]
+    def multi(name, image):
+        file_path = os.path.join(image_path, name, image)
+        data = dict(name=name, path=file_path, vector1=dict(feature=file_path))
+        idx = os.path.splitext(image)[0]
         url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + idx
         response = requests.post(url, headers=headers, data=json.dumps(data))
         print("insertWithID:" + response.text)
         assert response.status_code == 200 and response.json()['status'] == 200
-    with ThreadPoolExecutor(20) as pool:
-        futures = [pool.submit(multi, filename) for filename in os.listdir(image_path)]
+
+    futures = []
+    for face_folder in os.listdir(image_path):
+        folder = os.path.join(image_path, face_folder)
+        if not os.path.isdir(folder):
+            continue
+        for filename in os.listdir(folder):
+            futures.append(pool.submit(multi, face_folder, filename))
+
     wait(futures)
 
 
 def test_searchById():
     logger.info("test_searchById")
-    for filename in os.listdir(image_path):
-        idx = os.path.splitext(filename)[0]
-        url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + idx
-        response = requests.get(url)
-        print("searchById:" + response.text)
-        assert response.status_code == 200 and response.json()['found'] is True
+    for face_folder in os.listdir(image_path):
+        folder = os.path.join(image_path, face_folder)
+        if not os.path.isdir(folder):
+            continue
+        for filename in os.listdir(folder):
+            idx = os.path.splitext(filename)[0]
+            url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + idx
+            response = requests.get(url)
+            print("searchById:" + response.text)
+            assert response.status_code == 200 and response.json()['found'] is True
 
-
-def test_insterNoId():
-    logger.info("insertDataNoId")
-
-    def multi(filename):
-        file_path = os.path.join(image_path, filename)
-        data = dict(string=file_path, vector1=dict(feature=file_path))
-        url = "http://" + ip_data + "/" + db_name + "/" + space_name
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        print("insertWithNOID:" + response.text)
-        assert response.status_code == 200 and response.json()['status'] == 201
-    with ThreadPoolExecutor(20) as pool:
-        futures = [pool.submit(multi, filename) for filename in os.listdir(image_path)]
-    wait(futures)
-
+        
+"""
+# def test_insterNoId():
+#     logger.info("insertDataNoId")
+# 
+#     def multi(filename):
+#         file_path = os.path.join(image_path, filename)
+#         data = dict(string=file_path, vector1=dict(feature=file_path))
+#         url = "http://" + ip_data + "/" + db_name + "/" + space_name
+#         response = requests.post(url, headers=headers, data=json.dumps(data))
+#         print("insertWithNOID:" + response.text)
+#         assert response.status_code == 200 and response.json()['status'] == 201
+#     with ThreadPoolExecutor(20) as pool:
+#         futures = [pool.submit(multi, filename) for filename in os.listdir(image_path)]
+#     wait(futures)
+"""
 
 def test_searchByFeature():
     url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/_search?size=100"
-    for filename in os.listdir(image_path):
-        file_path = os.path.join(image_path, filename)
-        data = {
-            "query": {
-                "sum": [{
-                    "field": "vector1",
-                    "feature": file_path,
-                    "format": "normalization"
-                }]
+    for face_folder in os.listdir(image_path):
+        folder = os.path.join(image_path, face_folder)
+        if not os.path.isdir(folder):
+            continue
+        for filename in os.listdir(folder):
+            file_path = os.path.join(folder, filename)
+            data = {
+                "query": {
+                    "sum": [{
+                        "field": "vector1",
+                        "feature": file_path,
+                        "format": "normalization"
+                    }]
+                }
             }
-        }
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        print("searchByFeature---\n" + response.text)
-        assert response.status_code == 200
+            response = requests.post(url, headers=headers, data=json.dumps(data))
+            print("searchByFeature---\n" + response.text)
+            assert response.status_code == 200
 
 
-def test_deleteDoc():
-    logger.info("test_deleteDoc")
-    # fileData = "/home/vearch/test/data/test_data.json"
-    for filename in os.listdir(image_path):
-        idx = os.path.splitext(filename)[0]
-        url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + idx
-        response = requests.delete(url)
-        print("deleteDoc:" + response.text)
-        assert response.status_code == 200
+# def test_deleteDoc():
+#     logger.info("test_deleteDoc")
+#     # fileData = "/home/vearch/test/data/test_data.json"
+#     for face_folder in os.listdir(image_path):
+#         folder = os.path.join(image_path, face_folder)
+#         if not os.path.isdir(folder):
+#             continue
+#         for filename in os.listdir(folder):
+#             idx = os.path.splitext(filename)[0]
+#             url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + idx
+#             response = requests.delete(url)
+#             print("deleteDoc:" + response.text)
+#             assert response.status_code == 200
 
 
-def test_deleteSpace():
-    url = "http://" + ip_db + "/space/" + db_name + "/" + space_name
-    response = requests.delete(url)
-    print("deleteSpace:" + response.text)
-    assert response.status_code == 200
+# def test_deleteSpace():
+#     url = "http://" + ip_db + "/space/" + db_name + "/" + space_name
+#     response = requests.delete(url)
+#     print("deleteSpace:" + response.text)
+#     assert response.status_code == 200
 
 
-def test_deleteDB():
-    url = "http://" + ip_db + "/db/" + db_name
-    response = requests.delete(url)
-    print("deleteDB:" + response.text)
-    assert response.status_code == 200
+# def test_deleteDB():
+#     url = "http://" + ip_db + "/db/" + db_name
+#     response = requests.delete(url)
+#     print("deleteDB:" + response.text)
+#     assert response.status_code == 200
+
 
 
