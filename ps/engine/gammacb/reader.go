@@ -125,9 +125,6 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 		req.fields_num = C.int(len(fs))
 	}
 
-	if log.IsDebugEnabled() {
-		log.Debug("send request:[%v]", req)
-	}
 	reps := C.Search(ri.engine.gamma, req)
 	defer C.DestroyResponse(reps)
 	result := make(response.SearchResponses, int(req.req_num))
@@ -194,7 +191,14 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 	reps := C.Search(gamma, req)
 	defer C.DestroyResponse(reps)
 
-	result := ri.singleSearchResult(reps, 0)
+	result := &response.SearchResponse{
+		Total:    uint64(0),
+		MaxScore: 1,
+		Hits:     make(response.Hits, 0),
+		Status:   &response.SearchStatus{Total: 1, Successful: 1},
+	}
+
+	//result := ri.singleSearchResult(reps, 0)
 	result.MaxTook = int64(time.Now().Sub(start) / time.Millisecond)
 	result.MaxTookID = ri.engine.partitionID
 
