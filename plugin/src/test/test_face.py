@@ -208,33 +208,33 @@ def test_searchByFeature():
             assert response.status_code == 200
 
 
-# def test_deleteDoc():
-#     logger.info("test_deleteDoc")
-#     # fileData = "/home/vearch/test/data/test_data.json"
-#     for face_folder in os.listdir(image_path):
-#         folder = os.path.join(image_path, face_folder)
-#         if not os.path.isdir(folder):
-#             continue
-#         for filename in os.listdir(folder):
-#             idx = os.path.splitext(filename)[0]
-#             url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + idx
-#             response = requests.delete(url)
-#             print("deleteDoc:" + response.text)
-#             assert response.status_code == 200
+def test_deleteDoc():
+    logger.info("test_deleteDoc")
+    # fileData = "/home/vearch/test/data/test_data.json"
+    for face_folder in os.listdir(image_path):
+        folder = os.path.join(image_path, face_folder)
+        if not os.path.isdir(folder):
+            continue
+        for filename in os.listdir(folder):
+            idx = os.path.splitext(filename)[0]
+            url = "http://" + ip_data + "/" + db_name + "/" + space_name + "/" + idx
+            response = requests.delete(url)
+            print("deleteDoc:" + response.text)
+            assert response.status_code == 200
 
 
-# def test_deleteSpace():
-#     url = "http://" + ip_db + "/space/" + db_name + "/" + space_name
-#     response = requests.delete(url)
-#     print("deleteSpace:" + response.text)
-#     assert response.status_code == 200
+def test_deleteSpace():
+    url = "http://" + ip_db + "/space/" + db_name + "/" + space_name
+    response = requests.delete(url)
+    print("deleteSpace:" + response.text)
+    assert response.status_code == 200
 
 
-# def test_deleteDB():
-#     url = "http://" + ip_db + "/db/" + db_name
-#     response = requests.delete(url)
-#     print("deleteDB:" + response.text)
-#     assert response.status_code == 200
+def test_deleteDB():
+    url = "http://" + ip_db + "/db/" + db_name
+    response = requests.delete(url)
+    print("deleteDB:" + response.text)
+    assert response.status_code == 200
 
 
 

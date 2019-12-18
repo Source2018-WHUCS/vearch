@@ -288,6 +288,8 @@ def install(model_name):
     elif model_name == 'text':
         text_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'text', 'requirements.txt')
         util.install_package(f'-r {text_path}')
+    elif model_name == 'audio':
+        raise NotImplementedError()
     else:
         raise Exception(f'{model_name} is not existed')
 

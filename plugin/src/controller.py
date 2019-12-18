@@ -89,6 +89,8 @@ def load_model(model_name):
         model = ImageSearch()
     elif model_name == 'text':
         model = Text()
+    elif model_name == 'audio':
+        raise NotImplementedError()
     else:
         raise exceptions.LoadModelError(f'{model_name} is not existed')
 
