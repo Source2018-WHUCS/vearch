@@ -215,7 +215,8 @@ curl -H "content-type: application/json" -XPOST -d'
    "vector_value":false,
     "sort" : [
        { "_score" : {"order" : "asc"} }
-   ]
+   ],
+   "fileds":["name","age"]
 }
 ' {{ROUTER}}/test_vector_db/vector_space/_search
 ````
