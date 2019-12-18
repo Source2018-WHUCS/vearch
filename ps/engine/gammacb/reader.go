@@ -188,8 +188,10 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 	}
 	start := time.Now()
 
-	//reps := C.Search(gamma, req)
-	//defer C.DestroyResponse(reps)
+	for i:=0 ; i<1000; i++{
+		reps := C.Search(gamma, req)
+		defer C.DestroyResponse(reps)
+	}
 
 	result := &response.SearchResponse{
 		Total:    uint64(0),
