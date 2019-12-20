@@ -196,6 +196,94 @@ func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 	return &C.struct_Doc{fields: arr, fields_num: C.int(len(fields))}, nil
 }
 
+
+func (ge *gammaEngine) Doc2DocResultCGO(doc *C.struct_Doc) *response.DocResult {
+
+	result := response.DocResult{
+		Found:     true,
+		DB:        ge.GetSpace().DBId,
+		Space:     ge.GetSpace().Id,
+		Partition: ge.GetPartitionID(),
+	}
+
+	fieldNum := int(doc.fields_num)
+
+	source := make(map[string]interface{})
+
+	var err error
+
+	for i := 0; i < fieldNum; i++ {
+		fv := C.GetField(doc, C.int(i))
+		name := string(CbArr2ByteArray(fv.name))
+
+		switch name {
+		case mapping.VersionField:
+			result.Version = int64(cbbytes.ByteArray2UInt64(CbArr2ByteArray(fv.value)))
+		case mapping.SlotField:
+			result.SlotID = uint32(cbbytes.ByteArray2UInt64(CbArr2ByteArray(fv.value)))
+		case mapping.IdField:
+			result.Id = string(CbArr2ByteArray(fv.value))
+		case mapping.SourceField:
+			result.Source = CbArr2ByteArray(fv.value)
+		default:
+			field := ge.GetMapping().GetField(name)
+			if field == nil {
+				log.Error("can not found mappping by field:[%s]", name)
+				continue
+			}
+			switch field.FieldType() {
+			case pspb.FieldType_STRING:
+				tempValue := string(CbArr2ByteArray(fv.value))
+				if field.FieldMappingI.(*mapping.StringFieldMapping).Array {
+					source[name] = strings.Split(tempValue, string([]byte{'\001'}))
+				} else {
+					source[name] = tempValue
+				}
+			case pspb.FieldType_INT:
+				source[name] = cbbytes.Bytes2Int(CbArr2ByteArray(fv.value))
+			case pspb.FieldType_BOOL:
+				if cbbytes.Bytes2Int(CbArr2ByteArray(fv.value)) == 0 {
+					source[name] = false
+				} else {
+					source[name] = true
+				}
+			case pspb.FieldType_DATE:
+				u := cbbytes.Bytes2Int(CbArr2ByteArray(fv.value))
+				source[name] = time.Unix(u/1e6, u%1e6)
+			case pspb.FieldType_FLOAT:
+				source[name] = cbbytes.ByteToFloat64(CbArr2ByteArray(fv.value))
+			case pspb.FieldType_VECTOR:
+
+				float32s, uri, err := cbbytes.ByteToVector(CbArr2ByteArray(fv.value))
+				if err != nil {
+					return response.NewErrDocResult(result.Id, err)
+				}
+				source[name] = map[string]interface{}{
+					"source":  uri,
+					"feature": float32s,
+				}
+
+			default:
+				log.Warn("can not set value by type:[%v] ", field.FieldType())
+			}
+		}
+	}
+	marshal, err := json.Marshal(source)
+	if err != nil {
+		return response.NewErrDocResult(result.Id, err)
+	}
+	result.Source = marshal
+
+	if marshal, err := json.Marshal(source); err != nil {
+		log.Warn("can not marshl source :[%v] ", err.Error())
+	} else {
+		result.Source = marshal
+	}
+
+	return &result
+}
+
+
 func (ge *gammaEngine) ResultItem2DocResult(item *gamma_api.ResultItem) *response.DocResult {
 	result := ge.Doc2DocResult(item.Doc(nil))
 	result.Score = float64(item.Score())

@@ -64,7 +64,7 @@ func (ri *readerImpl) GetDoc(ctx context.Context, docID string) *response.DocRes
 		return response.NewNotFoundDocResult(docID)
 	}
 	defer C.DestroyDoc(doc)
-	result := ri.engine.Doc2DocResult(doc)
+	result := ri.engine.Doc2DocResultCGO(doc)
 	return result
 }
 
@@ -208,7 +208,7 @@ func (ri *readerImpl) singleSearchResult(reps *gamma_api.Response, index int) *r
 	searchResult := new(gamma_api.SearchResult)
 	reps.Results(searchResult, index)
 	if searchResult.ResultCode() > 0 {
-		msg := string(CbArr2ByteArray(searchResult.Msg())) + ", code:[%d]"
+		msg := string(searchResult.Msg()) + ", code:[%d]"
 		return response.NewSearchResponseErr(vearchlog.LogErrAndReturn(fmt.Errorf(msg, searchResult.ResultCode())))
 	}
 	hits := make(response.Hits, 0, searchResult.ResultItemsLength())
@@ -232,7 +232,7 @@ func (ri *readerImpl) singleSearchResult(reps *gamma_api.Response, index int) *r
 	}
 
 	message := reps.OnlineLogMessage()
-	if len(message) == 0 {
+	if len(message) > 0 {
 		result.Explain = map[uint32]string{
 			ri.engine.partitionID: string(message),
 		}
