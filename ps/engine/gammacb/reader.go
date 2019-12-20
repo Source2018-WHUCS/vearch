@@ -211,11 +211,13 @@ func (ri *readerImpl) singleSearchResult(reps *gamma_api.Response, index int) *r
 		msg := string(searchResult.Msg()) + ", code:[%d]"
 		return response.NewSearchResponseErr(vearchlog.LogErrAndReturn(fmt.Errorf(msg, searchResult.ResultCode())))
 	}
-	hits := make(response.Hits, 0, searchResult.ResultItemsLength())
+
+	l := searchResult.ResultItemsLength()
+	hits := make(response.Hits, 0, l)
 
 	var maxScore float64 = -1
 
-	for i := 0; i < len(hits); i++ {
+	for i := 0; i < l; i++ {
 		item := new(gamma_api.ResultItem)
 		searchResult.ResultItems(item, i)
 		result := ri.engine.ResultItem2DocResult(item)
