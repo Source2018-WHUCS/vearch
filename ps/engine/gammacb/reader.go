@@ -24,6 +24,7 @@ import "C"
 import (
 	"context"
 	"fmt"
+	"github.com/vearch/vearch/proto/gamma_api"
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/proto"
@@ -125,12 +126,14 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 		req.fields_num = C.int(len(fs))
 	}
 
-	reps := C.Search(ri.engine.gamma, req)
-	defer C.DestroyResponse(reps)
-	result := make(response.SearchResponses, int(req.req_num))
+	arr := C.SearchV2(ri.engine.gamma, req)
+	defer C.DestroyByteArray(arr)
 
-	for index := range result {
-		result[index] = ri.singleSearchResult(reps, index)
+	resp := gamma_api.GetRootAsResponse(CbArr2ByteArrayUnsafe(arr), 0)
+
+	result := make(response.SearchResponses, resp.ResultsLength())
+	for i := 0; i < len(result); i++ {
+		result[i] = ri.singleSearchResult(resp, i)
 	}
 
 	return result
@@ -188,10 +191,12 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 	}
 	start := time.Now()
 
-	reps := C.Search(gamma, req)
-	defer C.DestroyResponse(reps)
+	arr := C.SearchV2(ri.engine.gamma, req)
+	defer C.DestroyByteArray(arr)
 
-	result := ri.singleSearchResult(reps, 0)
+	resp := gamma_api.GetRootAsResponse(CbArr2ByteArrayUnsafe(arr), 0)
+
+	result := ri.singleSearchResult(resp, 0)
 	result.MaxTook = int64(time.Now().Sub(start) / time.Millisecond)
 	result.MaxTookID = ri.engine.partitionID
 
@@ -199,19 +204,20 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 
 }
 
-func (ri *readerImpl) singleSearchResult(reps *C.struct_Response, index int) *response.SearchResponse {
-	rep := C.GetSearchResult(reps, C.int(index))
-	if rep.result_code > 0 {
-		msg := string(CbArr2ByteArray(rep.msg)) + ", code:[%d]"
-		return response.NewSearchResponseErr(vearchlog.LogErrAndReturn(fmt.Errorf(msg, rep.result_code)))
+func (ri *readerImpl) singleSearchResult(reps *gamma_api.Response, index int) *response.SearchResponse {
+	searchResult := new(gamma_api.SearchResult)
+	reps.Results(searchResult, index)
+	if searchResult.ResultCode() > 0 {
+		msg := string(CbArr2ByteArray(searchResult.Msg())) + ", code:[%d]"
+		return response.NewSearchResponseErr(vearchlog.LogErrAndReturn(fmt.Errorf(msg, searchResult.ResultCode())))
 	}
-	hits := make(response.Hits, 0, int(rep.result_num))
+	hits := make(response.Hits, 0, searchResult.ResultItemsLength())
 
 	var maxScore float64 = -1
-	size := int(rep.result_num)
 
-	for i := 0; i < size; i++ {
-		item := C.GetResultItem(rep, C.int(i))
+	for i := 0; i < len(hits); i++ {
+		item := new(gamma_api.ResultItem)
+		searchResult.ResultItems(item, i)
 		result := ri.engine.ResultItem2DocResult(item)
 		if maxScore < result.Score {
 			maxScore = result.Score
@@ -219,15 +225,16 @@ func (ri *readerImpl) singleSearchResult(reps *C.struct_Response, index int) *re
 		hits = append(hits, result)
 	}
 	result := response.SearchResponse{
-		Total:    uint64(rep.total),
+		Total:    uint64(searchResult.Total()),
 		MaxScore: maxScore,
 		Hits:     hits,
 		Status:   &response.SearchStatus{Total: 1, Successful: 1},
 	}
 
-	if reps.online_log_message != nil {
+	message := reps.OnlineLogMessage()
+	if len(message) == 0 {
 		result.Explain = map[uint32]string{
-			ri.engine.partitionID: string(CbArr2ByteArray(reps.online_log_message)),
+			ri.engine.partitionID: string(message),
 		}
 	}
 

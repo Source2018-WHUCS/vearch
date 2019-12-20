@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cast"
+	"github.com/vearch/vearch/proto/gamma_api"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine/mapping"
@@ -195,10 +196,10 @@ func DocCmd2Document(docCmd *pspb.DocCmd) (*C.struct_Doc, error) {
 	return &C.struct_Doc{fields: arr, fields_num: C.int(len(fields))}, nil
 }
 
-func (ge *gammaEngine) ResultItem2DocResult(item *C.struct_ResultItem) *response.DocResult {
-	result := ge.Doc2DocResult(item.doc)
-	result.Score = float64(item.score)
-	result.Extra = CbArr2ByteArray(item.extra)
+func (ge *gammaEngine) ResultItem2DocResult(item *gamma_api.ResultItem) *response.DocResult {
+	result := ge.Doc2DocResult(item.Doc(nil))
+	result.Score = float64(item.Score())
+	result.Extra = item.Extra()
 	result.SortValues = []sortorder.SortValue{
 		&sortorder.FloatSortValue{
 			Val: result.Score,
@@ -207,7 +208,7 @@ func (ge *gammaEngine) ResultItem2DocResult(item *C.struct_ResultItem) *response
 	return result
 }
 
-func (ge *gammaEngine) Doc2DocResult(doc *C.struct_Doc) *response.DocResult {
+func (ge *gammaEngine) Doc2DocResult(doc *gamma_api.Doc) *response.DocResult {
 
 	result := response.DocResult{
 		Found:     true,
@@ -216,25 +217,28 @@ func (ge *gammaEngine) Doc2DocResult(doc *C.struct_Doc) *response.DocResult {
 		Partition: ge.GetPartitionID(),
 	}
 
-	fieldNum := int(doc.fields_num)
+	fieldNum := doc.FieldsLength()
 
 	source := make(map[string]interface{})
 
 	var err error
 
 	for i := 0; i < fieldNum; i++ {
-		fv := C.GetField(doc, C.int(i))
-		name := string(CbArr2ByteArray(fv.name))
+		fv := new(gamma_api.Field)
+
+		doc.Fields(fv, i)
+
+		name := string(fv.Name())
 
 		switch name {
 		case mapping.VersionField:
-			result.Version = int64(cbbytes.ByteArray2UInt64(CbArr2ByteArray(fv.value)))
+			result.Version = int64(cbbytes.ByteArray2UInt64(fv.Value()))
 		case mapping.SlotField:
-			result.SlotID = uint32(cbbytes.ByteArray2UInt64(CbArr2ByteArray(fv.value)))
+			result.SlotID = uint32(cbbytes.ByteArray2UInt64(fv.Value()))
 		case mapping.IdField:
-			result.Id = string(CbArr2ByteArray(fv.value))
+			result.Id = string(fv.Value())
 		case mapping.SourceField:
-			result.Source = CbArr2ByteArray(fv.value)
+			result.Source = fv.Value()
 		default:
 			field := ge.GetMapping().GetField(name)
 			if field == nil {
@@ -243,28 +247,28 @@ func (ge *gammaEngine) Doc2DocResult(doc *C.struct_Doc) *response.DocResult {
 			}
 			switch field.FieldType() {
 			case pspb.FieldType_STRING:
-				tempValue := string(CbArr2ByteArray(fv.value))
+				tempValue := string(fv.Value())
 				if field.FieldMappingI.(*mapping.StringFieldMapping).Array {
 					source[name] = strings.Split(tempValue, string([]byte{'\001'}))
 				} else {
 					source[name] = tempValue
 				}
 			case pspb.FieldType_INT:
-				source[name] = cbbytes.Bytes2Int(CbArr2ByteArray(fv.value))
+				source[name] = cbbytes.Bytes2Int(fv.Value())
 			case pspb.FieldType_BOOL:
-				if cbbytes.Bytes2Int(CbArr2ByteArray(fv.value)) == 0 {
+				if cbbytes.Bytes2Int(fv.Value()) == 0 {
 					source[name] = false
 				} else {
 					source[name] = true
 				}
 			case pspb.FieldType_DATE:
-				u := cbbytes.Bytes2Int(CbArr2ByteArray(fv.value))
+				u := cbbytes.Bytes2Int(fv.Value())
 				source[name] = time.Unix(u/1e6, u%1e6)
 			case pspb.FieldType_FLOAT:
-				source[name] = cbbytes.ByteToFloat64(CbArr2ByteArray(fv.value))
+				source[name] = cbbytes.ByteToFloat64(fv.Value())
 			case pspb.FieldType_VECTOR:
 
-				float32s, uri, err := cbbytes.ByteToVector(CbArr2ByteArray(fv.value))
+				float32s, uri, err := cbbytes.ByteToVector(fv.Value())
 				if err != nil {
 					return response.NewErrDocResult(result.Id, err)
 				}
@@ -317,6 +321,18 @@ func CbArr2ByteArray(arr *C.struct_ByteArray) []byte {
 	sliceHeader.Len = int(arr.len)
 	sliceHeader.Data = uintptr(unsafe.Pointer(arr.value))
 	return cbbytes.CloneBytes(oids)
+}
+
+func CbArr2ByteArrayUnsafe(arr *C.struct_ByteArray) []byte {
+	if arr == nil {
+		return []byte{}
+	}
+	var oids []byte
+	sliceHeader := (*reflect.SliceHeader)((unsafe.Pointer(&oids)))
+	sliceHeader.Cap = int(arr.len)
+	sliceHeader.Len = int(arr.len)
+	sliceHeader.Data = uintptr(unsafe.Pointer(arr.value))
+	return oids
 }
 
 func rowDateToFloatArray(data []byte, dimension int) ([]float32, error) {
