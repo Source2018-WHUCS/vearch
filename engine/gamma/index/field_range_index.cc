@@ -102,7 +102,7 @@ class NodeList {
 
 class FieldRangeIndex {
  public:
-  FieldRangeIndex(const string &name, enum DataType field_type);
+  FieldRangeIndex(int idx, enum DataType field_type);
 
   int Add(unsigned char *key, uint key_len, int value);
 
@@ -127,9 +127,9 @@ class FieldRangeIndex {
 
 const char *FieldRangeIndex::kDelim_ = "\001";
 
-FieldRangeIndex::FieldRangeIndex(const string &name, enum DataType field_type) {
-  string cache_file = string("cache_") + name + ".dis";
-  string main_file = string("main_") + name + ".dis";
+FieldRangeIndex::FieldRangeIndex(int idx, enum DataType field_type) {
+  string cache_file = string("cache_") + std::to_string(idx) + ".dis";
+  string main_file = string("main_") + std::to_string(idx) + ".dis";
 
   remove(cache_file.c_str());
   remove(main_file.c_str());
@@ -197,7 +197,7 @@ int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
     char *p, *k;
     k = strtok_r(key_s, kDelim_, &p);
     while (k != nullptr) {
-      InsertToBt(reinterpret_cast<unsigned char*>(k), strlen(k));
+      InsertToBt(reinterpret_cast<unsigned char *>(k), strlen(k));
       k = strtok_r(NULL, kDelim_, &p);
     }
   }
@@ -350,16 +350,22 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
   return retval;
 }
 
-MultiFieldsRangeIndex::MultiFieldsRangeIndex() {}
+MultiFieldsRangeIndex::MultiFieldsRangeIndex(Profile *profile) {
+  profile_ = profile;
+  fields_.resize(profile->FieldsNum());
+  std::fill(fields_.begin(), fields_.end(), nullptr);
+}
 
-int MultiFieldsRangeIndex::Add(const string &field, unsigned char *key,
-                               uint key_len, int value) {
-  const auto &iter = fields_.find(field);
-  if (iter == fields_.end()) {
+int MultiFieldsRangeIndex::Add(int docid, int field) {
+  FieldRangeIndex *index = fields_[field];
+  if (index == nullptr) {
     return 0;
   }
-  FieldRangeIndex *index = iter->second;
-  index->Add(key, key_len, value);
+
+  unsigned char *key;
+  int key_len = 0;
+  profile_->GetFieldRawValue(docid, field, &key, key_len);
+  index->Add(key, key_len, docid);
 
   return 0;
 }
@@ -375,12 +381,11 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
       out.SetFlags(out.Flags() | 0x4);
     }
     RangeQueryResult tmp(out.Flags());
-    const auto &iter = fields_.find(_.field);
-    if (iter == fields_.end()) {
+    FieldRangeIndex *index = fields_[_.field];
+    if (index == nullptr || _.field < 0) {
       return -1;
     }
 
-    FieldRangeIndex *index = iter->second;
     int retval = index->Search(_.lower_value, _.upper_value, tmp);
     if (retval > 0) {
       out.Add(tmp);
@@ -396,8 +401,8 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
   for (int i = 0; i < fsize; ++i) {
     auto &filter = filters[i];
 
-    const auto &iter = fields_.find(filter.field);
-    if (iter == fields_.end()) {
+    FieldRangeIndex *index = fields_[filter.field];
+    if (index == nullptr || filter.field < 0) {
       continue;
     }
 
@@ -408,7 +413,6 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
 
     results[valuable_result + 1].SetFlags(flags);
 
-    FieldRangeIndex *index = iter->second;
     int retval = index->Search(filter.lower_value, filter.upper_value,
                                results[valuable_result + 1]);
     if (retval < 0) {
@@ -501,10 +505,9 @@ int MultiFieldsRangeIndex::Intersect(const RangeQueryResult *results, int j,
   return count;
 }
 
-int MultiFieldsRangeIndex::AddField(const string &field,
-                                    enum DataType field_type) {
+int MultiFieldsRangeIndex::AddField(int field, enum DataType field_type) {
   FieldRangeIndex *index = new FieldRangeIndex(field, field_type);
-  fields_.insert(std::make_pair(field, index));
+  fields_[field] = index;
   return 0;
 }
 }  // namespace tig_gamma

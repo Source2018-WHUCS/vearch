@@ -12,6 +12,7 @@
 #include <chrono>
 #include <iostream>
 #include <sstream>
+#include "api_generated.h"
 #include "gamma_engine.h"
 #include "log.h"
 #include "utils.h"
@@ -543,7 +544,8 @@ Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
                      RangeFilter **range_filters, int range_filters_num,
                      TermFilter **term_filters, int term_filters_num,
                      int req_num, int direct_search_type,
-                     ByteArray *online_log_level, int has_rank, int multi_vector_rank) {
+                     ByteArray *online_log_level, int has_rank,
+                     int multi_vector_rank) {
   Request *request = static_cast<Request *>(malloc(sizeof(Request)));
   memset(request, 0, sizeof(Request));
   request->topn = topn;
@@ -577,6 +579,80 @@ enum ResponseCode DestroyRequest(Request *request) {
 
 Response *Search(void *engine, Request *request) {
   return static_cast<tig_gamma::GammaEngine *>(engine)->Search(request);
+}
+
+ByteArray *SearchV2(void *engine, Request *request) {
+  Response *response =
+      static_cast<tig_gamma::GammaEngine *>(engine)->Search(request);
+  flatbuffers::FlatBufferBuilder builder;
+
+  std::vector<flatbuffers::Offset<gamma_api::SearchResult>> result_vector;
+  for (int result_idx = 0; result_idx < response->req_num; ++result_idx) {
+    SearchResult *result = response->results[result_idx];
+    std::vector<flatbuffers::Offset<gamma_api::ResultItem>> item_vector;
+    for (int item_idx = 0; item_idx < result->result_num; ++item_idx) {
+      ResultItem *result_item = result->result_items[item_idx];
+      Doc *doc = result_item->doc;
+      auto extra = builder.CreateString(result_item->extra->value,
+                                        result_item->extra->len);
+      std::vector<flatbuffers::Offset<gamma_api::Field>> field_vector;
+      for (int field_idx = 0; field_idx < doc->fields_num; ++field_idx) {
+        Field *field = doc->fields[field_idx];
+        auto name = builder.CreateString(field->name->value, field->name->len);
+        auto value =
+            builder.CreateString(field->value->value, field->value->len);
+        flatbuffers::Offset<flatbuffers::String> source;
+        if ((field->source != nullptr) and (field->source->len != 0)) {
+          source =
+              builder.CreateString(field->source->value, field->source->len);
+        } else {
+          source = builder.CreateString("");
+        }
+
+        auto f = gamma_api::CreateField(
+            builder, name, value, source,
+            static_cast<gamma_api::DataType>(field->data_type));
+        field_vector.push_back(f);
+      }
+
+      auto field_vec = builder.CreateVector(field_vector);
+      auto d = gamma_api::CreateDoc(builder, field_vec);
+
+      auto item =
+          gamma_api::CreateResultItem(builder, result_item->score, d, extra);
+      item_vector.push_back(item);
+    }
+
+    auto item_vec = builder.CreateVector(item_vector);
+
+    auto msg = builder.CreateString(result->msg->value, result->msg->len);
+    gamma_api::SearchResultCode result_code =
+        static_cast<gamma_api::SearchResultCode>(result->result_code);
+    auto results = gamma_api::CreateSearchResult(builder, result->total,
+                                                 result_code, msg, item_vec);
+    result_vector.push_back(results);
+  }
+  auto result_vec = builder.CreateVector(result_vector);
+
+  flatbuffers::Offset<flatbuffers::String> message;
+  if ((response->online_log_message != nullptr) and
+      (response->online_log_message->len != 0)) {
+    message = builder.CreateString(response->online_log_message->value,
+                                   response->online_log_message->len);
+  } else {
+    message = builder.CreateString("");
+  }
+  auto res = gamma_api::CreateResponse(builder, result_vec, message);
+  builder.Finish(res);
+  char *ptr = (char *)builder.GetBufferPointer();
+
+  ByteArray *response_out = (ByteArray *)malloc(sizeof(ByteArray));
+  response_out->len = builder.GetSize();
+  response_out->value = (char *)malloc(builder.GetSize() * sizeof(char));
+  memcpy(response_out->value, (char *)builder.GetBufferPointer(),
+         builder.GetSize());
+  builder.Release();
+  return response_out;
 }
 
 SearchResult *GetSearchResult(Response *response, int idx) {

@@ -29,6 +29,9 @@ struct Options {
     nprobe = 10;
     doc_id = 0;
     d = 512;
+    filter = false;
+    print_doc = false;
+    search_thread_num = 100;
     max_doc_size = 10000 * 200;
     add_doc_num = 10000 * 100;
     search_num = 10000 * 1;
@@ -50,6 +53,9 @@ struct Options {
   size_t max_doc_size;
   size_t add_doc_num;
   size_t search_num;
+  bool filter;
+  bool print_doc;
+  int search_thread_num;
   std::vector<string> fields_vec;
   std::vector<enum DataType> fields_type;
   string path;
@@ -134,78 +140,88 @@ int SearchThread(void *engine, size_t num) {
         StringToByteArray(opt.vector_name), value, 0, 10000, 0.1, 0);
     SetVectorQuery(vector_querys, 0, vector_query);
 
-    // string c1_lower = opt.profiles[idx * (opt.fields_vec.size()) + 4];
-    // string c1_upper = opt.profiles[idx * (opt.fields_vec.size()) + 4];
-    int low = 0;
-    // long upper = 99999999999;
-    int upper = 999999;
-    string c1_lower = string((char *)&low, sizeof(low));
-    string c1_upper = string((char *)&upper, sizeof(upper));
+    Request *request = nullptr;
 
-    if (idx % 1000 == 0) LOG(INFO) << "idx=" << idx;
-  
-    string name = "field2";
-    RangeFilter **range_filters = MakeRangeFilters(2);
-    RangeFilter *range_filter =
-        MakeRangeFilter(StringToByteArray(name), StringToByteArray(c1_lower),
-                        StringToByteArray(c1_upper), false, true);
-    SetRangeFilter(range_filters, 0, range_filter);
+    if (opt.filter) {
+      // string c1_lower = opt.profiles[idx * (opt.fields_vec.size()) + 4];
+      // string c1_upper = opt.profiles[idx * (opt.fields_vec.size()) + 4];
+      int low = 0;
+      // long upper = 99999999999;
+      int upper = 999999;
+      string c1_lower = string((char *)&low, sizeof(low));
+      string c1_upper = string((char *)&upper, sizeof(upper));
 
-    low = 0;
-    upper = 999999;
-    c1_lower = string((char *)&low, sizeof(low));
-    c1_upper = string((char *)&upper, sizeof(upper));
-    name = "field3";
-    range_filter =
-        MakeRangeFilter(StringToByteArray(name), StringToByteArray(c1_lower),
-                        StringToByteArray(c1_upper), false, true);
-    SetRangeFilter(range_filters, 1, range_filter);
+      string name = "field2";
+      RangeFilter **range_filters = MakeRangeFilters(2);
+      RangeFilter *range_filter =
+          MakeRangeFilter(StringToByteArray(name), StringToByteArray(c1_lower),
+                          StringToByteArray(c1_upper), false, true);
+      SetRangeFilter(range_filters, 0, range_filter);
 
-    TermFilter **term_filters = MakeTermFilters(1);
-    TermFilter *term_filter;
+      low = 0;
+      upper = 999999;
+      c1_lower = string((char *)&low, sizeof(low));
+      c1_upper = string((char *)&upper, sizeof(upper));
+      name = "field3";
+      range_filter =
+          MakeRangeFilter(StringToByteArray(name), StringToByteArray(c1_lower),
+                          StringToByteArray(c1_upper), false, true);
+      SetRangeFilter(range_filters, 1, range_filter);
 
-    std::string term_low = string("1315\00115248");
-    name = "field1";
-    term_filter = MakeTermFilter(StringToByteArray(name),
-                                 StringToByteArray(term_low), true);
-    SetTermFilter(term_filters, 0, term_filter);
+      TermFilter **term_filters = MakeTermFilters(1);
+      TermFilter *term_filter;
 
-    ByteArray **vec_fields = MakeByteArrays(1);
-    ByteArray *vec_name = StringToByteArray(opt.vector_name);
-    vec_fields[0] = vec_name;
-    Request *request =
-        MakeRequest(10, vector_querys, 1, vec_fields, 1, range_filters, 2,
-                    term_filters, 1, req_num, 0, nullptr, TRUE, 0);
-    // Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0,
-    //                                nullptr, 0, req_num, 0, nullptr, FALSE);
+      std::string term_low = string("1315\00115248");
+      name = "field1";
+      term_filter = MakeTermFilter(StringToByteArray(name),
+                                   StringToByteArray(term_low), true);
+      SetTermFilter(term_filters, 0, term_filter);
+
+      int field_num = 2;
+      ByteArray **vec_fields = MakeByteArrays(field_num);
+      ByteArray *vec_name = StringToByteArray(opt.vector_name);
+      string id_field = "_id";
+      ByteArray *id_name = StringToByteArray(id_field);
+      vec_fields[0] = vec_name;
+      vec_fields[1] = id_name;
+      request = MakeRequest(100, vector_querys, 1, vec_fields, field_num,
+                            range_filters, 2, term_filters, 1, req_num, 0,
+                            nullptr, TRUE, 0);
+    } else {
+      request = MakeRequest(100, vector_querys, 1, nullptr, 0, nullptr, 0,
+                            nullptr, 0, req_num, 0, nullptr, FALSE, 0);
+    }
 
     Response *response = Search(engine, request);
-    for (int i = 0; i < response->req_num; ++i) {
-      int ii = idx + i;
-      string msg = std::to_string(ii) + ", ";
-      SearchResult *results = GetSearchResult(response, i);
-      if (results->result_num <= 0) {
-        continue;
-      }
-      msg += string("total [") + std::to_string(results->total) + "], ";
-      msg +=
-          string("result_num [") + std::to_string(results->result_num) + "], ";
-      for (int j = 0; j < results->result_num; ++j) {
-        ResultItem *result_item = GetResultItem(results, j);
-        msg += string("score [") + std::to_string(result_item->score) + "], ";
-        printDoc(result_item->doc, msg);
-        msg += "\n";
-      }
-      if (abs(GetResultItem(results, 0)->score - 1.0) < 0.001) {
-        if (ii % 1000 == 0) {
-          LOG(INFO) << msg;
+
+    if (opt.print_doc) {
+      for (int i = 0; i < response->req_num; ++i) {
+        int ii = idx + i;
+        string msg = std::to_string(ii) + ", ";
+        SearchResult *results = GetSearchResult(response, i);
+        if (results->result_num <= 0) {
+          continue;
         }
-      } else {
-        if (!bitmap::test(opt.docids_bitmap_, ii)) {
-          LOG(ERROR) << msg;
-          error += std::to_string(ii) + ",";
-          bitmap::set(opt.docids_bitmap_, ii);
-          failed_count++;
+        msg += string("total [") + std::to_string(results->total) + "], ";
+        msg += string("result_num [") + std::to_string(results->result_num) +
+               "], ";
+        for (int j = 0; j < results->result_num; ++j) {
+          ResultItem *result_item = GetResultItem(results, j);
+          msg += string("score [") + std::to_string(result_item->score) + "], ";
+          printDoc(result_item->doc, msg);
+          msg += "\n";
+        }
+        if (abs(GetResultItem(results, 0)->score - 1.0) < 0.001) {
+          if (ii % 1000 == 0) {
+            LOG(INFO) << msg;
+          }
+        } else {
+          if (!bitmap::test(opt.docids_bitmap_, ii)) {
+            LOG(ERROR) << msg;
+            error += std::to_string(ii) + ",";
+            bitmap::set(opt.docids_bitmap_, ii);
+            failed_count++;
+          }
         }
       }
     }
@@ -340,7 +356,7 @@ int CreateTable() {
 
   for (size_t i = 0; i < opt.fields_vec.size(); ++i) {
     char is_index = 0;
-    if (i == 0 || i == 2 || i == 3 || i == 4) {
+    if (opt.filter && (i == 0 || i == 2 || i == 3 || i == 4)) {
       is_index = 1;
     }
     FieldInfo *field_info = MakeFieldInfo(StringToByteArray(opt.fields_vec[i]),
@@ -348,11 +364,13 @@ int CreateTable() {
     SetFieldInfo(field_infos, i, field_info);
   }
 
+  string store_p = "{\"cache_size\": 2048}";
+  ByteArray *store_param = StringToByteArray(store_p);
   VectorInfo **vectors_info = MakeVectorInfos(1);
   VectorInfo *vector_info = MakeVectorInfo(
       StringToByteArray(opt.vector_name), FLOAT, TRUE, opt.d,
       StringToByteArray(opt.model_id), StringToByteArray(opt.retrieval_type),
-      StringToByteArray(opt.store_type), nullptr);
+      StringToByteArray(opt.store_type), store_param);
   SetVectorInfo(vectors_info, 0, vector_info);
 
   Table *table = MakeTable(table_name, field_infos, opt.fields_vec.size(),
@@ -410,15 +428,15 @@ int BuildEngineIndex() {
 }
 
 int Search() {
-  int search_thread_num = 1;
-  std::thread t_searchs[search_thread_num];
+  std::thread t_searchs[opt.search_thread_num];
 
   std::function<int()> func_search =
       std::bind(SearchThread, opt.engine, opt.search_num);
-  std::future<int> search_futures[search_thread_num];
-  std::packaged_task<int()> tasks[search_thread_num];
+  std::future<int> search_futures[opt.search_thread_num];
+  std::packaged_task<int()> tasks[opt.search_thread_num];
 
-  for (int i = 0; i < search_thread_num; ++i) {
+  double start = utils::getmillisecs();
+  for (int i = 0; i < opt.search_thread_num; ++i) {
     tasks[i] = std::packaged_task<int()>(func_search);
     search_futures[i] = tasks[i].get_future();
     t_searchs[i] = std::thread(std::move(tasks[i]));
@@ -431,7 +449,7 @@ int Search() {
   // std::thread add_thread(add_func, opt.engine);
 
   // get search results
-  for (int i = 0; i < search_thread_num; ++i) {
+  for (int i = 0; i < opt.search_thread_num; ++i) {
     search_futures[i].wait();
     int error_num = search_futures[i].get();
     if (error_num != 0) {
@@ -440,6 +458,8 @@ int Search() {
     t_searchs[i].join();
   }
 
+  double end = utils::getmillisecs();
+  LOG(INFO) << "Search cost [" << end - start << "] ms";
   // add_thread.join();
   return 0;
 }
@@ -554,8 +574,8 @@ int main(int argc, char **argv) {
   test::Add();
   test::BuildEngineIndex();
   test::Search();
-  test::DumpEngine();
-  test::LoadEngine();
+  // test::DumpEngine();
+  // test::LoadEngine();
   // test::BuildIndexAfterLoad();
   // test::SearchThreadAfterLoad();
   // test::DumpAfterLoad();
