@@ -41,8 +41,6 @@ func ExportToMonitorHandler(router *gin.Engine, monitorService *monitorService) 
 	//cluster handler
 	router.Handle(http.MethodGet, "/_cluster/health", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.health, dh.TimeOutEndHandler)
 	router.Handle(http.MethodGet, "/_cluster/stats", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.stats, dh.TimeOutEndHandler)
-	//metrics
-	router.Handle(http.MethodPost, "/metrics", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.metrics, dh.TimeOutEndHandler)
 
 	monitorService.Register()
 }
@@ -73,11 +71,6 @@ func (this *monitorApi) health(c *gin.Context) {
 	}
 
 	ginutil.NewAutoMehtodName(c).SendJson(result)
-}
-
-func (this *monitorApi) metrics(c *gin.Context) {
-	//ctx, _ := c.Get(vearchhttp.Ctx)
-
 }
 
 func (this *monitorApi) auth(c *gin.Context) {
