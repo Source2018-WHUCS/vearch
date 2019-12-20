@@ -16,6 +16,22 @@
 #include "cJSON.h"
 #include "gamma_api.h"
 
+#define CHECK_DELETE(ptr) \
+  {                       \
+    if (ptr) {            \
+      delete ptr;         \
+      ptr = nullptr;      \
+    }                     \
+  }
+
+#define CHECK_DELETE_ARRAY(ptr) \
+  {                             \
+    if (ptr) {                  \
+      delete[] ptr;             \
+      ptr = nullptr;            \
+    }                           \
+  }
+
 namespace utils {
 
 long get_file_size(const char *path);

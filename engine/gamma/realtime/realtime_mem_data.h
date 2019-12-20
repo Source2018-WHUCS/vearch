@@ -35,7 +35,6 @@ struct RTInvertBucketData {
   bool ReleaseBucketMem(const size_t &bucket_no,
                         const size_t &code_bytes_per_vec,
                         long &total_mem_bytes);
-  bool DestroyMem();
 
   bool GetBucketMemInfo(const size_t &bucket_no, std::string &mem_info);
 

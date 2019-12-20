@@ -1012,6 +1012,7 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
   GammaIVFPQIndex(faiss::Index *quantizer, size_t d, size_t nlist, size_t M,
                   size_t nbits_per_idx, const char *docids_bitmap,
                   RawVector *raw_vec, int nprobe);
+  ~GammaIVFPQIndex();
 
   faiss::InvertedListScanner *get_InvertedListScanner(
       bool store_pairs) const override;

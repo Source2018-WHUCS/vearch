@@ -74,6 +74,21 @@ GammaIVFPQIndex::GammaIVFPQIndex(faiss::Index *quantizer, size_t d,
 #endif
 }
 
+GammaIVFPQIndex::~GammaIVFPQIndex() {
+  if (rt_invert_index_ptr_) {
+    delete rt_invert_index_ptr_;
+    rt_invert_index_ptr_ = nullptr;
+  }
+  if (invlists) {
+    delete invlists;
+    invlists = nullptr;
+  }
+  if (quantizer) {
+    delete quantizer;  // it will not be delete in parent class
+    quantizer = nullptr;
+  }
+}
+
 faiss::InvertedListScanner *GammaIVFPQIndex::get_InvertedListScanner(
     bool store_pairs) const {
   return GetGammaInvertedListScanner(store_pairs);
@@ -298,8 +313,10 @@ void GammaIVFPQIndex::search_preassigned(
   using HeapForL2 = faiss::CMax<float, idx_t>;
 
   const int recall_num = condition->recall_num;
-  std::unique_ptr<float[]> recall_distances(new float[n * recall_num]);
-  std::unique_ptr<idx_t[]> recall_labels(new idx_t[n * recall_num]);
+  float *recall_distances = new float[n * recall_num];
+  idx_t *recall_labels = new idx_t[n * recall_num];
+  faiss::ScopeDeleter<float> del1(recall_distances);
+  faiss::ScopeDeleter<idx_t> del2(recall_labels);
 
   // intialize + reorder a result heap
   auto init_result = [&](int topk, float *simi, idx_t *idxi) {
@@ -464,8 +481,8 @@ void GammaIVFPQIndex::search_preassigned(
         float *simi = distances + i * k;
         idx_t *idxi = labels + i * k;
 
-        float *recall_simi = recall_distances.get() + i * recall_num;
-        idx_t *recall_idxi = recall_labels.get() + i * recall_num;
+        float *recall_simi = recall_distances + i * recall_num;
+        idx_t *recall_idxi = recall_labels + i * recall_num;
 
         init_result(k, simi, idxi);
         init_result(recall_num, recall_simi, recall_idxi);
@@ -572,8 +589,8 @@ void GammaIVFPQIndex::search_preassigned(
         float *simi = distances + i * k;
         idx_t *idxi = labels + i * k;
 
-        float *recall_simi = recall_distances.get() + i * recall_num;
-        idx_t *recall_idxi = recall_labels.get() + i * recall_num;
+        float *recall_simi = recall_distances + i * recall_num;
+        idx_t *recall_idxi = recall_labels + i * recall_num;
 
         init_result(k, simi, idxi);
         init_result(recall_num, recall_simi, recall_idxi);
@@ -637,8 +654,8 @@ void GammaIVFPQIndex::search_preassigned(
         float *simi = distances + i * k;
         idx_t *idxi = labels + i * k;
 
-        float *recall_simi = recall_distances.get() + i * recall_num;
-        idx_t *recall_idxi = recall_labels.get() + i * recall_num;
+        float *recall_simi = recall_distances + i * recall_num;
+        idx_t *recall_idxi = recall_labels + i * recall_num;
 
 #pragma omp single
         {

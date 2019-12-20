@@ -412,9 +412,12 @@ Response *GammaEngine::Search(const Request *request) {
   gamma_query.condition = &condition;
   if (request->vec_fields_num > 0) {
     GammaResult gamma_results[request->req_num];
+    int doc_num = GetDocsNum();
+
     for (int i = 0; i < request->req_num; ++i) {
-      gamma_results[i].total = this->GetDocsNum();
+      gamma_results[i].total = doc_num;
     }
+
     ret = vec_manager_->Search(gamma_query, gamma_results);
     if (ret != 0) {
       string msg = "search error [" + std::to_string(ret) + "]";
@@ -530,7 +533,8 @@ int GammaEngine::MultiRangeQuery(const Request *request,
   for (int i = 0; i < request->range_filters_num; ++i) {
     auto c = request->range_filters[i];
 
-    filters[idx].field = string(c->field->value, c->field->len);
+    filters[idx].field =
+        profile_->GetAttrIdx(string(c->field->value, c->field->len));
     filters[idx].lower_value =
         string(c->lower_value->value, c->lower_value->len);
     filters[idx].upper_value =
@@ -542,7 +546,8 @@ int GammaEngine::MultiRangeQuery(const Request *request,
   for (int i = 0; i < request->term_filters_num; ++i) {
     auto c = request->term_filters[i];
 
-    filters[idx].field = string(c->field->value, c->field->len);
+    filters[idx].field =
+        profile_->GetAttrIdx(string(c->field->value, c->field->len));
     filters[idx].lower_value = string(c->value->value, c->value->len);
     filters[idx].is_union = c->is_union;
 
@@ -589,7 +594,7 @@ int GammaEngine::CreateTable(const Table *table) {
     return -2;
   }
 
-  field_range_index_ = new MultiFieldsRangeIndex();
+  field_range_index_ = new MultiFieldsRangeIndex(profile_);
   if ((nullptr == field_range_index_) || (AddNumIndexFields() < 0)) {
     LOG(ERROR) << "add numeric index fields error!";
     return -3;
@@ -628,9 +633,8 @@ int GammaEngine::Add(const Doc *doc) {
 
   for (int i = 0; i < doc->fields_num; ++i) {
     auto *f = doc->fields[i];
-    field_range_index_->Add(string(f->name->value, f->name->len),
-                            reinterpret_cast<unsigned char *>(f->value->value),
-                            f->value->len, max_docid_);
+    int idx = profile_->GetAttrIdx(string(f->name->value, f->name->len));
+    field_range_index_->Add(max_docid_, idx);
   }
 
   // add vectors by VectorManager
@@ -684,9 +688,11 @@ int GammaEngine::AddOrUpdate(const Doc *doc) {
 
   for (int i = 0; i < doc->fields_num; ++i) {
     auto *f = doc->fields[i];
-    field_range_index_->Add(string(f->name->value, f->name->len),
-                            reinterpret_cast<unsigned char *>(f->value->value),
-                            f->value->len, max_docid_);
+    if (f->data_type == VECTOR) {
+      continue;
+    }
+    int idx = profile_->GetAttrIdx(string(f->name->value, f->name->len));
+    field_range_index_->Add(max_docid_, idx);
   }
 
   // add vectors by VectorManager
@@ -757,7 +763,8 @@ int GammaEngine::DelDocByQuery(Request *request) {
   for (int i = 0; i < request->range_filters_num; ++i) {
     auto c = request->range_filters[i];
 
-    filters[idx].field = string(c->field->value, c->field->len);
+    filters[idx].field =
+        profile_->GetAttrIdx(string(c->field->value, c->field->len));
     filters[idx].lower_value =
         string(c->lower_value->value, c->lower_value->len);
     filters[idx].upper_value =
@@ -871,7 +878,7 @@ int GammaEngine::Dump() {
   f_dumping << "end_docid " << max_docid << std::endl;
   f_dumping.close();
 
-  int ret = profile_->Dump(path, max_docid, dump_docid_);
+  int ret = profile_->Dump(path, dump_docid_, max_docid);
   if (ret != 0) {
     LOG(ERROR) << "dump profile error, ret=" << ret;
     return -1;
@@ -988,17 +995,15 @@ int GammaEngine::Load() {
       return -1;
     }
     // rebuild numeric index
-    for (int i = 0; i < max_docid_; ++i) {
-      Doc *doc = nullptr;
-      profile_->GetDocInfo(i, doc);
-      for (int j = 0; j < doc->fields_num; ++j) {
-        auto *f = doc->fields[j];
-        field_range_index_->Add(
-            string(f->name->value, f->name->len),
-            reinterpret_cast<unsigned char *>(f->value->value), f->value->len,
-            i);
+    std::map<std::string, enum DataType> attr_type_map;
+    profile_->GetAttrType(attr_type_map);
+    int field_num = attr_type_map.size();
+
+#pragma omp parallel for
+    for (int i = 0; i < field_num; ++i) {
+      for (int j = 0; j < max_docid_; ++j) {
+        field_range_index_->Add(j, i);
       }
-      DestroyDoc(doc);
     }
     // load bitmap
     if (docids_bitmap_ == nullptr) {
@@ -1055,12 +1060,12 @@ int GammaEngine::AddNumIndexFields() {
     if (is_index == 0) {
       continue;
     }
-    field_range_index_->AddField(field_name, it.second);
+    int field_idx = profile_->GetAttrIdx(field_name);
+    field_range_index_->AddField(field_idx, it.second);
   }
   return retvals;
 }
 
-// TODO: handle malloc error and NULL pointer errors
 int GammaEngine::PackResults(const GammaResult *gamma_results,
                              Response *response_results,
                              const Request *request) {
@@ -1068,9 +1073,9 @@ int GammaEngine::PackResults(const GammaResult *gamma_results,
     SearchResult *result = response_results->results[i];
     result->total = gamma_results[i].total;
     result->result_num = gamma_results[i].results_count;
-    result->result_items = new ResultItem *[gamma_results[i].results_count];
+    result->result_items = new ResultItem *[result->result_num];
 
-    for (int j = 0; j < gamma_results[i].results_count; ++j) {
+    for (int j = 0; j < result->result_num; ++j) {
       VectorDoc *vec_doc = gamma_results[i].docs[j];
       result->result_items[j] = PackResultItem(vec_doc, request);
     }
@@ -1093,37 +1098,51 @@ ResultItem *GammaEngine::PackResultItem(const VectorDoc *vec_doc,
 
   // add vector into result
   if (request->fields_num != 0) {
-    std::vector<std::pair<string, int>> fields_ids;
-
-    std::map<std::string, GammaIndex *> vector_indexes;
-    vec_manager_->GetVectorIndexes(vector_indexes);
+    std::vector<std::pair<string, int>> vec_fields_ids;
+    std::vector<string> profile_fields;
 
     for (int i = 0; i < request->fields_num; ++i) {
       ByteArray *field = request->fields[i];
       string name = string(field->value, field->len);
-      const auto &ret = vector_indexes.find(name);
-      if (ret == vector_indexes.end()) {
-        continue;
+      const auto ret = vec_manager_->GetVectorIndex(name);
+      if (ret == nullptr) {
+        profile_fields.emplace_back(std::move(name));
+      } else {
+        vec_fields_ids.emplace_back(std::make_pair(name, docid));
       }
-      fields_ids.emplace_back(std::make_pair(name, docid));
     }
 
     std::vector<string> vec;
-    int ret = vec_manager_->GetVector(fields_ids, vec, true);
+    int ret = vec_manager_->GetVector(vec_fields_ids, vec, true);
 
-    int profile_fields_num = profile_->FieldsNum();
+    int profile_fields_num = 0;
     doc = static_cast<Doc *>(malloc(sizeof(Doc)));
 
-    doc->fields_num = profile_fields_num + request->fields_num;
-    doc->fields =
-        static_cast<Field **>(malloc(doc->fields_num * sizeof(Field *)));
-    memset(doc->fields, 0, doc->fields_num * sizeof(Field *));
+    if (profile_fields.size() == 0) {
+      profile_fields_num = profile_->FieldsNum();
 
-    profile_->GetDocInfo(docid, doc);
-    if (ret == 0 && vec.size() == fields_ids.size()) {
+      doc->fields_num = profile_fields_num + request->fields_num;
+      doc->fields =
+          static_cast<Field **>(malloc(doc->fields_num * sizeof(Field *)));
+      memset(doc->fields, 0, doc->fields_num * sizeof(Field *));
+
+      profile_->GetDocInfo(docid, doc);
+    } else {
+      profile_fields_num = profile_fields.size();
+      doc->fields_num = request->fields_num;
+      doc->fields =
+          static_cast<Field **>(malloc(doc->fields_num * sizeof(Field *)));
+      memset(doc->fields, 0, doc->fields_num * sizeof(Field *));
+
+      for (int i = 0; i < profile_fields_num; ++i) {
+        doc->fields[i] = profile_->GetFieldInfo(docid, profile_fields[i]);
+      }
+    }
+
+    if (ret == 0 && vec.size() == vec_fields_ids.size()) {
       int j = 0;
       for (int i = profile_fields_num; i < doc->fields_num; ++i) {
-        string &field_name = fields_ids[j].first;
+        const string &field_name = vec_fields_ids[j].first;
         doc->fields[i] = static_cast<Field *>(malloc(sizeof(Field)));
         memset(doc->fields[i], 0, sizeof(Field));
         doc->fields[i]->name =
@@ -1132,6 +1151,8 @@ ResultItem *GammaEngine::PackResultItem(const VectorDoc *vec_doc,
         doc->fields[i]->data_type = DataType::VECTOR;
       }
     } else {
+      // get vector error
+      // TODO : release extra field
       doc->fields_num = profile_fields_num;
     }
   } else {

@@ -26,11 +26,7 @@ RTInvertIndex::RTInvertIndex(faiss::Index *index, long max_vec_size,
 }
 
 RTInvertIndex::~RTInvertIndex() {
-  if (!_index_ivf) {
-    delete _index_ivf;
-    _index_ivf = nullptr;
-  }
-  if (!_cur_ptr) {
+  if (_cur_ptr) {
     delete _cur_ptr;
     _cur_ptr = nullptr;
   }
