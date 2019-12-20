@@ -463,6 +463,36 @@ inline flatbuffers::Offset<Response> CreateResponseDirect(
       online_log_message__);
 }
 
+inline const gamma_api::Response *GetResponse(const void *buf) {
+  return flatbuffers::GetRoot<gamma_api::Response>(buf);
+}
+
+inline const gamma_api::Response *GetSizePrefixedResponse(const void *buf) {
+  return flatbuffers::GetSizePrefixedRoot<gamma_api::Response>(buf);
+}
+
+inline bool VerifyResponseBuffer(
+    flatbuffers::Verifier &verifier) {
+  return verifier.VerifyBuffer<gamma_api::Response>(nullptr);
+}
+
+inline bool VerifySizePrefixedResponseBuffer(
+    flatbuffers::Verifier &verifier) {
+  return verifier.VerifySizePrefixedBuffer<gamma_api::Response>(nullptr);
+}
+
+inline void FinishResponseBuffer(
+    flatbuffers::FlatBufferBuilder &fbb,
+    flatbuffers::Offset<gamma_api::Response> root) {
+  fbb.Finish(root);
+}
+
+inline void FinishSizePrefixedResponseBuffer(
+    flatbuffers::FlatBufferBuilder &fbb,
+    flatbuffers::Offset<gamma_api::Response> root) {
+  fbb.FinishSizePrefixed(root);
+}
+
 }  // namespace gamma_api
 
 #endif  // FLATBUFFERS_GENERATED_API_GAMMA_API_H_

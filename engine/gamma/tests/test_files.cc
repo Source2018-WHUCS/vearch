@@ -12,6 +12,7 @@
 #include <fstream>
 #include <functional>
 #include <future>
+#include "api_generated.h"
 #include "test.h"
 
 /**
@@ -192,6 +193,30 @@ int SearchThread(void *engine, size_t num) {
                             nullptr, 0, req_num, 0, nullptr, FALSE, 0);
     }
 
+    {
+      ByteArray *response = SearchV2(engine, request);
+      flatbuffers::FlatBufferBuilder builder_out;
+      builder_out.PushBytes((const uint8_t *)response->value, response->len);
+      auto res = gamma_api::GetResponse(builder_out.GetCurrentBufferPointer());
+
+      for (int i = 0; i < res->results()->Length(); ++i) {
+        auto result = res->results()->Get(i);
+        int total = result->total();
+        std::string msg = result->msg()->str();
+        auto result_items = result->result_items();
+        for (int j = 0; j < result_items->Length(); ++j) {
+          auto result_item = result_items->Get(j);
+          double score = result_item->score();
+          auto doc = result_item->doc();
+          auto fields = doc->fields();
+          for (int k = 0; k < fields->Length(); ++k) {
+            auto field = fields->Get(k);
+            std::string name = field->name()->str();
+            std::string value = field->value()->str();
+          }
+        }
+      }
+    }
     Response *response = Search(engine, request);
 
     if (opt.print_doc) {
