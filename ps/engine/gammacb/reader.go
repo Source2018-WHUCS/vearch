@@ -24,13 +24,12 @@ import "C"
 import (
 	"context"
 	"fmt"
-	"github.com/vearch/vearch/proto/gamma_api"
-	"github.com/vearch/vearch/ps/engine/mapping"
-	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/proto/gamma_api"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine"
+	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/util/vearchlog"
 	"io/ioutil"
 	"os"
@@ -129,7 +128,7 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 	arr := C.SearchV2(ri.engine.gamma, req)
 	defer C.DestroyByteArray(arr)
 
-	resp := gamma_api.GetRootAsResponse(CbArr2ByteArrayUnsafe(arr), 0)
+	resp := gamma_api.GetRootAsResponse(CbArr2ByteArray(arr), 0)
 
 	result := make(response.SearchResponses, resp.ResultsLength())
 	for i := 0; i < len(result); i++ {
@@ -186,15 +185,12 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 		req.fields_num = C.int(len(fs))
 	}
 
-	if log.IsDebugEnabled() {
-		log.Debug("send request:[%v]", req)
-	}
 	start := time.Now()
 
 	arr := C.SearchV2(ri.engine.gamma, req)
 	defer C.DestroyByteArray(arr)
 
-	resp := gamma_api.GetRootAsResponse(CbArr2ByteArrayUnsafe(arr), 0)
+	resp := gamma_api.GetRootAsResponse(CbArr2ByteArray(arr), 0)
 
 	result := ri.singleSearchResult(resp, 0)
 	result.MaxTook = int64(time.Now().Sub(start) / time.Millisecond)
