@@ -11,22 +11,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # ==============================================================================
 
-
-class LoadModelError(Exception):
-    pass
-
-
-class InstallError(Exception):
-    pass
-
-
-class CreateDBAndSpaceError(Exception):
-    pass
-
-
-class ImageError(Exception):
-    pass
-
-
-class HTTPError(Exception):
-    pass
+version = "v1.0"
