@@ -20,11 +20,13 @@ import torchvision.models as models
 
 import torch.nn.functional as F
 
+
 class BaseModel(object):
 
     def __init__(self):
         self.image_size = 224
-        self.dimision = 512
+        self.dimision = 256
+        self.load_model()
 
     def load_model(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -49,7 +51,7 @@ class BaseModel(object):
         # x = x.to(self.device)
         x = self.preprocess_input(x).unsqueeze(0)
         x = self.model.features(x)
-        x = F.max_pool2d(x, kernel_size=(7, 7))
+        x = F.max_pool2d(x, kernel_size=(6, 6))
         x = x.view(x.size(0),-1)
         # print(x.shape)
         # x = torch.squeeze(x,-1)

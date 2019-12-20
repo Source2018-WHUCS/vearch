@@ -24,7 +24,8 @@ class BaseModel(object):
 
     def __init__(self):
         self.image_size = 224
-        self.dimision = 512
+        self.dimision = 2048
+        self.load_model()
 
     def load_model(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
