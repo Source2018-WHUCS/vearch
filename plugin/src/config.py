@@ -16,7 +16,7 @@ import os
 root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 port = 4101
-gpus = '0,1'
+gpus = '-1'
 master_address = 'http://127.0.0.1:8817'
 router_address = 'http://127.0.0.1:9001'
 
@@ -28,7 +28,7 @@ image_config = dict(modelname='image_retrieval.image_extract.vgg16',
 
 video = dict(db='video',
              space='video',
-             ip='http://11.3.146.4',
+             ip='http://127.0.0.1',
              imagepath=os.path.join(root_path, 'images', 'face_retrieval'),
              videopath='rtmp://58.200.131.2:1935/livetv/hunantv')
 
