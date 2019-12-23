@@ -586,7 +586,6 @@ ByteArray *SearchV2(void *engine, Request *request) {
       static_cast<tig_gamma::GammaEngine *>(engine)->Search(request);
   flatbuffers::FlatBufferBuilder builder;
 
-  double start = utils::getmillisecs();
   std::vector<flatbuffers::Offset<gamma_api::SearchResult>> result_vector;
   for (int result_idx = 0; result_idx < response->req_num; ++result_idx) {
     SearchResult *result = response->results[result_idx];
@@ -653,7 +652,6 @@ ByteArray *SearchV2(void *engine, Request *request) {
   }
   auto res = gamma_api::CreateResponse(builder, result_vec, message);
   builder.Finish(res);
-  char *ptr = (char *)builder.GetBufferPointer();
 
   ByteArray *response_out = (ByteArray *)malloc(sizeof(ByteArray));
   response_out->len = builder.GetSize();
@@ -661,9 +659,9 @@ ByteArray *SearchV2(void *engine, Request *request) {
   memcpy(response_out->value, (char *)builder.GetBufferPointer(),
          builder.GetSize());
   builder.Release();
+
+  DestroyResponse(response);
   
-  double end = utils::getmillisecs();
-  LOG(INFO) << "Search cost [" << end - start << "] ms";
   return response_out;
 }
 
