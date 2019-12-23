@@ -37,20 +37,6 @@ else (DEFINED ENV{ROCKSDB_HOME})
     message(STATUS "RocksDB home isn't set, so store_type=RocksDB is not supported! ")
 endif (DEFINED ENV{ROCKSDB_HOME})
 
-# install FlatBuffers
-if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/flatbuffers")
-    execute_process(COMMAND rm -rf flatbuffers WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
-    execute_process(COMMAND wget https://github.com/google/flatbuffers/archive/v1.11.0.tar.gz WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
-    execute_process(COMMAND tar xf v1.11.0.tar.gz WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
-    execute_process(COMMAND rm -rf v1.11.0.tar.gz WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
-    execute_process(COMMAND cmake -DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_CURRENT_SOURCE_DIR}/third_party/flatbuffers/include 
-    -DCMAKE_INSTALL_LIBDIR=${CMAKE_CURRENT_SOURCE_DIR}/third_party/flatbuffers/lib 
-    -DCMAKE_INSTALL_BINDIR=${CMAKE_CURRENT_SOURCE_DIR}/third_party/flatbuffers/bin . WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/flatbuffers-1.11.0)
-    execute_process(COMMAND make WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/flatbuffers-1.11.0)
-    execute_process(COMMAND make install WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party/flatbuffers-1.11.0)
-    execute_process(COMMAND rm -rf flatbuffers-1.11.0 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
-endif ()
-
 #INCLUDE DIR
 include_directories(
     ${THIRDPARTY}
@@ -67,18 +53,12 @@ include_directories(
     ${GAMMA_C_API}
     ${Faiss_INCLUDE_DIR}
     ${RocksDB_INCLUDE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/flatbuffers/include
-)
-
-link_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/flatbuffers/lib/
 )
 
 #LINK LIBRARY
 set(LIBRARIES
     ${Faiss_LIB}
     ${RocksDB_LIB}
-    flatbuffers
 )
 
 #ADDITIONAL SOURCE DIR

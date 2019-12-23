@@ -28,6 +28,7 @@ class FieldRangeIndex;
 class MultiFieldsRangeIndex {
  public:
   MultiFieldsRangeIndex(Profile *profile);
+  ~MultiFieldsRangeIndex();
 
   int Add(int docid, int field);
 

@@ -116,26 +116,6 @@ bool RTInvertBucketData::ReleaseBucketMem(const size_t &bucket_no,
   return true;
 }
 
-bool RTInvertBucketData::DestroyMem() {
-  if (_idx_array) {
-    delete[] _idx_array;
-    _idx_array = nullptr;
-  }
-  if (_retrieve_idx_pos) {
-    delete _retrieve_idx_pos;
-    _retrieve_idx_pos = nullptr;
-  }
-  if (_cur_bucket_keys) {
-    delete _cur_bucket_keys;
-    _cur_bucket_keys = nullptr;
-  }
-  if (_codes_array) {
-    delete[] _codes_array;
-    _codes_array = nullptr;
-  }
-  return true;
-}
-
 bool RTInvertBucketData::GetBucketMemInfo(const size_t &bucket_no,
                                           std::string &mem_info) {
   return false;
@@ -177,6 +157,17 @@ RealTimeMemData::RealTimeMemData(size_t buckets_num, long max_vec_size,
 
 RealTimeMemData::~RealTimeMemData() {
   if (_cur_invert_ptr) {
+    for (size_t i = 0; i < _buckets_num; i++) {
+      if (_cur_invert_ptr->_idx_array)
+        CHECK_DELETE_ARRAY(_cur_invert_ptr->_idx_array[i]);
+      if (_cur_invert_ptr->_codes_array)
+        CHECK_DELETE_ARRAY(_cur_invert_ptr->_codes_array[i]);
+    }
+    CHECK_DELETE_ARRAY(_cur_invert_ptr->_idx_array);
+    CHECK_DELETE_ARRAY(_cur_invert_ptr->_retrieve_idx_pos);
+    CHECK_DELETE_ARRAY(_cur_invert_ptr->_cur_bucket_keys);
+    CHECK_DELETE_ARRAY(_cur_invert_ptr->_codes_array);
+    CHECK_DELETE_ARRAY(_cur_invert_ptr->_dump_latest_pos);
     delete _cur_invert_ptr;
     _cur_invert_ptr = nullptr;
   }

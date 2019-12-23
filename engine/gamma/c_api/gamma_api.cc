@@ -586,6 +586,7 @@ ByteArray *SearchV2(void *engine, Request *request) {
       static_cast<tig_gamma::GammaEngine *>(engine)->Search(request);
   flatbuffers::FlatBufferBuilder builder;
 
+  double start = utils::getmillisecs();
   std::vector<flatbuffers::Offset<gamma_api::SearchResult>> result_vector;
   for (int result_idx = 0; result_idx < response->req_num; ++result_idx) {
     SearchResult *result = response->results[result_idx];
@@ -595,12 +596,17 @@ ByteArray *SearchV2(void *engine, Request *request) {
       Doc *doc = result_item->doc;
       auto extra = builder.CreateString(result_item->extra->value,
                                         result_item->extra->len);
-      std::vector<flatbuffers::Offset<gamma_api::Field>> field_vector;
+      std::vector<flatbuffers::Offset<flatbuffers::String>> name_vector;
+      std::vector<flatbuffers::Offset<flatbuffers::String>> value_vector;
+      std::vector<flatbuffers::Offset<flatbuffers::String>> source_vector;
+      std::vector<signed char> data_type_vector;
       for (int field_idx = 0; field_idx < doc->fields_num; ++field_idx) {
         Field *field = doc->fields[field_idx];
         auto name = builder.CreateString(field->name->value, field->name->len);
+        name_vector.push_back(name);
         auto value =
             builder.CreateString(field->value->value, field->value->len);
+        value_vector.push_back(value);
         flatbuffers::Offset<flatbuffers::String> source;
         if ((field->source != nullptr) and (field->source->len != 0)) {
           source =
@@ -608,18 +614,21 @@ ByteArray *SearchV2(void *engine, Request *request) {
         } else {
           source = builder.CreateString("");
         }
+        source_vector.push_back(source);
 
-        auto f = gamma_api::CreateField(
-            builder, name, value, source,
-            static_cast<gamma_api::DataType>(field->data_type));
-        field_vector.push_back(f);
+        signed char data_tpye =
+            static_cast<signed char>(field->data_type);
+        data_type_vector.push_back(data_tpye);
       }
 
-      auto field_vec = builder.CreateVector(field_vector);
-      auto d = gamma_api::CreateDoc(builder, field_vec);
+      auto names = builder.CreateVector(name_vector);
+      auto values = builder.CreateVector(value_vector);
+      auto sources = builder.CreateVector(source_vector);
+      auto data_types = builder.CreateVector(data_type_vector);
 
       auto item =
-          gamma_api::CreateResultItem(builder, result_item->score, d, extra);
+          gamma_api::CreateResultItem(builder, result_item->score, names,
+                                      values, sources, data_types, extra);
       item_vector.push_back(item);
     }
 
@@ -652,6 +661,9 @@ ByteArray *SearchV2(void *engine, Request *request) {
   memcpy(response_out->value, (char *)builder.GetBufferPointer(),
          builder.GetSize());
   builder.Release();
+  
+  double end = utils::getmillisecs();
+  LOG(INFO) << "Search cost [" << end - start << "] ms";
   return response_out;
 }
 

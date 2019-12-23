@@ -3,20 +3,12 @@ namespace gamma_api;
 enum SearchResultCode : byte { SUCCESS = 0, INDEX_NOT_TRAINED, SEARCH_ERROR }
 enum DataType : byte { INT = 0, LONG, FLOAT, DOUBLE, STRING, VECTOR }
 
-table Field {
-  name:string;
-  value:string;
-  source:string;
-  data_type:DataType;
-}
-
-table Doc {
-  fields:[Field];
-}
-
 table ResultItem {
   score:double;
-  doc:Doc;
+  name:[string];
+  value:[string];
+  source:[string];
+  data_type:[DataType];
   extra:string;
 }
 

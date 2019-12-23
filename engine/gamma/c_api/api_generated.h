@@ -8,10 +8,6 @@
 
 namespace gamma_api {
 
-struct Field;
-
-struct Doc;
-
 struct ResultItem;
 
 struct SearchResult;
@@ -93,158 +89,29 @@ inline const char *EnumNameDataType(DataType e) {
   return EnumNamesDataType()[index];
 }
 
-struct Field FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_NAME = 4,
-    VT_VALUE = 6,
-    VT_SOURCE = 8,
-    VT_DATA_TYPE = 10
-  };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
-  }
-  const flatbuffers::String *value() const {
-    return GetPointer<const flatbuffers::String *>(VT_VALUE);
-  }
-  const flatbuffers::String *source() const {
-    return GetPointer<const flatbuffers::String *>(VT_SOURCE);
-  }
-  DataType data_type() const {
-    return static_cast<DataType>(GetField<int8_t>(VT_DATA_TYPE, 0));
-  }
-  bool Verify(flatbuffers::Verifier &verifier) const {
-    return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_NAME) &&
-           verifier.VerifyString(name()) &&
-           VerifyOffset(verifier, VT_VALUE) &&
-           verifier.VerifyString(value()) &&
-           VerifyOffset(verifier, VT_SOURCE) &&
-           verifier.VerifyString(source()) &&
-           VerifyField<int8_t>(verifier, VT_DATA_TYPE) &&
-           verifier.EndTable();
-  }
-};
-
-struct FieldBuilder {
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
-    fbb_.AddOffset(Field::VT_NAME, name);
-  }
-  void add_value(flatbuffers::Offset<flatbuffers::String> value) {
-    fbb_.AddOffset(Field::VT_VALUE, value);
-  }
-  void add_source(flatbuffers::Offset<flatbuffers::String> source) {
-    fbb_.AddOffset(Field::VT_SOURCE, source);
-  }
-  void add_data_type(DataType data_type) {
-    fbb_.AddElement<int8_t>(Field::VT_DATA_TYPE, static_cast<int8_t>(data_type), 0);
-  }
-  explicit FieldBuilder(flatbuffers::FlatBufferBuilder &_fbb)
-        : fbb_(_fbb) {
-    start_ = fbb_.StartTable();
-  }
-  FieldBuilder &operator=(const FieldBuilder &);
-  flatbuffers::Offset<Field> Finish() {
-    const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<Field>(end);
-    return o;
-  }
-};
-
-inline flatbuffers::Offset<Field> CreateField(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> name = 0,
-    flatbuffers::Offset<flatbuffers::String> value = 0,
-    flatbuffers::Offset<flatbuffers::String> source = 0,
-    DataType data_type = DataType_INT) {
-  FieldBuilder builder_(_fbb);
-  builder_.add_source(source);
-  builder_.add_value(value);
-  builder_.add_name(name);
-  builder_.add_data_type(data_type);
-  return builder_.Finish();
-}
-
-inline flatbuffers::Offset<Field> CreateFieldDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    const char *name = nullptr,
-    const char *value = nullptr,
-    const char *source = nullptr,
-    DataType data_type = DataType_INT) {
-  auto name__ = name ? _fbb.CreateString(name) : 0;
-  auto value__ = value ? _fbb.CreateString(value) : 0;
-  auto source__ = source ? _fbb.CreateString(source) : 0;
-  return gamma_api::CreateField(
-      _fbb,
-      name__,
-      value__,
-      source__,
-      data_type);
-}
-
-struct Doc FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_FIELDS = 4
-  };
-  const flatbuffers::Vector<flatbuffers::Offset<Field>> *fields() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Field>> *>(VT_FIELDS);
-  }
-  bool Verify(flatbuffers::Verifier &verifier) const {
-    return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_FIELDS) &&
-           verifier.VerifyVector(fields()) &&
-           verifier.VerifyVectorOfTables(fields()) &&
-           verifier.EndTable();
-  }
-};
-
-struct DocBuilder {
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_fields(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Field>>> fields) {
-    fbb_.AddOffset(Doc::VT_FIELDS, fields);
-  }
-  explicit DocBuilder(flatbuffers::FlatBufferBuilder &_fbb)
-        : fbb_(_fbb) {
-    start_ = fbb_.StartTable();
-  }
-  DocBuilder &operator=(const DocBuilder &);
-  flatbuffers::Offset<Doc> Finish() {
-    const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<Doc>(end);
-    return o;
-  }
-};
-
-inline flatbuffers::Offset<Doc> CreateDoc(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Field>>> fields = 0) {
-  DocBuilder builder_(_fbb);
-  builder_.add_fields(fields);
-  return builder_.Finish();
-}
-
-inline flatbuffers::Offset<Doc> CreateDocDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    const std::vector<flatbuffers::Offset<Field>> *fields = nullptr) {
-  auto fields__ = fields ? _fbb.CreateVector<flatbuffers::Offset<Field>>(*fields) : 0;
-  return gamma_api::CreateDoc(
-      _fbb,
-      fields__);
-}
-
 struct ResultItem FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_SCORE = 4,
-    VT_DOC = 6,
-    VT_EXTRA = 8
+    VT_NAME = 6,
+    VT_VALUE = 8,
+    VT_SOURCE = 10,
+    VT_DATA_TYPE = 12,
+    VT_EXTRA = 14
   };
   double score() const {
     return GetField<double>(VT_SCORE, 0.0);
   }
-  const Doc *doc() const {
-    return GetPointer<const Doc *>(VT_DOC);
+  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *name() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_NAME);
+  }
+  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *value() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_VALUE);
+  }
+  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *source() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_SOURCE);
+  }
+  const flatbuffers::Vector<int8_t> *data_type() const {
+    return GetPointer<const flatbuffers::Vector<int8_t> *>(VT_DATA_TYPE);
   }
   const flatbuffers::String *extra() const {
     return GetPointer<const flatbuffers::String *>(VT_EXTRA);
@@ -252,8 +119,17 @@ struct ResultItem FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<double>(verifier, VT_SCORE) &&
-           VerifyOffset(verifier, VT_DOC) &&
-           verifier.VerifyTable(doc()) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyVector(name()) &&
+           verifier.VerifyVectorOfStrings(name()) &&
+           VerifyOffset(verifier, VT_VALUE) &&
+           verifier.VerifyVector(value()) &&
+           verifier.VerifyVectorOfStrings(value()) &&
+           VerifyOffset(verifier, VT_SOURCE) &&
+           verifier.VerifyVector(source()) &&
+           verifier.VerifyVectorOfStrings(source()) &&
+           VerifyOffset(verifier, VT_DATA_TYPE) &&
+           verifier.VerifyVector(data_type()) &&
            VerifyOffset(verifier, VT_EXTRA) &&
            verifier.VerifyString(extra()) &&
            verifier.EndTable();
@@ -266,8 +142,17 @@ struct ResultItemBuilder {
   void add_score(double score) {
     fbb_.AddElement<double>(ResultItem::VT_SCORE, score, 0.0);
   }
-  void add_doc(flatbuffers::Offset<Doc> doc) {
-    fbb_.AddOffset(ResultItem::VT_DOC, doc);
+  void add_name(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> name) {
+    fbb_.AddOffset(ResultItem::VT_NAME, name);
+  }
+  void add_value(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> value) {
+    fbb_.AddOffset(ResultItem::VT_VALUE, value);
+  }
+  void add_source(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> source) {
+    fbb_.AddOffset(ResultItem::VT_SOURCE, source);
+  }
+  void add_data_type(flatbuffers::Offset<flatbuffers::Vector<int8_t>> data_type) {
+    fbb_.AddOffset(ResultItem::VT_DATA_TYPE, data_type);
   }
   void add_extra(flatbuffers::Offset<flatbuffers::String> extra) {
     fbb_.AddOffset(ResultItem::VT_EXTRA, extra);
@@ -287,25 +172,41 @@ struct ResultItemBuilder {
 inline flatbuffers::Offset<ResultItem> CreateResultItem(
     flatbuffers::FlatBufferBuilder &_fbb,
     double score = 0.0,
-    flatbuffers::Offset<Doc> doc = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> name = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> value = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> source = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int8_t>> data_type = 0,
     flatbuffers::Offset<flatbuffers::String> extra = 0) {
   ResultItemBuilder builder_(_fbb);
   builder_.add_score(score);
   builder_.add_extra(extra);
-  builder_.add_doc(doc);
+  builder_.add_data_type(data_type);
+  builder_.add_source(source);
+  builder_.add_value(value);
+  builder_.add_name(name);
   return builder_.Finish();
 }
 
 inline flatbuffers::Offset<ResultItem> CreateResultItemDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     double score = 0.0,
-    flatbuffers::Offset<Doc> doc = 0,
+    const std::vector<flatbuffers::Offset<flatbuffers::String>> *name = nullptr,
+    const std::vector<flatbuffers::Offset<flatbuffers::String>> *value = nullptr,
+    const std::vector<flatbuffers::Offset<flatbuffers::String>> *source = nullptr,
+    const std::vector<int8_t> *data_type = nullptr,
     const char *extra = nullptr) {
+  auto name__ = name ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*name) : 0;
+  auto value__ = value ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*value) : 0;
+  auto source__ = source ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*source) : 0;
+  auto data_type__ = data_type ? _fbb.CreateVector<int8_t>(*data_type) : 0;
   auto extra__ = extra ? _fbb.CreateString(extra) : 0;
   return gamma_api::CreateResultItem(
       _fbb,
       score,
-      doc,
+      name__,
+      value__,
+      source__,
+      data_type__,
       extra__);
 }
 
