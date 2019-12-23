@@ -325,6 +325,8 @@ func (ge *gammaEngine) Doc2DocResult(item *gamma_api.ResultItem) *response.DocRe
 			result.SlotID = uint32(cbbytes.ByteArray2UInt64(value))
 		case mapping.IdField:
 			result.Id = string(value)
+		case mapping.SourceField:
+			result.Source = value
 		default:
 			field := ge.GetMapping().GetField(name)
 			if field == nil {
