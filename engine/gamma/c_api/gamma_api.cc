@@ -597,8 +597,6 @@ ByteArray *SearchV2(void *engine, Request *request) {
                                         result_item->extra->len);
       std::vector<flatbuffers::Offset<flatbuffers::String>> name_vector;
       std::vector<flatbuffers::Offset<flatbuffers::String>> value_vector;
-      std::vector<flatbuffers::Offset<flatbuffers::String>> source_vector;
-      std::vector<signed char> data_type_vector;
       for (int field_idx = 0; field_idx < doc->fields_num; ++field_idx) {
         Field *field = doc->fields[field_idx];
         auto name = builder.CreateString(field->name->value, field->name->len);
@@ -606,28 +604,13 @@ ByteArray *SearchV2(void *engine, Request *request) {
         auto value =
             builder.CreateString(field->value->value, field->value->len);
         value_vector.push_back(value);
-        flatbuffers::Offset<flatbuffers::String> source;
-        if ((field->source != nullptr) and (field->source->len != 0)) {
-          source =
-              builder.CreateString(field->source->value, field->source->len);
-        } else {
-          source = builder.CreateString("");
-        }
-        source_vector.push_back(source);
-
-        signed char data_tpye =
-            static_cast<signed char>(field->data_type);
-        data_type_vector.push_back(data_tpye);
       }
 
       auto names = builder.CreateVector(name_vector);
       auto values = builder.CreateVector(value_vector);
-      auto sources = builder.CreateVector(source_vector);
-      auto data_types = builder.CreateVector(data_type_vector);
 
-      auto item =
-          gamma_api::CreateResultItem(builder, result_item->score, names,
-                                      values, sources, data_types, extra);
+      auto item = gamma_api::CreateResultItem(builder, result_item->score,
+                                              names, values, extra);
       item_vector.push_back(item);
     }
 
@@ -661,7 +644,7 @@ ByteArray *SearchV2(void *engine, Request *request) {
   builder.Release();
 
   DestroyResponse(response);
-  
+
   return response_out;
 }
 

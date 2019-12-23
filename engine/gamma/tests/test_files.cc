@@ -199,23 +199,17 @@ int SearchThread(void *engine, size_t num) {
       builder_out.PushBytes((const uint8_t *)response->value, response->len);
       auto res = gamma_api::GetResponse(builder_out.GetCurrentBufferPointer());
 
-      // for (int i = 0; i < res->results()->Length(); ++i) {
-      //   auto result = res->results()->Get(i);
-      //   int total = result->total();
-      //   std::string msg = result->msg()->str();
-      //   auto result_items = result->result_items();
-      //   for (int j = 0; j < result_items->Length(); ++j) {
-      //     auto result_item = result_items->Get(j);
-      //     double score = result_item->score();
-      //     auto doc = result_item->doc();
-      //     auto fields = doc->fields();
-      //     for (int k = 0; k < fields->Length(); ++k) {
-      //       auto field = fields->Get(k);
-      //       std::string name = field->name()->str();
-      //       std::string value = field->value()->str();
-      //     }
-      //   }
-      // }
+      for (int i = 0; i < res->results()->Length(); ++i) {
+        auto result = res->results()->Get(i);
+        int total = result->total();
+        std::string msg = result->msg()->str();
+        auto result_items = result->result_items();
+        for (int j = 0; j < result_items->Length(); ++j) {
+          auto result_item = result_items->Get(j);
+          double score = result_item->score();
+          std::string name = result_item->name()->Get(0)->str();
+        }
+      }
     }
     Response *response = Search(engine, request);
 
@@ -519,52 +513,6 @@ int LoadEngine() {
   return ret;
 }
 
-int BuildIndexAfterLoad() {
-  std::thread t(BuildIndex, opt.engine);
-  t.detach();
-  while (GetIndexStatus(opt.engine) != INDEXED) {
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-  }
-
-  LOG(INFO) << "Indexed finished after load!";
-  return 0;
-}
-
-int SearchThreadAfterLoad() {
-  int search_thread_num = 1;
-  std::thread t_searchs[search_thread_num];
-
-  std::function<int()> func_search =
-      std::bind(SearchThread, opt.engine, opt.search_num);
-  std::future<int> search_futures[search_thread_num];
-  std::packaged_task<int()> tasks[search_thread_num];
-
-  for (int i = 0; i < search_thread_num; ++i) {
-    tasks[i] = std::packaged_task<int()>(func_search);
-    search_futures[i] = tasks[i].get_future();
-    t_searchs[i] = std::thread(std::move(tasks[i]));
-  }
-
-  std::this_thread::sleep_for(std::chrono::seconds(2));
-
-  std::function<int(void *)> add_func =
-      std::bind(AddDocToEngine, std::placeholders::_1, 10000 * 1, 1);
-  // std::thread add_thread(add_func, opt.engine);
-
-  // get search results
-  for (int i = 0; i < search_thread_num; ++i) {
-    search_futures[i].wait();
-    int error_num = search_futures[i].get();
-    if (error_num != 0) {
-      LOG(ERROR) << "error_num [" << error_num << "]";
-    }
-    t_searchs[i].join();
-  }
-
-  // add_thread.join();
-  return 0;
-}
-
 int DumpAfterLoad() {
   int ret = Dump(opt.engine);
   return ret;
@@ -601,8 +549,8 @@ int main(int argc, char **argv) {
   test::Search();
   // test::DumpEngine();
   // test::LoadEngine();
-  // test::BuildIndexAfterLoad();
-  // test::SearchThreadAfterLoad();
+  // test::BuildEngineIndex();
+  // test::Search();
   // test::DumpAfterLoad();
   test::CloseEngine();
 

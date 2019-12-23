@@ -94,9 +94,7 @@ struct ResultItem FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_SCORE = 4,
     VT_NAME = 6,
     VT_VALUE = 8,
-    VT_SOURCE = 10,
-    VT_DATA_TYPE = 12,
-    VT_EXTRA = 14
+    VT_EXTRA = 10
   };
   double score() const {
     return GetField<double>(VT_SCORE, 0.0);
@@ -106,12 +104,6 @@ struct ResultItem FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *value() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_VALUE);
-  }
-  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *source() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_SOURCE);
-  }
-  const flatbuffers::Vector<int8_t> *data_type() const {
-    return GetPointer<const flatbuffers::Vector<int8_t> *>(VT_DATA_TYPE);
   }
   const flatbuffers::String *extra() const {
     return GetPointer<const flatbuffers::String *>(VT_EXTRA);
@@ -125,11 +117,6 @@ struct ResultItem FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_VALUE) &&
            verifier.VerifyVector(value()) &&
            verifier.VerifyVectorOfStrings(value()) &&
-           VerifyOffset(verifier, VT_SOURCE) &&
-           verifier.VerifyVector(source()) &&
-           verifier.VerifyVectorOfStrings(source()) &&
-           VerifyOffset(verifier, VT_DATA_TYPE) &&
-           verifier.VerifyVector(data_type()) &&
            VerifyOffset(verifier, VT_EXTRA) &&
            verifier.VerifyString(extra()) &&
            verifier.EndTable();
@@ -147,12 +134,6 @@ struct ResultItemBuilder {
   }
   void add_value(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> value) {
     fbb_.AddOffset(ResultItem::VT_VALUE, value);
-  }
-  void add_source(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> source) {
-    fbb_.AddOffset(ResultItem::VT_SOURCE, source);
-  }
-  void add_data_type(flatbuffers::Offset<flatbuffers::Vector<int8_t>> data_type) {
-    fbb_.AddOffset(ResultItem::VT_DATA_TYPE, data_type);
   }
   void add_extra(flatbuffers::Offset<flatbuffers::String> extra) {
     fbb_.AddOffset(ResultItem::VT_EXTRA, extra);
@@ -174,14 +155,10 @@ inline flatbuffers::Offset<ResultItem> CreateResultItem(
     double score = 0.0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> name = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> value = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> source = 0,
-    flatbuffers::Offset<flatbuffers::Vector<int8_t>> data_type = 0,
     flatbuffers::Offset<flatbuffers::String> extra = 0) {
   ResultItemBuilder builder_(_fbb);
   builder_.add_score(score);
   builder_.add_extra(extra);
-  builder_.add_data_type(data_type);
-  builder_.add_source(source);
   builder_.add_value(value);
   builder_.add_name(name);
   return builder_.Finish();
@@ -192,21 +169,15 @@ inline flatbuffers::Offset<ResultItem> CreateResultItemDirect(
     double score = 0.0,
     const std::vector<flatbuffers::Offset<flatbuffers::String>> *name = nullptr,
     const std::vector<flatbuffers::Offset<flatbuffers::String>> *value = nullptr,
-    const std::vector<flatbuffers::Offset<flatbuffers::String>> *source = nullptr,
-    const std::vector<int8_t> *data_type = nullptr,
     const char *extra = nullptr) {
   auto name__ = name ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*name) : 0;
   auto value__ = value ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*value) : 0;
-  auto source__ = source ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*source) : 0;
-  auto data_type__ = data_type ? _fbb.CreateVector<int8_t>(*data_type) : 0;
   auto extra__ = extra ? _fbb.CreateString(extra) : 0;
   return gamma_api::CreateResultItem(
       _fbb,
       score,
       name__,
       value__,
-      source__,
-      data_type__,
       extra__);
 }
 

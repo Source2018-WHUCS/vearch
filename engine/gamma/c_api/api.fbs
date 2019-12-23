@@ -7,8 +7,6 @@ table ResultItem {
   score:double;
   name:[string];
   value:[string];
-  source:[string];
-  data_type:[DataType];
   extra:string;
 }
 
