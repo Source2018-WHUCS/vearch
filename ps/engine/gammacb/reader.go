@@ -190,9 +190,19 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 	arr := C.SearchV2(ri.engine.gamma, req)
 	defer C.DestroyByteArray(arr)
 
-	resp := gamma_api.GetRootAsResponse(CbArr2ByteArray(arr), 0)
 
-	result := ri.singleSearchResult(resp, 0)
+
+
+	result := &response.SearchResponse{
+		Total:    uint64(0),
+		MaxScore: 0,
+		Hits:     make(response.Hits,0),
+		Status:   &response.SearchStatus{Total: 1, Successful: 1},
+	}
+
+	//resp := gamma_api.GetRootAsResponse(CbArr2ByteArray(arr), 0)
+
+	//result := ri.singleSearchResult(resp, 0)
 	result.MaxTook = int64(time.Now().Sub(start) / time.Millisecond)
 	result.MaxTookID = ri.engine.partitionID
 
