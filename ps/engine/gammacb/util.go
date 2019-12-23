@@ -25,7 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/proto/gamma_api"
+	"github.com/vearch/vearch/engine/gamma/c_api/gamma_api"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine/mapping"
@@ -285,7 +285,7 @@ func (ge *gammaEngine) Doc2DocResultCGO(doc *C.struct_Doc) *response.DocResult {
 
 
 func (ge *gammaEngine) ResultItem2DocResult(item *gamma_api.ResultItem) *response.DocResult {
-	result := ge.Doc2DocResult(item.Doc(nil))
+	result := ge.Doc2DocResult(item)
 	result.Score = float64(item.Score())
 	result.Extra = item.Extra()
 	result.SortValues = []sortorder.SortValue{
@@ -296,7 +296,7 @@ func (ge *gammaEngine) ResultItem2DocResult(item *gamma_api.ResultItem) *respons
 	return result
 }
 
-func (ge *gammaEngine) Doc2DocResult(doc *gamma_api.Doc) *response.DocResult {
+func (ge *gammaEngine) Doc2DocResult(item *gamma_api.ResultItem) *response.DocResult {
 
 	result := response.DocResult{
 		Found:     true,
@@ -305,28 +305,28 @@ func (ge *gammaEngine) Doc2DocResult(doc *gamma_api.Doc) *response.DocResult {
 		Partition: ge.GetPartitionID(),
 	}
 
-	fieldNum := doc.FieldsLength()
+	fieldNum := item.NameLength()
 
 	source := make(map[string]interface{})
 
 	var err error
 
+
+
 	for i := 0; i < fieldNum; i++ {
-		fv := new(gamma_api.Field)
 
-		doc.Fields(fv, i)
-
-		name := string(fv.Name())
+		name := string(item.Name(i))
+		value := item.Value(i)
 
 		switch name {
 		case mapping.VersionField:
-			result.Version = int64(cbbytes.ByteArray2UInt64(fv.Value()))
+			result.Version = int64(cbbytes.ByteArray2UInt64(value))
 		case mapping.SlotField:
-			result.SlotID = uint32(cbbytes.ByteArray2UInt64(fv.Value()))
+			result.SlotID = uint32(cbbytes.ByteArray2UInt64(value))
 		case mapping.IdField:
-			result.Id = string(fv.Value())
+			result.Id = string(value)
 		case mapping.SourceField:
-			result.Source = fv.Value()
+			result.Source = value
 		default:
 			field := ge.GetMapping().GetField(name)
 			if field == nil {
@@ -335,28 +335,28 @@ func (ge *gammaEngine) Doc2DocResult(doc *gamma_api.Doc) *response.DocResult {
 			}
 			switch field.FieldType() {
 			case pspb.FieldType_STRING:
-				tempValue := string(fv.Value())
+				tempValue := string(value)
 				if field.FieldMappingI.(*mapping.StringFieldMapping).Array {
 					source[name] = strings.Split(tempValue, string([]byte{'\001'}))
 				} else {
 					source[name] = tempValue
 				}
 			case pspb.FieldType_INT:
-				source[name] = cbbytes.Bytes2Int(fv.Value())
+				source[name] = cbbytes.Bytes2Int(value)
 			case pspb.FieldType_BOOL:
-				if cbbytes.Bytes2Int(fv.Value()) == 0 {
+				if cbbytes.Bytes2Int(value) == 0 {
 					source[name] = false
 				} else {
 					source[name] = true
 				}
 			case pspb.FieldType_DATE:
-				u := cbbytes.Bytes2Int(fv.Value())
+				u := cbbytes.Bytes2Int(value)
 				source[name] = time.Unix(u/1e6, u%1e6)
 			case pspb.FieldType_FLOAT:
-				source[name] = cbbytes.ByteToFloat64(fv.Value())
+				source[name] = cbbytes.ByteToFloat64(value)
 			case pspb.FieldType_VECTOR:
 
-				float32s, uri, err := cbbytes.ByteToVector(fv.Value())
+				float32s, uri, err := cbbytes.ByteToVector(value)
 				if err != nil {
 					return response.NewErrDocResult(result.Id, err)
 				}
