@@ -29,9 +29,12 @@ namespace tig_gamma {
 
 class Node {
  public:
-  Node(int size) {
+  Node() {
     num_ = 0;
     next_ = nullptr;
+  }
+
+  void Init(int size) {
     size_ = size;
     value_ = (int *)malloc(size_ * sizeof(int));
   }
@@ -53,7 +56,8 @@ class Node {
       ++num_;
       return this;
     } else {
-      next_ = new Node(size_ * 2);
+      next_ = new Node();
+      next_->Init(size_ * 2);
       next_->Add(val);
       return next_;
     }
@@ -93,7 +97,8 @@ class NodeList {
     min_ = min_ < val ? min_ : val;
     max_ = max_ > val ? max_ : val;
     if (head_ == nullptr) {
-      head_ = new Node(512);
+      head_ = new Node();
+      head_->Init(512);
       tail_ = head_;
     }
     tail_ = tail_->Add(val);
@@ -117,9 +122,20 @@ class NodeList {
   Node *tail_;
 };
 
+typedef struct {
+  uint mainleafxtra;
+  uint maxleaves;
+  uint poolsize;
+  uint leafxtra;
+  uint mainpool;
+  uint mainbits;
+  uint bits;
+  const char *kDelim;
+} BTreeParameters;
+
 class FieldRangeIndex {
  public:
-  FieldRangeIndex(int idx, enum DataType field_type);
+  FieldRangeIndex(int idx, enum DataType field_type, BTreeParameters &bt_param);
   ~FieldRangeIndex();
 
   int Add(unsigned char *key, uint key_len, int value);
@@ -128,42 +144,34 @@ class FieldRangeIndex {
 
   int Search(const string &tags, RangeQueryResult &result);
 
-  static const uint mainleafxtra_ = 0;
-  static const uint maxleaves_ = 1000000;
-  static const uint poolsize_ = 500;
-  static const uint leafxtra_ = 0;
-  static const uint mainpool_ = 500;
-  static const uint mainbits_ = 16;
-  static const uint bits_ = 16;
-  static const char *kDelim_;
-
  private:
   BtMgr *main_mgr_;
   BtMgr *cache_mgr_;
   bool is_numeric_;
+  char *kDelim_;
 };
 
-const char *FieldRangeIndex::kDelim_ = "\001";
-
-FieldRangeIndex::FieldRangeIndex(int idx, enum DataType field_type) {
+FieldRangeIndex::FieldRangeIndex(int idx, enum DataType field_type,
+                                 BTreeParameters &bt_param) {
   string cache_file = string("cache_") + std::to_string(idx) + ".dis";
   string main_file = string("main_") + std::to_string(idx) + ".dis";
 
   remove(cache_file.c_str());
   remove(main_file.c_str());
 
-  cache_mgr_ = bt_mgr(const_cast<char *>(cache_file.c_str()), bits_, leafxtra_,
-                      poolsize_);
-  cache_mgr_->maxleaves = maxleaves_;
-  main_mgr_ = bt_mgr(const_cast<char *>(main_file.c_str()), mainbits_,
-                     mainleafxtra_, mainpool_);
-  main_mgr_->maxleaves = maxleaves_;
+  cache_mgr_ = bt_mgr(const_cast<char *>(cache_file.c_str()), bt_param.bits,
+                      bt_param.leafxtra, bt_param.poolsize);
+  cache_mgr_->maxleaves = bt_param.maxleaves;
+  main_mgr_ = bt_mgr(const_cast<char *>(main_file.c_str()), bt_param.mainbits,
+                     bt_param.mainleafxtra, bt_param.mainpool);
+  main_mgr_->maxleaves = bt_param.maxleaves;
 
   if (field_type == DataType::STRING) {
     is_numeric_ = false;
   } else {
     is_numeric_ = true;
   }
+  kDelim_ = const_cast<char *>(bt_param.kDelim);
 }
 
 FieldRangeIndex::~FieldRangeIndex() {
@@ -172,8 +180,9 @@ FieldRangeIndex::~FieldRangeIndex() {
   if (bt_startkey(bt, nullptr, 0) == 0) {
     while (bt_nextkey(bt)) {
       if (bt->phase == 1) {
-        NodeList **list = (NodeList **)bt->mainval->value;
-        delete *list;
+        NodeList *p_list = nullptr;
+        memcpy(&p_list, bt->mainval->value, sizeof(NodeList *));
+        delete p_list;
       }
     }
   }
@@ -212,21 +221,20 @@ int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
 
   std::function<void(unsigned char *, uint)> InsertToBt =
       [&](unsigned char *key_to_add, uint key_len) {
-        NodeList **p_list = new NodeList *;
-        int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)p_list,
+        NodeList *p_list = nullptr;
+        int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)&p_list,
                              sizeof(NodeList *));
 
         if (ret < 0) {
-          *p_list = new NodeList;
+          p_list = new NodeList;
           BTERR bterr = bt_insertkey(bt->main, key_to_add, key_len, 0,
-                                     static_cast<void *>(p_list),
+                                     static_cast<void *>(&p_list),
                                      sizeof(NodeList *), Unique);
           if (bterr) {
             LOG(ERROR) << "Error " << bt->mgr->err;
           }
         }
-        (*p_list)->Add(value);
-        delete p_list;
+        p_list->Add(value);
       };
 
   if (is_numeric_) {
@@ -271,22 +279,21 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
   int max_doc = 0;
 
   int idx = 0;
-  NodeList **p_list = new NodeList *;
   if (bt_startkey(bt, key_l, lower.length()) == 0) {
     while (bt_nextkey(bt)) {
       if (bt->phase == 1) {
         if (keycmp(bt->mainkey, key_u, upper.length()) > 0) {
           break;
         }
-        memcpy(p_list, bt->mainval->value, sizeof(NodeList *));
-        lists.push_back(*p_list);
+        NodeList *p_list = nullptr;
+        memcpy(&p_list, bt->mainval->value, sizeof(NodeList *));
+        lists.push_back(p_list);
 
-        min_doc = std::min(min_doc, (*p_list)->Min());
-        max_doc = std::max(max_doc, (*p_list)->Max());
+        min_doc = std::min(min_doc, p_list->Min());
+        max_doc = std::max(max_doc, p_list->Max());
       }
     }
   }
-  delete p_list;
 
   bt_unlockpage(BtLockRead, bt->cacheset->latch, __LINE__);
   bt_unpinlatch(bt->cacheset->latch);
@@ -328,7 +335,6 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
 
   RangeQueryResult results_union[items.size()];
 
-  NodeList **p_list = new NodeList *;
   for (size_t i = 0; i < items.size(); ++i) {
     string item = items[i];
     const unsigned char *key_tag =
@@ -337,17 +343,18 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
     int min_doc = std::numeric_limits<int>::max();
     int max_doc = 0;
 
+    NodeList *p_list = nullptr;
     BtDb *bt = bt_open(cache_mgr_, main_mgr_);
     int ret =
         bt_findkey(bt, const_cast<unsigned char *>(key_tag), item.length(),
-                   (unsigned char *)p_list, sizeof(NodeList *));
+                   (unsigned char *)&p_list, sizeof(NodeList *));
     bt_close(bt);
 
     if (ret < 0) {
       return 0;
     }
-    min_doc = std::min(min_doc, (*p_list)->Min());
-    max_doc = std::max(max_doc, (*p_list)->Max());
+    min_doc = std::min(min_doc, p_list->Min());
+    max_doc = std::max(max_doc, p_list->Max());
 
     if (max_doc - min_doc + 1 <= 0) {
       return 0;
@@ -356,7 +363,7 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
     results_union[i].SetRange(min_doc, max_doc);
     results_union[i].Resize();
 
-    Node *node = (*p_list)->Head();
+    Node *node = p_list->Head();
     while (node != nullptr) {
       int node_num = node->Num();
       int *values = node->Value();
@@ -369,7 +376,6 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
       node = node->Next();
     }
   }
-  delete p_list;
 
   int min_doc = std::numeric_limits<int>::max();
   int max_doc = 0;
@@ -560,7 +566,17 @@ int MultiFieldsRangeIndex::Intersect(const RangeQueryResult *results, int j,
 }
 
 int MultiFieldsRangeIndex::AddField(int field, enum DataType field_type) {
-  FieldRangeIndex *index = new FieldRangeIndex(field, field_type);
+  BTreeParameters bt_param;
+  bt_param.mainleafxtra = 0;
+  bt_param.maxleaves = 1000000;
+  bt_param.poolsize = 500;
+  bt_param.leafxtra = 0;
+  bt_param.mainpool = 500;
+  bt_param.mainbits = 16;
+  bt_param.bits = 16;
+  bt_param.kDelim = "\001";
+
+  FieldRangeIndex *index = new FieldRangeIndex(field, field_type, bt_param);
   fields_[field] = index;
   return 0;
 }
