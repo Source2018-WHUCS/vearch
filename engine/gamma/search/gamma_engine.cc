@@ -445,7 +445,8 @@ Response *GammaEngine::Search(const Request *request) {
     std::vector<std::pair<string, int>> fields_ids;
     std::vector<string> vec_names;
 
-    if (request->term_filters_num > 0) {
+    const auto &range_result = range_query_result.GetAllResult();
+    if (range_result.size() == 0 && request->term_filters_num > 0) {
       LOG(INFO) << "request->term_filters_num [" << request->term_filters_num
                 << "]";
       for (int i = 0; i < request->term_filters_num; ++i) {
@@ -837,10 +838,6 @@ long GammaEngine::GetMemoryBytes() {
   long vec_mem_bytes = vec_manager_->GetTotalMemBytes();
 
   long total_mem_bytes = profile_mem_bytes + vec_mem_bytes + bitmap_bytes_size_;
-  LOG(INFO) << "total_mem_bytes: " << total_mem_bytes
-            << ", profile_mem_bytes: " << profile_mem_bytes
-            << ", vec_mem_bytes: " << vec_mem_bytes
-            << ", bitmap_bytes_size: " << bitmap_bytes_size_;
   return total_mem_bytes;
 }
 

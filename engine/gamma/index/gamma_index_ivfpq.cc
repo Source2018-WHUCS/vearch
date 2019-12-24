@@ -713,6 +713,8 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
 
   long k = condition->topn;  // topK
 
+  int d = raw_vec_->GetDimension();
+
   using HeapForIP = faiss::CMin<float, idx_t>;
   using HeapForL2 = faiss::CMax<float, idx_t>;
 
@@ -762,7 +764,6 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
       int total = 0;
       auto *nr = condition->range_query_result;
       bool ck_dis = (condition->min_dist >= 0 && condition->max_dist >= 0);
-      auto d = this->d;
 
       if (metric_type == faiss::METRIC_INNER_PRODUCT) {
         for (int i = 0; i < ny; i++) {
