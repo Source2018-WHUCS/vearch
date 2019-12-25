@@ -199,17 +199,18 @@ func (s *Server) DeletePartition(id entity.PartitionID) {
 
 	if p, ok := s.partitions.Load(id); ok {
 		if partition, is := p.(PartitionStore); is {
-			if partition.GetPartition().GetStatus() != entity.PA_INVALID {
-				for _, r := range partition.GetPartition().Replicas {
-					s.raftResolver.DeleteNode(r)
-				}
-				if err := partition.Destroy(); err != nil {
-					log.Error("delete partition[%v] fail cause: %v", id, err)
-					return
-				}
+			for _, r := range partition.GetPartition().Replicas {
+				s.raftResolver.DeleteNode(r)
+			}
+			if err := partition.Destroy(); err != nil {
+				log.Error("delete partition[%v] fail cause: %v", id, err)
+				return
+			}
+
+			if partition.GetPartition().GetStatus() == entity.PA_INVALID {
+				s.partitions.Delete(id)
 			}
 		}
-		s.partitions.Delete(id)
 	}
 
 	psutil.ClearPartition(config.Conf().GetDataDirBySlot(config.PS, id), id)
