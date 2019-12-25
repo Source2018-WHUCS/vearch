@@ -125,7 +125,6 @@ func (s *Store) Start() (err error) {
 		return fmt.Errorf("start partition[%d] create raft error: %s", s.Partition.Id, err)
 	}
 
-
 	// Start Raft Sn Flush worker
 	s.startFlushJob()
 	// Start Raft Truncate Worker
@@ -139,6 +138,7 @@ func (s *Store) Close() error {
 
 	if err := s.RaftServer.RemoveRaft(uint64(s.Partition.Id)); err != nil {
 		log.Error("close raft server err : %s , Partition.Id: %d", err.Error(), s.Partition.Id)
+		return err
 	}
 
 	if s.Engine != nil {
@@ -146,6 +146,8 @@ func (s *Store) Close() error {
 	}
 	s.CtxCancel() // to stop
 	s.Partition.SetStatus(entity.PA_CLOSED)
+
+	return nil
 }
 
 // Destroy close partition store if it running currently and remove all data file from filesystem.
@@ -171,7 +173,6 @@ func (s *Store) IsLeader() bool {
 	return s.NodeID == leaderID
 }
 
-
 func (s *Store) Status() *raft.Status {
 	return s.RaftServer.Status(uint64(s.Partition.Id))
 }
@@ -182,7 +183,7 @@ func (s *Store) GetLeader() (entity.NodeID, uint64) {
 
 func (s *Store) TryToLeader() error {
 	future := s.RaftServer.TryToLeader(uint64(s.Partition.Id))
-	response , err := future.Response()
+	response, err := future.Response()
 	if response != nil && response.(*RaftApplyResponse).Err != nil {
 		return response.(*RaftApplyResponse).Err
 	}
