@@ -253,9 +253,10 @@ func (ge *gammaEngine) BuildIndex() error {
 }
 
 func (ge *gammaEngine) Close() {
+	closeEngine := ge.gamma
 	ge.gamma = nil
 	ge.cancel()
-	go func() {
+	go func(closeEngine unsafe.Pointer) {
 		i := 0
 		for {
 			time.Sleep(3 * time.Second)
@@ -264,10 +265,10 @@ func (ge *gammaEngine) Close() {
 				log.Info("wait stop gamma engine times:[%d]", i)
 				continue
 			}
-			C.Close(ge.gamma)
+			C.Close(closeEngine)
 			break
 		}
-	}()
+	}(closeEngine)
 
 }
 
