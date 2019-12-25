@@ -33,6 +33,7 @@ import (
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/ps/engine/register"
 	"github.com/vearch/vearch/util/atomic"
+	"github.com/vearch/vearch/util/uuid"
 	"io/ioutil"
 	"reflect"
 	"sync"
@@ -265,7 +266,10 @@ func (ge *gammaEngine) Close() {
 				log.Info("wait stop gamma engine times:[%d]", i)
 				continue
 			}
+			start, flakeUUID := time.Now(), uuid.FlakeUUID()
+			log.Info("to close gamma engine begin token:[%s]", flakeUUID)
 			C.Close(closeEngine)
+			log.Info("to close gamma engine end token:[%s] use time:[%d]", flakeUUID, time.Now().Sub(start))
 			break
 		}
 	}(closeEngine)

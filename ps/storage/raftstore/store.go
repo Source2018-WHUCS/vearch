@@ -136,20 +136,16 @@ func (s *Store) Start() (err error) {
 
 // Destroy close partition store if it running currently.
 func (s *Store) Close() error {
-	s.CloseOnce.Do(func() {
 
-		s.Partition.SetStatus(entity.PA_CLOSED)
+	if err := s.RaftServer.RemoveRaft(uint64(s.Partition.Id)); err != nil {
+		log.Error("close raft server err : %s , Partition.Id: %d", err.Error(), s.Partition.Id)
+	}
 
-		if err := s.RaftServer.RemoveRaft(uint64(s.Partition.Id)); err != nil {
-			log.Error("close raft server err : %s , Partition.Id: %d", err.Error(), s.Partition.Id)
-		}
-		if s.Engine != nil {
-			s.Engine.Close()
-		}
-
-		s.CtxCancel() // to stop
-	})
-	return nil
+	if s.Engine != nil {
+		s.Engine.Close()
+	}
+	s.CtxCancel() // to stop
+	s.Partition.SetStatus(entity.PA_CLOSED)
 }
 
 // Destroy close partition store if it running currently and remove all data file from filesystem.
