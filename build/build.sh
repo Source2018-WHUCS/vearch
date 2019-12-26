@@ -5,7 +5,7 @@ BUILDOUT=$ROOT/build/bin/
 mkdir -p $BUILDOUT
 GAMMAOUT=$ROOT/build/gamma_build
 mkdir -p $GAMMAOUT
-
+PYTHONOUT=$ROOT/python
 
 # version value
 BUILD_VERSION="0.3"
@@ -25,8 +25,11 @@ echo "version info: $flags"
 echo "build gamma"
 
 cd $GAMMAOUT
-cmake -DPERFORMANCE_TESTING=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$ROOT/ps/engine/gammacb/lib $ROOT/engine/gamma/
+cmake -DPERFORMANCE_TESTING=ON -DBUILD_PYTHON=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$ROOT/ps/engine/gammacb/lib $ROOT/engine/gamma/
 make gamma -j  && make install
+
+cp *swigvearch* $PYTHONOUT
+
 cd ../
 
 echo "build vearch"
