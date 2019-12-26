@@ -27,3 +27,8 @@ plugin/src/log/
 build/gamma_build/
 cloud/compile/bin/
 cloud/compile/lib/
+
+#Output of python
+python/*
+!python/setup.py
+!python/vearch.py

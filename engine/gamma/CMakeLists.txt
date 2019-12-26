@@ -8,7 +8,7 @@ LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 FIND_PACKAGE(Faiss REQUIRED)
 
-OPTION(BUILD_TEST "Build tests" OFF)
+OPTION(BUILD_TEST "Build tests" 0FF)
 OPTION(BUILD_GTEST "Build gtests" ON)
 OPTION(BUILD_TOOLS "Build tools" OFF)
 
@@ -76,8 +76,8 @@ ADD_DEFINITIONS(-DFINTEGER=int)
 IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
     MESSAGE(STATUS "Debug Mode")
     MESSAGE(STATUS "Flags:" ${CMAKE_CXX_FLAGS_DEBUG})
-    ADD_DEFINITIONS(-DDEBUG_) 
-ELSE (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    ADD_DEFINITIONS(-DDEBUG) 
+ELSE (CMAKE_BUILD_TYPE STREQUAL "Release")
     SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "build type" FORCE)
     MESSAGE(STATUS "Release Mode")
     MESSAGE(STATUS "Flags:" ${CMAKE_CXX_FLAGS_RELEASE})
@@ -107,3 +107,44 @@ ENDIF(BUILD_TEST)
 IF(BUILD_TOOLS)
     ADD_SUBDIRECTORY(${CMAKE_CURRENT_SOURCE_DIR}/tools)
 ENDIF(BUILD_TOOLS)
+
+IF (BUILD_PYTHON STREQUAL "ON")
+    MESSAGE(STATUS "Build Gamma python SDK")
+    ADD_DEFINITIONS(-DPYTHON)
+
+    find_package(SWIG REQUIRED)
+    include(${SWIG_USE_FILE})
+    find_package(PythonInterp REQUIRED)
+    find_package(PythonLibs REQUIRED)
+
+    INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_DIR})
+
+    #numpy include path
+    execute_process(
+    COMMAND "${PYTHON_EXECUTABLE}" -c
+            "from __future__ import print_function\ntry: import numpy; print(numpy.get_include(), end='')\nexcept:pass\n"
+            OUTPUT_VARIABLE __numpy_path)
+
+    #numpy version
+    execute_process(
+    COMMAND "${PYTHON_EXECUTABLE}" -c
+            "from __future__ import print_function\ntry: import numpy; print(numpy.get_include(), end='')\nexcept:pass\n"
+            OUTPUT_VARIABLE __numpy_path)
+
+    find_path(PYTHON_NUMPY_INCLUDE_DIR numpy/arrayobject.h
+      HINTS "${__numpy_path}" "${PYTHON_INCLUDE_PATH}" NO_DEFAULT_PATH)
+
+    INCLUDE_DIRECTORIES(${PYTHON_NUMPY_INCLUDE_DIR})
+
+    # set the flags
+    set(CMAKE_SWIG_FLAGS "-DSWIGWORDSIZE64")
+
+    # Set the properties for the interface file.
+    set_property(SOURCE ./python/swigvearch.i PROPERTY CPLUSPLUS ON)
+
+    cmake_policy(SET CMP0078 NEW)
+    SWIG_ADD_LIBRARY( swigvearch LANGUAGE python SOURCES ./python/swigvearch.i ${LIB_SRCS} )
+
+    swig_link_libraries( swigvearch ${LIBRARIES} )
+
+ENDIF (BUILD_PYTHON STREQUAL "ON")
