@@ -29,6 +29,4 @@ cloud/compile/bin/
 cloud/compile/lib/
 
 #Output of python
-python/*
-!python/setup.py
-!python/vearch.py
+build/python

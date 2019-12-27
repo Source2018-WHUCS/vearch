@@ -5,7 +5,9 @@ BUILDOUT=$ROOT/build/bin/
 mkdir -p $BUILDOUT
 GAMMAOUT=$ROOT/build/gamma_build
 mkdir -p $GAMMAOUT
-PYTHONOUT=$ROOT/python
+PYTHONOUT=$ROOT/build/python
+mkdir -p $PYTHONOUT
+PYTHONROOT=$ROOT/python
 
 # version value
 BUILD_VERSION="0.3"
@@ -41,4 +43,5 @@ go build -a -ldflags "$flags" -o $BUILDOUT/batch_deployment $ROOT/tools/deployme
 
 echo "build python vearch wheel"
 cd $PYTHONOUT
+cp $PYTHONROOT/setup.py $PYTHONROOT/vearch.py .
 python setup.py bdist_wheel
