@@ -141,8 +141,9 @@ IF (BUILD_PYTHON STREQUAL "ON")
 
     # Set the properties for the interface file.
     set_property(SOURCE ./python/swigvearch.i PROPERTY CPLUSPLUS ON)
-
-    cmake_policy(SET CMP0078 NEW)
+    if(POLICY CMP0078)
+        cmake_policy(SET CMP0078 NEW)
+    endif()
     SWIG_ADD_LIBRARY( swigvearch LANGUAGE python SOURCES ./python/swigvearch.i ${LIB_SRCS} )
 
     swig_link_libraries( swigvearch ${LIBRARIES} )
