@@ -26,41 +26,6 @@ import uuid
 
 from .swigvearch import *
 
-__version__ = "%d.%d.%d" % (VEARCH_VERSION_MAJOR,
-                            VEARCH_VERSION_MINOR,
-                            VEARCH_VERSION_PATCH)
-
-numpy_dtype_map = {
-    np.dtype('float32'): 'Float',
-    np.dtype('uint8'): 'Byte',
-    np.dtype('int8'): 'Char',
-    np.dtype('uint64'): 'Uint64',
-    np.dtype('int64'): 'Long',
-    np.dtype('int32'): 'Int',
-    np.dtype('float64'): 'Double'   
-}
-
-def byte_array_to_numpy(ba):
-    ''' convert byte array to numpy array
-        ba: byte array
-    '''
-    dtype = np.dtype('float32')
-    vector = ByteArrayToFloatVector(ba)
-    numpy_array = np.asarray(vector, dtype)
-    return numpy_array
-
-def numpy_to_byte_array(numpy_array):
-    ''' convert numpy array to byte array
-        numpy_array: numpy array
-    '''
-    dtype = numpy_array.dtype
-    dimension = 1
-
-    for d in numpy_array.shape:
-        dimension *= d
-    ba = eval(numpy_dtype_map[dtype] + "sToByteArray")(swig_ptr(numpy_array), dimension)
-    return ba
-
 class Helper:
     '''
     A simple usage for Vearch
@@ -225,6 +190,11 @@ class Helper:
             "feature": [0.2, 0.3]
         }
     }
+    Suppose you have init a vearch engine, then:
+        doc_items = []
+        doc_items.append(item)
+        doc_ids = engine.add(item, doc_id)
+
     field1 and field2 are scalar field and field3 is feature field. 
     All field names, value types, and table structures are consistent.
     As you can see, one item can have multiple feature vectors.
@@ -434,6 +404,51 @@ class Helper:
 ###########################################
 # vearch core
 ###########################################
+
+numpy_dtype_map = {
+    np.dtype('float32'): 'Float',
+    np.dtype('uint8'): 'Byte',
+    np.dtype('int8'): 'Char',
+    np.dtype('uint64'): 'Uint64',
+    np.dtype('int64'): 'Long',
+    np.dtype('int32'): 'Int',
+    np.dtype('float64'): 'Double'   
+}
+
+def byte_array_to_numpy(ba):
+    ''' convert byte array to numpy array
+        ba: byte array
+    '''
+    dtype = np.dtype('float32')
+    vector = ByteArrayToFloatVector(ba)
+    numpy_array = np.asarray(vector, dtype)
+    return numpy_array
+
+def normalize_numpy_array(numpy_array):
+    array_size = len(numpy_array.shape)
+    if array_size == 1:
+        norm = np.linalg.norm(numpy_array)
+        numpy_array = numpy_array / norm
+    elif array_size == 2:
+        norm = np.linalg.norm(numpy_array, axis=1)
+        for i in range(len(norm)):
+            numpy_array[i,:] = numpy_array[i,:] / norm[i]
+    else:
+        e = Exception("Wrong array, array shape' size should be 1 or 2")
+        raise e
+    return (numpy_array, norm)
+
+def numpy_to_byte_array(numpy_array):
+    ''' convert numpy array to byte array
+        numpy_array: numpy array
+    '''
+    dtype = numpy_array.dtype
+    dimension = 1
+
+    for d in numpy_array.shape:
+        dimension *= d
+    ba = eval(numpy_dtype_map[dtype] + "sToByteArray")(swig_ptr(numpy_array), dimension)
+    return ba
 
 data_type_map = {
     DataTypes.INT: 'Int',
@@ -848,12 +863,11 @@ class Item:
 
             if data_type == DataTypes.VECTOR:
                 if isinstance(self.info[key], list):
-                    self.info[key] = np.asarray(self.info[key])
+                    self.info[key] = np.asarray(self.info[key], dtype="float32")
                 metric_type = table.get_metric_type()
-                if metric_type == 0:    
-                    norm = np.linalg.norm(self.info[key])
+                if metric_type == 0:
+                    self.info[key], norm = normalize_numpy_array(self.info[key])
                     table.norms[doc_id] = norm
-                    self.info[key] = self.info[key] / norm
                 value = numpy_to_byte_array(self.info[key])
             elif data_type == DataTypes.STRING:
                 value = StringToByteArray(self.info[key])
@@ -996,6 +1010,8 @@ class Query:
         ''' parse query vector and tanslate it to
             the way engine can accept. req_num shows
             how many query vectors
+            table: engine table need to parse vector
+            query
         '''
         req_num = 1
         if self.vector == None:
@@ -1007,15 +1023,18 @@ class Query:
         # only one vector field, but maybe one or multi
         # vector
         if len(self.vector) == 1:
+            if isinstance(self.vector[0]["feature"], list):
+                self.vector[0]["feature"] = np.asarray(self.vector[0]["feature"], dtype="float32")
             shape = self.vector[0]["feature"].shape
             if len(shape) != 1:
                 req_num = shape[0]
 
         for i in range(0, len(self.vector)):
             metric_type = table.get_metric_type()
+            if isinstance(self.vector[i]["feature"], list):
+                self.vector[i]["feature"] = np.asarray(self.vector[i]["feature"], dtype="float32")
             if metric_type == 0:
-                norm = np.linalg.norm(self.vector[i]["feature"])
-                self.vector[i]["feature"] = self.vector[i]["feature"] / norm
+                self.vector[i]["feature"], _ = normalize_numpy_array(self.vector[i]["feature"])
             
             vector_query = MakeVectorQuery( \
                 StringToByteArray(self.vector[i]["field"]), \
