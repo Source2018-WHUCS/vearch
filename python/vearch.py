@@ -579,7 +579,7 @@ class EngineTable:
             model: detail model info
         '''
         self.model = copy.deepcopy(model)
-        self.model["nprobe"] = 20
+        self.model["nprobe"] = 10
         if "nprobe" in model and model["nprobe"] != -1:
             self.model["nprobe"] = model["nprobe"]
 
