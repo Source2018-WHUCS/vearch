@@ -10,7 +10,7 @@ Provides
   2. vector similarity search
   3. use like a database
 
-Vearch have four builtins.object
+Vearch have five builtins.object
     Engine
     EngineTable
     Item
@@ -28,377 +28,397 @@ from .swigvearch import *
 
 class Helper:
     '''
-    A simple usage for Vearch
-    =========================
+	A simple usage for Vearch
+	=========================
 
-    1. Create a vearch engine.
-        engine_path = "files"
-        max_doc_size = 100000
-        engine = vearch.Engine(path, max_doc_size)
-        log_path = "logs"
-        engine.init_log_dir(log_path)
+	1. Create a vearch engine.
+	    engine_path = "files"
+	    max_doc_size = 100000
+	    engine = vearch.Engine(path, max_doc_size)
+	    log_path = "logs"
+	    engine.init_log_dir(log_path)
 
-    2. Create a table for engine.
-        # metric_type can be L2 or InnerProduct
-        # strongly suggest to use metric_type as L2,
-        # InnerProduct have to check it's normalized,
-        # use more time and memory.
-        table = {
-            "name" : "test_table",
-            "model" : {
-                "name": "IVFPQ",
-                "nprobe": -1,
-                "metric_type": "L2",
-                "ncentroids": -1,
-                "nsubvector": -1
-            },
-            "properties" : {
-                "key": {
-                    "type": "integer"
-                },
-                "feature": {
-                    "type": "vector",
-                    "dimension": 128,
-                    "store_param": {
-                        "cache_size": 2000
-                    }
-                },
-            },
-        }
-        engine.create_table(table)
+	2. Create a table for engine.
+	    table = {
+	        "name" : "test_table",
+	        "model" : {
+	            "name": "IVFPQ",
+	            "nprobe": -1,
+	            "metric_type": "L2",
+	            "ncentroids": -1,
+	            "nsubvector": -1
+	        },
+	        "properties" : {
+	            "key": {
+	                "type": "integer"
+	            },
+	            "feature": {
+	                "type": "vector",
+	                "dimension": 128,
+	                "store_param": {
+	                    "cache_size": 2000
+	                }
+	            },
+	        },
+	    }
+	    engine.create_table(table)
 
-    2. Add vector into table.
-        add_num = 10000
-        features = np.random.rand(add_num, 128)
-        doc_items = []
-        for i in range(add_num):
-            profiles["key"] = 1
-            profiles["feature"] = features[i,:]
-            doc_items.append(profiles)
-       
-        #pass list to it, even only add one doc item
-        engine.add(doc_items)
+	3. Add vector into table.
+	    add_num = 10000
+	    features = np.random.rand(add_num, 128)
+	    doc_items = []
+	    for i in range(add_num):
+	        profiles["key"] = 1
+	        profiles["feature"] = features[i,:]
+	        doc_items.append(profiles)
+	   
+	    #pass list to it, even only add one doc item
+	    engine.add(doc_items)
 
-    3. Search vector nearest neighbors.
-        query =  {
-            "vector": [{
-                "field": "feature",
-                "feature": features[0,:],
-            }],
-        }
-        result = engine.search(query)
-        print(result)
+	4. Search vector nearest neighbors.
+	    query =  {
+	        "vector": [{
+	            "field": "feature",
+	            "feature": features[0,:],
+	        }],
+	    }
+	    result = engine.search(query)
+	    print(result)
 
-    4. See other helper detail info for deeper use.
+	5. See other detail info for deeper use.
 
-    Vearch table detail info"
-    "======================="
+	Vearch Engine detail info
+	=========================
 
-    A possible table can like this:
-    table = {
-        "name": "space1",
-        "model": {
-            "nprobe": 10,
-            "metric_type": "InnerProduct",
-            "ncentroids": 256,
-            "nsubvector": 64
-        },
-        "properties": {
-            "field1": {
-                "type": "keyword"
-            },
-            "field2": {
-                "type": "integer"
-            },
-            "field3": {
-                "type": "float",
-                "index": "true"
-            },
-            "field4": {
-                "type": "keyword",
-                "index": "true"
-            },
-            "field5": {
-                "type": "integer",
-                "index": "true"
-            },
-            "field6": {
-                "type": "vector",
-                "dimension": 128
-            },
-            "field7": {
-                "type": "vector",
-                "dimension": 256,
-                "store_type": "Mmap",
-                "store_param": {
-                    "cache_size": 2000
-                }
-            }
-        }
-    }
+	Engine is the vearch core. It is used to store, update 
+	and delete feature vectors, build indexes for stored vectors,
+	and find the nearest neighbor of vectors. Create an engine
+	Just like this:
+	    engine = vearch.Engine(path, max_doc_size)
+	    path: engine config path to save dump file or 
+	            something else engine will create
+	    max_doc_size: maximum doc size engine can afford
+	and then init log path:
+	    log_path = "logs"
+	    engine.init_log_dir(log_path)
 
-    ==========  ==========================================================
-    field name   Description
-    ==========  ==========================================================
-    name        table' name
+	Vearch table detail info
+	========================
 
-    model       table' retrieve model, and now only support IVFPQ.
-                there are four parameters in model IVFPQ.
-                metric_type: distance metric type, L2 or InnerProduct, 
-                    defalt are L2, and strongly suggest to use L2,
-                    because for InnerProduct, vearch have to normalize
-                    the vector, means to spend more time and momery.
-                nprobe: number of probes at query time, default 20, 
-                    when you use -1, it will use the default value.
-                ncentroids: how many centroids for IVF, default 256,
-                    set -1 will use the default value.
-                nsubvector: number of subquantizers, default 64, set
-                    -1 will use the default value.
+	A possible table can like this:
+	table = {
+	    "name": "space1",
+	    "model": {
+	        "nprobe": 10,
+	        "metric_type": "InnerProduct",
+	        "ncentroids": 256,
+	        "nsubvector": 64
+	    },
+	    "properties": {
+	        "field1": {
+	            "type": "keyword"
+	        },
+	        "field2": {
+	            "type": "integer"
+	        },
+	        "field3": {
+	            "type": "float",
+	            "index": "true"
+	        },
+	        "field4": {
+	            "type": "keyword",
+	            "index": "true"
+	        },
+	        "field5": {
+	            "type": "integer",
+	            "index": "true"
+	        },
+	        "field6": {
+	            "type": "vector",
+	            "dimension": 128
+	        },
+	        "field7": {
+	            "type": "vector",
+	            "dimension": 256,
+	            "store_type": "Mmap",
+	            "store_param": {
+	                "cache_size": 2000
+	            }
+	        }
+	    }
+	}
 
-    properties  table' properties, define what field are in the table.
-                There are four types (that is, the value of type) 
-                supported by the field defined by the table space 
-                structure: keyword, integer, float, vector 
-                (keyword is equivalent to string).
-                The keyword type fields support index attributes. 
-                Index defines whether to create an index, Integer, float 
-                type fields support the index attribute, and the fields 
-                with index set to true support the use of numeric range 
-                filtering queries. Vector type fields are feature fields. 
-                Multiple feature fields are supported in a table space. 
-                The attributes supported by vector type fields are as 
-                follows:
-                dimension: feature dimension, should be integer
-                store_type: feature storage type,support Mmap and RocksDB, 
-                default Mmap, this is set for vector storage in disk.
-                store_param: set the size of memory feature vector can use, 
-                if you spend more memory you set, then vector will be get 
-                from disk.
-                model_id: feature used model, like vgg or somethin else.
+	==========  ==========================================================
+	field name   Description
+	==========  ==========================================================
+	name        table' name
 
-    "Vearch item detail info"
-    "======================="
+	model       table' retrieve model, and now only support IVFPQ.
+	            there are four parameters in model IVFPQ.
+	            metric_type: distance metric type, L2 or InnerProduct, 
+	                defalt are L2, and strongly suggest to use L2,
+	                because for InnerProduct, vearch have to normalize
+	                the vector, means to spend more time and momery.
+	            nprobe: number of probes at query time, default 10, 
+	                when you use -1, it will use the default value.
+	            ncentroids: how many centroids for IVF, default 256,
+	                set -1 will use the default value.
+	            nsubvector: number of subquantizers, default 64, set
+	                -1 will use the default value.
 
-    A possible item can like this:
-    item = {
-        "field1": "value1",
-        "field2": "value2",
-        "field3": {
-            "feature": [0.1, 0.2]
-        }
-        "field4": {
-            "feature": [0.2, 0.3]
-        }
-    }
-    Suppose you have init a vearch engine, then:
-        doc_items = []
-        doc_items.append(item)
-        doc_ids = engine.add(item, doc_id)
+	properties  table' properties, define what field are in the table.
+	            There are four types (that is, the value of type) 
+	            supported by the field defined by the table space 
+	            structure: keyword, integer, float, vector 
+	            (keyword is equivalent to string).
+	            The keyword type fields support index attributes. 
+	            Index defines whether to create an index, Integer, float 
+	            type fields support the index attribute, and the fields 
+	            with index set to true support the use of numeric range 
+	            filtering queries. Vector type fields are feature fields. 
+	            Multiple feature fields are supported in a table space. 
+	            The attributes supported by vector type fields are as 
+	            follows:
+	            dimension: feature dimension, should be integer
+	            store_type: feature storage type,support Mmap and RocksDB, 
+	            default Mmap, this is set for vector storage in disk.
+	            store_param: This feature field is defined to store the 
+	            occupied memory size. The default size is the engine 
+	            max_size parameter value multiplied by the feature 
+	            dimension multiplied by the occupied space size of 
+	            each feature value. If the store’type is set to rocksdb, 
+	            the changed value represents the rocksdb read buffer size. 
+	            This parameter does not affect each other among multiple 
+	            feature fields. The total size of all feature fields is 
+	            recommended not to exceed 70% of the machine memory. 
+	            Example: for 128 dimensional float feature, max_size = 
+	            1000000, the default value of cache_size is 
+	            1000000 * 128 * 4B.
+	            model_id: feature used model, like vgg or somethin else.
 
-    field1 and field2 are scalar field and field3 is feature field. 
-    All field names, value types, and table structures are consistent.
-    As you can see, one item can have multiple feature vectors.
-    And vearch will return a unique id for every added item.
-    The unique identification needs to be used for data modification 
-    and deletion, or just get added item's detail info.
+	Vearch item detail info
+	=======================
 
-    "Vearch query detail info"
-    "========================"
+	A possible item can like this:
+	item = {
+	    "field1": "value1",
+	    "field2": "value2",
+	    "field3": {
+	        "feature": [0.1, 0.2]
+	    }
+	    "field4": {
+	        "feature": [0.2, 0.3]
+	    }
+	}
+	Suppose you have init a vearch engine, then:
+	    doc_items = []
+	    doc_items.append(item)
+	    doc_ids = engine.add(item, doc_id)
 
-    Vearch supports flexible search. 
-    Single query:
-    A possible query can like this:
-    query = {
-            "vector": [{
-                "field": "field_name",
-                "feature": [0.1, 0.2, 0.3, 0.4, 0.5],
-                "min_score": 0.9,
-                "boost": 0.5
-            }],
-            "filter": [{
-                "range": {
-                    "field_name": {
-                        "gte": 160,
-                        "lte": 180
-                    }
-                }
-            },
-            {
-                 "term": {
-                     "field_name": ["100", "200", "300"],
-                     "operator": "or"
-                 }
-            }]
-        },
-        "direct_search_type": 0,
-        "online_log_level": "debug",
-        "topn": 10,
-        "fields": ["field1", "field2"]
-    }
+	field1 and field2 are scalar field and field3 is feature field. 
+	All field names, value types, and table structures are consistent.
+	As you can see, one item can have multiple feature vectors.
+	And vearch will return a unique id for every added item.
+	The unique identification needs to be used for data modification 
+	and deletion, or just get added item's detail info.
 
-    Batch query:
-    A possible query can like this:
-    query = {
-            "vector": [{
-                "field": "field_name",
-                "feature": [[0.1, 0.2, 0.3, 0.4, 0.5],
-                            [0.6, 0.7, 0.8, 0.9, 1.0]]
-            }],
-    }
+	"Vearch query detail info"
+	"========================"
 
-    Multi vector query:
-    A possible query can like this:
-    query = {
-            "vector": [
-                "field1": {
-                    "type": "vector",
-                    "dimension": 128
-                },
-                "field2": {
-                    "type": "vector",
-                    "dimension": 256
-        }],
-    }
-    result will be their intersection.
+	Vearch supports flexible search. 
+	Single query:
+	A possible query can like this:
+	query = {
+	        "vector": [{
+	            "field": "field_name",
+	            "feature": [0.1, 0.2, 0.3, 0.4, 0.5],
+	            "min_score": 0.9,
+	            "boost": 0.5
+	        }],
+	        "filter": [{
+	            "range": {
+	                "field_name": {
+	                    "gte": 160,
+	                    "lte": 180
+	                }
+	            }
+	        },
+	        {
+	             "term": {
+	                 "field_name": ["100", "200", "300"],
+	                 "operator": "or"
+	             }
+	        }]
+	    },
+	    "direct_search_type": 0,
+	    "online_log_level": "debug",
+	    "topn": 10,
+	    "fields": ["field1", "field2"]
+	}
 
-    Query only with filter:
-    A possible query can like this:
-    query = {
-        "filter": [{
-                "range": {
-                    "field_name": {
-                        "gte": 160,
-                        "lte": 180
-                    }
-                }
-            },
-            {
-                 "term": {
-                     "field_name": ["100", "200", "300"],
-                     "operator": "or"
-                 }
-            }]
-        },   
-    }
+	Batch query:
+	A possible query can like this:
+	query = {
+	        "vector": [{
+	            "field": "field_name",
+	            "feature": [[0.1, 0.2, 0.3, 0.4, 0.5],
+	                        [0.6, 0.7, 0.8, 0.9, 1.0]]
+	        }],
+	}
 
-    ==================  ===================================================
-    field name          Description
-    ==================  ===================================================
-    vector              Support multiple (including multiple feature fields 
-                        when defining table structure correspondingly).
-                        field: Specifies the name of the feature field when 
-                        the table is created.
-                        feature: Transfer feature, dimension must be the same 
-                        when defining table structure
-                        min_score: Specify the minimum score of the returned 
-                        result, the similarity between the two vector 
-                        calculation results is between 0-1, 
-                        min_score can specify the minimum score of the 
-                        returned result, and max_score can specify the maximum 
-                        score. For example, set “min_score”: 0.8, “max_score”: 
-                        0.95 to filter the result of 0.8 <= score <= 0.95. 
-                        min_score and max_score are between 0 and 1.
+	Multi vector query:
+	A possible query can like this:
+	query = {
+	        "vector": [
+	            "field1": {
+	                "type": "vector",
+	                "dimension": 128
+	            },
+	            "field2": {
+	                "type": "vector",
+	                "dimension": 256
+	    }],
+	}
+	result will be their intersection.
 
-    boost               Specify the weight of similarity. For example, 
-                        if the similarity score of two vectors is 0.7 and boost 
-                        is set to 0.5, the returned result will multiply the 
-                        score 0.7 * 0.5, which is 0.35.
+	Query only with filter:
+	A possible query can like this:
+	query = {
+	    "filter": [{
+	            "range": {
+	                "field_name": {
+	                    "gte": 160,
+	                    "lte": 180
+	                }
+	            }
+	        },
+	        {
+	             "term": {
+	                 "field_name": ["100", "200", "300"],
+	                 "operator": "or"
+	             }
+	        }]
+	    },   
+	}
 
-    filter              Multiple conditions are supported. Multiple conditions 
-                        are intersecting. There are two kind of filters.
-                        range: Specify to use the numeric field integer / float 
-                        filtering, the file name is the numeric field name, gte 
-                        and lte specify the range, lte is less than or equal to, 
-                        gte is greater than or equal to, if equivalent filtering 
-                        is used, lte and gte settings are the same value. 
-                        The above example shows that the query field_name field 
-                        is greater than or equal to 160 but less than or equal 
-                        to 180.
-                        term: With label filtering, field_name is a defined label 
-                        field, which allows multiple value filtering. You can 
-                        intersect “operator”: “or”, merge: “operator”: “and”. 
-                        The above example indicates that the query field name 
-                        segment value is “100”, “200” or “300”.
+	==================  ===================================================
+	field name          Description
+	==================  ===================================================
+	vector              Support multiple (including multiple feature fields 
+	                    when defining table structure correspondingly).
+	                    field: Specifies the name of the feature field when 
+	                    the table is created.
+	                    feature: Transfer feature, dimension must be the same 
+	                    when defining table structure
+	                    min_score: Specify the minimum score of the returned 
+	                    result, the similarity between the two vector 
+	                    calculation results is between 0-1, 
+	                    min_score can specify the minimum score of the 
+	                    returned result, and max_score can specify the maximum 
+	                    score. For example, set “min_score”: 0.8, “max_score”: 
+	                    0.95 to filter the result of 0.8 <= score <= 0.95. 
+	                    min_score and max_score are between 0 and 1.
 
-    direct_search_type  Specify the query type. 0 means to use index if the feature 
-                        has been created, and violent search if it has not been created; 
-                        and 1 means not to use index only for violent search.
-                        The default value is 0.
+	boost               Specify the weight of similarity. For example, 
+	                    if the similarity score of two vectors is 0.7 and boost 
+	                    is set to 0.5, the returned result will multiply the 
+	                    score 0.7 * 0.5, which is 0.35.
 
-    online_log_level    debug|info|warn|error|none
-                        Set “debug” to specify to print more detailed logs on the 
-                        server, which is convenient for troubleshooting in the 
-                        development and test phase.
+	filter              Multiple conditions are supported. Multiple conditions 
+	                    are intersecting. There are two kind of filters.
+	                    range: Specify to use the numeric field integer / float 
+	                    filtering, the file name is the numeric field name, gte 
+	                    and lte specify the range, lte is less than or equal to, 
+	                    gte is greater than or equal to, if equivalent filtering 
+	                    is used, lte and gte settings are the same value. 
+	                    The above example shows that the query field_name field 
+	                    is greater than or equal to 160 but less than or equal 
+	                    to 180.
+	                    term: With label filtering, field_name is a defined label 
+	                    field, which allows multiple value filtering. You can 
+	                    intersect “operator”: “or”, merge: “operator”: “and”. 
+	                    The above example indicates that the query field name 
+	                    segment value is “100”, “200” or “300”.
 
-    topn                Specifies the maximum number of results to return.
+	direct_search_type  Specify the query type. 0 means to use index if the feature 
+	                    has been created, and violent search if it has not been created; 
+	                    and 1 means not to use index only for violent search.
+	                    The default value is 0.
 
-    has_rank            whether it needs ranking after recalling from PQ index.
-                        default 0, has not rank; 1, has rank
+	online_log_level    debug|info|warn|error|none
+	                    Set “debug” to specify to print more detailed logs on the 
+	                    server, which is convenient for troubleshooting in the 
+	                    development and test phase.
 
-    multi_vector_rank   whether it needs ranking after merging the searching result 
-                        of multi-vectors. default 0, has not rank; 1, has rank
+	topn                Specifies the maximum number of results to return.
 
-    fields              what field you want get from query result. If you don't set
-                        any field in profile fields(here means none feature vector 
-                        field), all profile fields will return;
-                        And when you want to get feature vectors then specify the
-                        feature vector field.
+	has_rank            whether it needs ranking after recalling from PQ index.
+	                    default 0, has not rank; 1, has rank
 
-    Vearch how to update a document
-    =============================="
+	multi_vector_rank   whether it needs ranking after merging the searching result 
+	                    of multi-vectors. default 0, has not rank; 1, has rank
 
-    Here you can update doc's info by its unique id, 
-    now don't support to update string and feature vector.
-    item = {
-        "field1": "value1",
-        "field2": "value2",
-    }
-    field1 and field2 are scalar field. All field names, value 
-    types, and table structures should be consistented.
-    doc_id = "its unique id"
-    Suppose you have init a vearch engine, then:
-        engine.update_doc(item, doc_id)
-    to update it.
+	fields              what field you want get from query result. If you don't set
+	                    any field in profile fields(here means none feature vector 
+	                    field), all profile fields will return;
+	                    And when you want to get feature vectors then specify the
+	                    feature vector field.
 
-    Vearch how to delete document
-    =============================
+	Vearch how to update a document
+	===============================
 
-    1. you can delete a document by its unique id.
-    doc_id = "its unique id"
-    Suppose you have init a vearch engine, then:
-        engine.del_doc(doc_id)
-    to delete it.
-    2. you can delete documents by query.
-    del_query =  {
-        "filter": [{
-            "range": {
-                "field2": {
-                    "gte": 1,
-                    "lte": 20
-                }
-            },
-        }],
-    }
-    Suppose you have init a vearch engine, then:
-        engine.del_doc_by_query(del_query)
-    All documents that meet the conditions will be deleted
+	Here you can update doc's info by its unique id, 
+	now don't support to update string and feature vector.
+	item = {
+	    "field1": "value1",
+	    "field2": "value2",
+	}
+	field1 and field2 are scalar field. All field names, value 
+	types, and table structures should be consistented.
+	doc_id = "its unique id"
+	Suppose you have init a vearch engine, then:
+	    engine.update_doc(item, doc_id)
+	to update it.
 
-    How vearch makes data persistent
-    ================================
+	Vearch how to delete document
+	=============================
 
-    Vearch support dump table into disk. When you dump
-    vearch engine, everything in table will dump into disk.
-    And you can load it from disk.
-    Suppose you have init a vearch engine, and you have 
-    done something, then:
-        engine.dump()
-    everythin in table will store in the path you set for engine.
-    And you want to load it from dist:
-        engine.load()
-    engine will auto to load file in the path you set for engine,
-    so the path should be the same.
-    When load, need't to create table and auto load data from dump 
-    files, so you just create engine and init log for it.   
+	1. you can delete a document by its unique id.
+	doc_id = "its unique id"
+	Suppose you have init a vearch engine, then:
+	    engine.del_doc(doc_id)
+	to delete it.
+	2. you can delete documents by query.
+	del_query =  {
+	    "filter": [{
+	        "range": {
+	            "field2": {
+	                "gte": 1,
+	                "lte": 20
+	            }
+	        },
+	    }],
+	}
+	Suppose you have init a vearch engine, then:
+	    engine.del_doc_by_query(del_query)
+	All documents that meet the conditions will be deleted
+
+	How vearch makes data persistent
+	================================
+
+	Vearch support dump table into disk. When you dump
+	vearch engine, everything in table will dump into disk.
+	And you can load it from disk.
+	Suppose you have init a vearch engine, and you have 
+	done something, then:
+	    engine.dump()
+	everythin in table will store in the path you set for engine.
+	And you want to load it from disk:
+	    engine.load()
+	engine will auto to load file in the path you set for engine,
+	so the path should be the same.
+	When load, need't to create table and auto load data from dump 
+	files, so you just create engine and init log for it.  
     '''
 
 ###########################################
@@ -579,7 +599,7 @@ class EngineTable:
             model: detail model info
         '''
         self.model = copy.deepcopy(model)
-        self.model["nprobe"] = 10
+        self.model["nprobe"] = 20
         if "nprobe" in model and model["nprobe"] != -1:
             self.model["nprobe"] = model["nprobe"]
 
