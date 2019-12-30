@@ -68,7 +68,7 @@ class Helper:
 	    features = np.random.rand(add_num, 128)
 	    doc_items = []
 	    for i in range(add_num):
-	        profiles["key"] = 1
+	        profiles["key"] = i
 	        profiles["feature"] = features[i,:]
 	        doc_items.append(profiles)
 	   
@@ -206,14 +206,11 @@ class Helper:
 	    "field3": {
 	        "feature": [0.1, 0.2]
 	    }
-	    "field4": {
-	        "feature": [0.2, 0.3]
-	    }
 	}
 	Suppose you have init a vearch engine, then:
 	    doc_items = []
 	    doc_items.append(item)
-	    doc_ids = engine.add(item, doc_id)
+	    doc_ids = engine.add(item)
 
 	field1 and field2 are scalar field and field3 is feature field. 
 	All field names, value types, and table structures are consistent.
