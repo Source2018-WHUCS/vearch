@@ -27,3 +27,6 @@ plugin/src/log/
 build/gamma_build/
 cloud/compile/bin/
 cloud/compile/lib/
+
+#Output of python
+build/python
