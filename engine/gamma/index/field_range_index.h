@@ -27,7 +27,7 @@ typedef struct {
 class FieldRangeIndex;
 class MultiFieldsRangeIndex {
  public:
-  MultiFieldsRangeIndex(Profile *profile);
+  MultiFieldsRangeIndex(std::string &path, Profile *profile);
   ~MultiFieldsRangeIndex();
 
   int Add(int docid, int field);
@@ -42,6 +42,7 @@ class MultiFieldsRangeIndex {
                 RangeQueryResult &out) const;
   std::vector<FieldRangeIndex *> fields_;
   Profile *profile_;
+  std::string path_;
   static const int kLazyThreshold_ = 10000;
 };
 
