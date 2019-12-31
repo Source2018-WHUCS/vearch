@@ -506,11 +506,9 @@ Response *GammaEngine::Search(const Request *request) {
 
 #ifdef PERFORMANCE_TESTING
   double search_time = utils::getmillisecs();
-  if (++search_num_ % 1000 == 0) {
-    ss << "search cost [" << search_time - numeric_filter_time
-       << "]ms, total cost [" << search_time - start << "]ms";
-    LOG(INFO) << ss.str();
-  }
+  ss << "search cost [" << search_time - numeric_filter_time
+     << "]ms, total cost [" << search_time - start << "]ms";
+  LOG(INFO) << ss.str();
 #endif
 
   const char *log_message = logger.Data();
@@ -595,7 +593,7 @@ int GammaEngine::CreateTable(const Table *table) {
     return -2;
   }
 
-  field_range_index_ = new MultiFieldsRangeIndex(profile_);
+  field_range_index_ = new MultiFieldsRangeIndex(index_root_path_, profile_);
   if ((nullptr == field_range_index_) || (AddNumIndexFields() < 0)) {
     LOG(ERROR) << "add numeric index fields error!";
     return -3;
@@ -1163,7 +1161,7 @@ ResultItem *GammaEngine::PackResultItem(const VectorDoc *vec_doc,
             MakeByteArray(field_name.c_str(), field_name.length());
         doc->fields[i]->value = MakeByteArray(vec[j].c_str(), vec[j].length());
         doc->fields[i]->data_type = DataType::VECTOR;
-        j++;
+        ++j;
       }
     } else {
       // get vector error

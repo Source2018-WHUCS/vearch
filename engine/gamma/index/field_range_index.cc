@@ -135,7 +135,8 @@ typedef struct {
 
 class FieldRangeIndex {
  public:
-  FieldRangeIndex(int idx, enum DataType field_type, BTreeParameters &bt_param);
+  FieldRangeIndex(std::string &path, int idx, enum DataType field_type,
+                  BTreeParameters &bt_param);
   ~FieldRangeIndex();
 
   int Add(unsigned char *key, uint key_len, int value);
@@ -149,12 +150,15 @@ class FieldRangeIndex {
   BtMgr *cache_mgr_;
   bool is_numeric_;
   char *kDelim_;
+  std::string path_;
 };
 
-FieldRangeIndex::FieldRangeIndex(int idx, enum DataType field_type,
-                                 BTreeParameters &bt_param) {
-  string cache_file = string("cache_") + std::to_string(idx) + ".dis";
-  string main_file = string("main_") + std::to_string(idx) + ".dis";
+FieldRangeIndex::FieldRangeIndex(std::string &path, int idx,
+                                 enum DataType field_type,
+                                 BTreeParameters &bt_param)
+    : path_(path) {
+  string cache_file = path + string("/cache_") + std::to_string(idx) + ".dis";
+  string main_file = path + string("/main_") + std::to_string(idx) + ".dis";
 
   remove(cache_file.c_str());
   remove(main_file.c_str());
@@ -401,7 +405,9 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
   return retval;
 }
 
-MultiFieldsRangeIndex::MultiFieldsRangeIndex(Profile *profile) {
+MultiFieldsRangeIndex::MultiFieldsRangeIndex(std::string &path,
+                                             Profile *profile)
+    : path_(path) {
   profile_ = profile;
   fields_.resize(profile->FieldsNum());
   std::fill(fields_.begin(), fields_.end(), nullptr);
@@ -576,7 +582,7 @@ int MultiFieldsRangeIndex::AddField(int field, enum DataType field_type) {
   bt_param.bits = 16;
   bt_param.kDelim = "\001";
 
-  FieldRangeIndex *index = new FieldRangeIndex(field, field_type, bt_param);
+  FieldRangeIndex *index = new FieldRangeIndex(path_, field, field_type, bt_param);
   fields_[field] = index;
   return 0;
 }
