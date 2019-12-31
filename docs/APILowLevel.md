@@ -57,15 +57,15 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
 	"properties": {
 		"string": {
 			"type": "keyword",
-			"index": "true"
+			"index": true
 		},
 		"int": {
 			"type": "integer",
-			"index": "true"
+			"index": true
 		},
 		"float": {
 			"type": "float",
-			"index": "true"
+			"index": true
 		},
 		"vector": {
 			"type": "vector",
@@ -76,17 +76,17 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPUT -d'
 		"string_tags": {
 			"type": "string",
 			"array": true,
-			"index": "true"
+			"index": true
 		},
 		"int_tags": {
 			"type": "integer",
 			"array": true,
-			"index": "true"
+			"index": true
 		},
 		"float_tags": {
 			"type": "float",
 			"array": true,
-			"index": "true"
+			"index": true
 		}
 	},
 	"models": [{
