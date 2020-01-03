@@ -114,6 +114,8 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 			request.Fields = append(request.Fields, key)
 			return nil
 		})
+
+		request.Fields = append(request.Fields, mapping.IdField)
 	}
 
 	if len(request.Fields) > 0 {
