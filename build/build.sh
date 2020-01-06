@@ -28,7 +28,7 @@ echo "build gamma"
 
 #if don't want to build python, set -DBUILD_PYTHON=OFF
 cd $GAMMAOUT
-cmake -DPERFORMANCE_TESTING=ON -DBUILD_PYTHON=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$ROOT/ps/engine/gammacb/lib $ROOT/engine/gamma/
+cmake -DPERFORMANCE_TESTING=ON -DBUILD_PYTHON=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$ROOT/ps/engine/gammacb/lib $ROOT/engine/gamma/
 make gamma -j  && make install
 
 cp *swigvearch* $PYTHONOUT
@@ -44,4 +44,5 @@ go build -a -ldflags "$flags" -o $BUILDOUT/batch_deployment $ROOT/tools/deployme
 echo "build python vearch wheel"
 cd $PYTHONOUT
 cp $PYTHONROOT/setup.py $PYTHONROOT/vearch.py .
+
 python setup.py bdist_wheel

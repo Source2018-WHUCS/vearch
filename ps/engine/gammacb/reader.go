@@ -24,12 +24,12 @@ import "C"
 import (
 	"context"
 	"fmt"
-	"github.com/vearch/vearch/ps/engine/mapping"
-	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine"
+	"github.com/vearch/vearch/ps/engine/mapping"
+	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/util/vearchlog"
 	"io/ioutil"
 	"os"
@@ -119,12 +119,7 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 	}
 
 	if len(request.Fields) > 0 {
-		req.fields = C.MakeByteArrays(C.int(len(request.Fields)))
-		fs := make([]*C.struct_ByteArray, len(request.Fields))
-		for i, f := range request.Fields {
-			C.SetByteArray(req.fields, C.int(i), byteArrayStr(f))
-		}
-		req.fields_num = C.int(len(fs))
+		ri.setFields(request, req)
 	}
 
 	reps := C.Search(ri.engine.gamma, req)
@@ -174,15 +169,11 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 			request.Fields = append(request.Fields, key)
 			return nil
 		})
+		request.Fields = append(request.Fields, mapping.IdField)
 	}
 
 	if len(request.Fields) > 0 {
-		req.fields = C.MakeByteArrays(C.int(len(request.Fields)))
-		fs := make([]*C.struct_ByteArray, len(request.Fields))
-		for i, f := range request.Fields {
-			C.SetByteArray(req.fields, C.int(i), byteArrayStr(f))
-		}
-		req.fields_num = C.int(len(fs))
+		ri.setFields(request, req)
 	}
 
 	if log.IsDebugEnabled() {
@@ -199,6 +190,27 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 
 	return result
 
+}
+
+func (ri *readerImpl) setFields(request *request.SearchRequest, req *C.struct_Request) {
+		req.fields = C.MakeByteArrays(C.int(len(request.Fields)))
+		fs := make([]*C.struct_ByteArray, len(request.Fields))
+
+		hasID := false
+		for i, f := range request.Fields {
+			if !hasID && f == mapping.IdField {
+				hasID = true
+			}
+			C.SetByteArray(req.fields, C.int(i), byteArrayStr(f))
+		}
+
+		fsLen := len(fs)
+		if !hasID {
+			C.SetByteArray(req.fields, C.int(fsLen), byteArrayStr(mapping.IdField))
+			fsLen++
+		}
+
+		req.fields_num = C.int(fsLen)
 }
 
 func (ri *readerImpl) singleSearchResult(reps *C.struct_Response, index int) *response.SearchResponse {
