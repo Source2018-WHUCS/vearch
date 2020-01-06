@@ -7,7 +7,7 @@ GAMMAOUT=$ROOT/build/gamma_build
 mkdir -p $GAMMAOUT
 
 #if want to build python, set PYTHON_FLAG=ON
-PYTHON_FLAG="ON"
+PYTHON_FLAG="OFF"
 if [ $PYTHON_FLAG == 'ON' ]
 then
     PYTHONOUT=$ROOT/build/python
