@@ -16,7 +16,7 @@
 
 namespace tig_gamma {
 
-typedef std::vector<char> BitmapType;
+typedef std::vector<bool> BitmapType;
 
 // do intersection immediately
 class RangeQueryResult {
@@ -121,11 +121,19 @@ class MultiRangeQueryResults {
 public:
   MultiRangeQueryResults() : flags_(0x1 | 0x2) { Clear(); }
 
+  ~MultiRangeQueryResults() {
+    for (auto &result : all_results_) {
+      delete result;
+      result = nullptr;
+    }
+    all_results_.clear();
+  }
+
   // Take full advantage of multi-core while recalling
   bool Has(int doc) const {
     bool ret = true;
     for (auto &result : all_results_) {
-      ret &= result.Has(doc);
+      ret &= result->Has(doc);
     }
     return ret;
   }
@@ -138,16 +146,16 @@ public:
   }
 
 public:
-  void Add(const RangeQueryResult &r) {
+  void Add(RangeQueryResult *r) {
     all_results_.emplace_back(r);
 
     // the maximum of the minimum(s)
-    if (r.Min() > min_) {
-      min_ = r.Min();
+    if (r->Min() > min_) {
+      min_ = r->Min();
     }
     // the minimum of the maximum(s)
-    if (r.Max() < max_) {
-      max_ = r.Max();
+    if (r->Max() < max_) {
+      max_ = r->Max();
     }
   }
 
@@ -164,7 +172,7 @@ public:
    */
   std::vector<int> ToDocs() const;
 
-  const std::vector<RangeQueryResult> &GetAllResult() const {
+  const std::vector<RangeQueryResult *> &GetAllResult() const {
     return all_results_;
   }
 
@@ -173,7 +181,7 @@ private:
   int min_;
   int max_;
 
-  std::vector<RangeQueryResult> all_results_;
+  std::vector<RangeQueryResult *> all_results_;
 };
 
 } // namespace tig_gamma
