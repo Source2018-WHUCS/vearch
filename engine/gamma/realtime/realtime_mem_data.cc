@@ -39,7 +39,7 @@ RTInvertBucketData::~RTInvertBucketData() {}
 bool RTInvertBucketData::Init(const size_t &buckets_num,
                               const size_t &bucket_keys,
                               const size_t &code_bytes_per_vec,
-                              long &total_mem_bytes) {
+                              std::atomic<long> &total_mem_bytes) {
   _idx_array = new (std::nothrow) long *[buckets_num];
   _codes_array = new (std::nothrow) uint8_t *[buckets_num];
   _cur_bucket_keys = new (std::nothrow) int[buckets_num];
@@ -71,7 +71,7 @@ bool RTInvertBucketData::Init(const size_t &buckets_num,
 
 bool RTInvertBucketData::ExtendBucketMem(const size_t &bucket_no,
                                          const size_t &code_bytes_per_vec,
-                                         long &total_mem_bytes) {
+                                         std::atomic<long> &total_mem_bytes) {
   int extend_size = _cur_bucket_keys[bucket_no] * 2;
 
   uint8_t *extend_code_bytes_array =
@@ -222,6 +222,23 @@ bool RealTimeMemData::AddKeys(size_t list_no, size_t n, std::vector<long> &keys,
   return true;
 }
 
+void RealTimeMemData::FreeOldData(long *idx, uint8_t *codes,
+                                  RTInvertBucketData *invert, long size) {
+  if (idx) {
+    delete idx;
+    idx = nullptr;
+  }
+  if (codes) {
+    delete codes;
+    codes = nullptr;
+  }
+  if (invert) {
+    delete invert;
+    invert = nullptr;
+  }
+  _total_mem_bytes -= size;
+}
+
 bool RealTimeMemData::ExtendBucketMem(const size_t &bucket_no) {
   _extend_invert_ptr = new (std::nothrow) RTInvertBucketData(
       _cur_invert_ptr->_idx_array, _cur_invert_ptr->_retrieve_idx_pos,
@@ -248,21 +265,18 @@ bool RealTimeMemData::ExtendBucketMem(const size_t &bucket_no) {
   RTInvertBucketData *old_invert_ptr = _cur_invert_ptr;
   _cur_invert_ptr = _extend_invert_ptr;
 
-  sleep(1);
+  std::function<void(long *, uint8_t *, RTInvertBucketData *, long)> func_free =
+      std::bind(&RealTimeMemData::FreeOldData, this, std::placeholders::_1,
+                std::placeholders::_2, std::placeholders::_3,
+                std::placeholders::_4);
 
-  if (old_idx_array) {
-    delete old_idx_array;
-    old_idx_array = nullptr;
-    _total_mem_bytes -= old_keys * sizeof(long);
-  }
+  long free_size = old_keys * sizeof(long) +
+                   old_keys * _code_bytes_per_vec * sizeof(uint8_t);
+  utils::AsyncWait(1000, func_free, old_idx_array, old_codes_array,
+                   old_invert_ptr, free_size);
 
-  if (old_codes_array) {
-    delete old_codes_array;
-    old_codes_array = nullptr;
-    _total_mem_bytes -= old_keys * _code_bytes_per_vec * sizeof(uint8_t);
-  }
-
-  delete old_invert_ptr;
+  old_idx_array = nullptr;
+  old_codes_array = nullptr;
   old_invert_ptr = nullptr;
   _extend_invert_ptr = nullptr;
 

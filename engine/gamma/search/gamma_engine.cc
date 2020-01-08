@@ -553,7 +553,7 @@ int GammaEngine::MultiRangeQuery(const Request *request,
     ++idx;
   }
 
-  int retval = field_range_index_->Search(filters, *range_query_result);
+  int retval = field_range_index_->Search(filters, range_query_result);
 
   OLOG(&logger, DEBUG, "search numeric index, ret: " << retval);
 
@@ -772,7 +772,7 @@ int GammaEngine::DelDocByQuery(Request *request) {
     ++idx;
   }
 
-  int retval = field_range_index_->Search(filters, range_query_result);
+  int retval = field_range_index_->Search(filters, &range_query_result);
   if (retval == 0) {
     LOG(ERROR) << "numeric index search error, ret=" << retval;
     return 1;
@@ -807,22 +807,6 @@ Doc *GammaEngine::GetDoc(const std::string &id) {
   return doc;
 }
 
-
-#ifdef PYTHON
-int GammaEngine::BuildIndex() {
-  if(index_status_ != IndexStatus::INDEXED) {
-    if (vec_manager_->Indexing() != 0) {
-      LOG(ERROR) << "Create index failed!";
-      return -1;
-    }
-    LOG(INFO) << "vector manager indexing success!";
-    index_status_ = IndexStatus::INDEXED;
-  }
-  int ret = vec_manager_->AddRTVecsToIndex();
-  return ret;
-}
-
-#else
 int GammaEngine::BuildIndex() {
   if (vec_manager_->Indexing() != 0) {
     LOG(ERROR) << "Create index failed!";
@@ -832,11 +816,17 @@ int GammaEngine::BuildIndex() {
 
   b_running_ = true;
   int ret = 0;
+  bool has_error = false;
   while (b_running_) {
-    if (vec_manager_->AddRTVecsToIndex() != 0) {
+    if (has_error) {
+      usleep(5000 * 1000);  // sleep 5000ms
+      continue;
+    }
+    int add_ret = vec_manager_->AddRTVecsToIndex();
+    if (add_ret != 0) {
+      has_error = true;
       LOG(ERROR) << "Add real time vectors to index error!";
-      ret = -3;
-      break;
+      continue;
     }
     index_status_ = IndexStatus::INDEXED;
     usleep(5000 * 1000);  // sleep 5000ms
@@ -844,7 +834,6 @@ int GammaEngine::BuildIndex() {
   running_cv_.notify_one();
   return ret;
 }
-#endif
 
 int GammaEngine::GetDocsNum() { return max_docid_ - delete_num_; }
 

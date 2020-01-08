@@ -54,7 +54,7 @@ GammaIVFPQIndex::GammaIVFPQIndex(faiss::Index *quantizer, size_t d,
   int max_vec_size = raw_vec->GetMaxVectorSize();
 
   rt_invert_index_ptr_ =
-      new realtime::RTInvertIndex(this, max_vec_size, 10000, 1000000);
+      new realtime::RTInvertIndex(this, max_vec_size, 10000, 1280000);
 
   if (this->invlists) {
     delete this->invlists;
@@ -413,7 +413,7 @@ void GammaIVFPQIndex::search_preassigned(
   int ni_total = -1;
   if (condition->range_query_result &&
       condition->range_query_result->GetAllResult().size() >= 1) {
-    ni_total = condition->range_query_result->GetAllResult()[0].Size();
+    ni_total = condition->range_query_result->GetAllResult()[0]->Size();
   }
 
   // don't start parallel section if single query
@@ -421,7 +421,7 @@ void GammaIVFPQIndex::search_preassigned(
 
   if (condition->range_query_result &&
       condition->range_query_result->GetAllResult().size() == 1 &&
-      condition->range_query_result->GetAllResult()[0].Size() < 50000) {
+      condition->range_query_result->GetAllResult()[0]->Size() < 50000) {
     const std::vector<int> docid_list = condition->range_query_result->ToDocs();
 
 #ifdef DEBUG

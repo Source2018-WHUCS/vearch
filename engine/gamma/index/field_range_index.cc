@@ -9,6 +9,7 @@
 #include <string.h>
 #include <algorithm>
 #include <cassert>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
@@ -16,6 +17,7 @@
 #include <iostream>
 #include <iterator>
 #include <limits>
+#include <mutex>
 #include <numeric>
 #include <sstream>
 #include <typeinfo>
@@ -24,8 +26,11 @@
 #include "utils.h"
 
 using std::string;
+using std::vector;
 
 namespace tig_gamma {
+
+static void FreeNodeData(int *data) { free(data); }
 
 class Node {
  public:
@@ -44,7 +49,7 @@ class Node {
     max_ = std::max(max_, val);
 
     if (capacity_ == 0) {
-      capacity_ = 512;
+      capacity_ = 1;
       data_ = (int *)malloc(capacity_ * sizeof(int));
     } else if (size_ >= capacity_) {
       capacity_ *= 2;
@@ -52,8 +57,7 @@ class Node {
       memcpy(data, data_, size_ * sizeof(int));
       int *old_data = data_;
       data_ = data;
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      free(old_data);
+      utils::AsyncWait(1000, FreeNodeData, old_data);
     }
 
     data_[size_] = val;
@@ -90,15 +94,15 @@ typedef struct {
 
 class FieldRangeIndex {
  public:
-  FieldRangeIndex(std::string &path, int idx, enum DataType field_type,
+  FieldRangeIndex(std::string &path, int field_idx, enum DataType field_type,
                   BTreeParameters &bt_param);
   ~FieldRangeIndex();
 
   int Add(unsigned char *key, uint key_len, int value);
 
-  int Search(const string &low, const string &high, RangeQueryResult &result);
+  int Search(const string &low, const string &high, RangeQueryResult *result);
 
-  int Search(const string &tags, RangeQueryResult &result);
+  int Search(const string &tags, RangeQueryResult *result);
 
  private:
   BtMgr *main_mgr_;
@@ -108,12 +112,14 @@ class FieldRangeIndex {
   std::string path_;
 };
 
-FieldRangeIndex::FieldRangeIndex(std::string &path, int idx,
+FieldRangeIndex::FieldRangeIndex(std::string &path, int field_idx,
                                  enum DataType field_type,
                                  BTreeParameters &bt_param)
     : path_(path) {
-  string cache_file = path + string("/cache_") + std::to_string(idx) + ".dis";
-  string main_file = path + string("/main_") + std::to_string(idx) + ".dis";
+  string cache_file =
+      path + string("/cache_") + std::to_string(field_idx) + ".dis";
+  string main_file =
+      path + string("/main_") + std::to_string(field_idx) + ".dis";
 
   remove(cache_file.c_str());
   remove(main_file.c_str());
@@ -218,11 +224,14 @@ int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
 }
 
 int FieldRangeIndex::Search(const string &lower, const string &upper,
-                            RangeQueryResult &result) {
+                            RangeQueryResult *result) {
   if (!is_numeric_) {
     return Search(lower, result);
   }
 
+#ifdef PERFORMANCE_TESTING
+  double start = utils::getmillisecs();
+#endif
   BtDb *bt = bt_open(cache_mgr_, main_mgr_);
   unsigned char key_l[lower.length()];
   unsigned char key_u[upper.length()];
@@ -232,7 +241,7 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
                 upper.length());
 
   std::vector<Node *> lists;
-  lists.reserve(1000000);
+  std::vector<int> sizes;
 
   int min_doc = std::numeric_limits<int>::max();
   int max_doc = 0;
@@ -245,6 +254,7 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
         }
         Node *p_node = nullptr;
         memcpy(&p_node, bt->mainval->value, sizeof(Node *));
+        sizes.push_back(p_node->Size());
         lists.push_back(p_node);
 
         min_doc = std::min(min_doc, p_node->Min());
@@ -260,59 +270,42 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
   bt_unpinlatch(bt->mainset->latch);
   bt_close(bt);
 
+#ifdef PERFORMANCE_TESTING
+  double search_bt = utils::getmillisecs();
+#endif
   if (max_doc - min_doc + 1 <= 0) {
     return 0;
   }
 
-  result.SetRange(min_doc, max_doc);
-  result.Resize();
+  result->SetRange(min_doc, max_doc);
+  result->Resize();
+#ifdef PERFORMANCE_TESTING
+  double end_resize = utils::getmillisecs();
+#endif
 
+  auto &bit_map = result->Ref();
   int list_size = lists.size();
+
   for (int i = 0; i < list_size; ++i) {
     Node *list = lists[i];
+    int size = sizes[i];
     int *data = list->Data();
-    int size = list->Size();
-    // for (int j = 0; j < size; ++j) {
-    //   if (data[j] > max_doc) {
-    //     continue;
-    //   }
-    //   result.Set(data[j] - min_doc);
-    // }
 
-#define HANDLE_ONE                 \
-  do {                             \
-    if (data[j] > max_doc) {       \
-      continue;                    \
-    }                              \
-    result.Set(data[j] - min_doc); \
-                                   \
-    ++j;                           \
-  } while (0)
-
-    size_t j = 0;
-    size_t loops = size / 4;
-    for (size_t i = 0; i < loops; ++i) {
-      HANDLE_ONE;  // 1
-      HANDLE_ONE;  // 2
-      HANDLE_ONE;  // 3
-      HANDLE_ONE;  // 4
+    for (int j = 0; j < size; ++j) {
+      bit_map[data[j] - min_doc] = true;
     }
-
-    switch (size % 4) {
-      case 3:
-        HANDLE_ONE;
-      case 2:
-        HANDLE_ONE;
-      case 1:
-        HANDLE_ONE;
-    }
-#undef HANDLE_ONE
   }
 
+#ifdef PERFORMANCE_TESTING
+  double end = utils::getmillisecs();
+  LOG(INFO) << "bt cost [" << search_bt - start << "], resize cost ["
+            << end_resize - search_bt << "], assemble result ["
+            << end - end_resize << "], total [" << end - start << "]";
+#endif
   return max_doc - min_doc + 1;
 }
 
-int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
+int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
   std::vector<string> items = utils::split(tags, kDelim_);
 
   RangeQueryResult results_union[items.size()];
@@ -366,12 +359,12 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
   if (retval <= 0) {
     return 0;
   }
-  result.SetRange(min_doc, max_doc);
-  result.Resize();
+  result->SetRange(min_doc, max_doc);
+  result->Resize();
   for (size_t i = 0; i < items.size(); ++i) {
     int doc = results_union[i].Next();
     while (doc >= 0) {
-      result.Set(doc - min_doc);
+      result->Set(doc - min_doc);
       doc = results_union[i].Next();
     }
   }
@@ -411,29 +404,34 @@ int MultiFieldsRangeIndex::Add(int docid, int field) {
 }
 
 int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
-                                  MultiRangeQueryResults &out) {
-  out.Clear();
+                                  MultiRangeQueryResults *out) {
+  out->Clear();
   int fsize = filters.size();
+
+  vector<RangeQueryResult *> results(fsize);
 
   if (1 == fsize) {
     auto &_ = filters[0];
     if (_.is_union) {
-      out.SetFlags(out.Flags() | 0x4);
+      out->SetFlags(out->Flags() | 0x4);
     }
-    RangeQueryResult tmp(out.Flags());
+    RangeQueryResult *result = new RangeQueryResult(out->Flags());
     FieldRangeIndex *index = fields_[_.field];
     if (index == nullptr || _.field < 0) {
       return -1;
     }
 
-    int retval = index->Search(_.lower_value, _.upper_value, tmp);
+    int retval = index->Search(_.lower_value, _.upper_value, result);
     if (retval > 0) {
-      out.Add(tmp);
+      out->Add(result);
     }
     return retval;
   }
 
-  RangeQueryResult results[fsize];
+  for (int i = 0; i < fsize; ++i) {
+    results[i] = new RangeQueryResult;
+  }
+
   int valuable_result = -1;
   // record the shortest docid list
   int shortest_idx = -1, shortest = std::numeric_limits<int>::max();
@@ -446,12 +444,12 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
       continue;
     }
 
-    int flags = out.Flags();
+    int flags = out->Flags();
     if (filter.is_union) {
       flags |= 0x4;
     }
 
-    results[valuable_result + 1].SetFlags(flags);
+    results[valuable_result + 1]->SetFlags(flags);
 
     int retval = index->Search(filter.lower_value, filter.upper_value,
                                results[valuable_result + 1]);
@@ -481,62 +479,62 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
   // mechanism is made.
   if (shortest > kLazyThreshold_) {
     for (int i = 0; i <= valuable_result; ++i) {
-      out.Add(results[i]);
+      out->Add(results[i]);
     }
     return 1;  // it's hard to count the return docs
   }
 
-  RangeQueryResult tmp(out.Flags());
-  int count = Intersect(results, valuable_result, shortest_idx, tmp);
+  RangeQueryResult *tmp = new RangeQueryResult(out->Flags());
+  int count = Intersect(results.data(), valuable_result, shortest_idx, tmp);
   if (count > 0) {
-    out.Add(tmp);
+    out->Add(tmp);
   }
 
   return count;
 }
 
-int MultiFieldsRangeIndex::Intersect(const RangeQueryResult *results, int j,
-                                     int k, RangeQueryResult &out) const {
+int MultiFieldsRangeIndex::Intersect(RangeQueryResult **results, int j, int k,
+                                     RangeQueryResult *out) {
   assert(results != nullptr && j >= 0);
 
   // t.Start("Intersect");
   // I want to build a smaller bitmap ...
-  int min_doc = results[0].Min();
-  int max_doc = results[0].Max();
+  int min_doc = results[0]->Min();
+  int max_doc = results[0]->Max();
 
   for (int i = 1; i <= j; i++) {
-    auto &r = results[i];
+    RangeQueryResult *r = results[i];
 
     // the maximum of the minimum(s)
-    if (r.Min() > min_doc) {
-      min_doc = r.Min();
+    if (r->Min() > min_doc) {
+      min_doc = r->Min();
     }
     // the minimum of the maximum(s)
-    if (r.Max() < max_doc) {
-      max_doc = r.Max();
+    if (r->Max() < max_doc) {
+      max_doc = r->Max();
     }
   }
 
   if (max_doc - min_doc + 1 <= 0) {
     return 0;
   }
-  out.SetRange(min_doc, max_doc);
-  out.Resize();
+  out->SetRange(min_doc, max_doc);
+  out->Resize();
 
   // calculate the intersection with the shortest doc chain.
   int count = 0;
-  int docID = results[k].Next();
+  int docID = results[k]->Next();
   while (docID >= 0) {
     int i = 0;
-    while (i <= j && results[i].Has(docID)) {
+    while (i <= j && results[i]->Has(docID)) {
       i++;
     }
     if (i > j) {
       int pos = docID - min_doc;
-      out.Set(pos);
+      out->Set(pos);
       count++;
     }
-    docID = results[k].Next();
+    docID = results[k]->Next();
   }
 
   // t.Stop();
