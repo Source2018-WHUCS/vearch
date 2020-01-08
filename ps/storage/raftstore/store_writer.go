@@ -238,8 +238,6 @@ func (s *Store) checkWritable() error {
 		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)
 	case entity.PA_READONLY:
 		return pkg.CodeErr(pkg.ERRCODE_PARTITION_NOT_LEADER)
-	case entity.PA_READWRITE, entity.PA_CANNOT_SEARCH:
-		return nil
 	default:
 		return pkg.CodeErr(pkg.ERRCODE_INTERNAL_ERROR)
 	}

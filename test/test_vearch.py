@@ -202,7 +202,8 @@ def test_searchByFeature():
                         "field": "vector",
                         "feature": feature,
                         "format": "normalization"
-                    }]
+                    }],
+                    "vector_value": True
                 }
             }
             print(json.dumps(data))

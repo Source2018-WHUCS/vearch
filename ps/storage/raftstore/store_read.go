@@ -95,8 +95,6 @@ func (s *Store) checkSearchable(readLeader bool) error {
 		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)
 	case entity.PA_INVALID:
 		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_INVALID)
-	case entity.PA_CANNOT_SEARCH:
-		return pkg.CodeErr(pkg.ERRCODE_PARTITION_CANNOT_SEARCH)
 	}
 
 	if readLeader && status != entity.PA_READWRITE {

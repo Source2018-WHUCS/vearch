@@ -34,6 +34,7 @@ import (
 	"github.com/vearch/vearch/ps/engine/register"
 	"github.com/vearch/vearch/util/atomic"
 	"github.com/vearch/vearch/util/uuid"
+	"github.com/vearch/vearch/util/vearchlog"
 	"io/ioutil"
 	"reflect"
 	"sync"
@@ -100,13 +101,16 @@ func New(cfg register.EngineConfig) (engine.Engine, error) {
 		return nil, fmt.Errorf("create gamma table has err:[%d]", int(resp))
 	}
 	if len(infos) > 0 {
-		code := int(C.Load(ge.gamma))
-		if code != 0 {
-			return nil, fmt.Errorf("load gamma data err code:[%d]", code)
-		}
+		go func() {
+			code := int(C.Load(ge.gamma))
+			if code != 0 {
+				vearchlog.LogErrNotNil(fmt.Errorf("load gamma data err code:[%d]", code))
+				ge.Close()
+			}
+		}()
+	} else {
+		go ge.autoCreateIndex()
 	}
-
-	go ge.autoCreateIndex()
 
 	if log.IsDebugEnabled() {
 		go func() {
@@ -209,8 +213,6 @@ func (ge *gammaEngine) Optimize() error {
 }
 
 func (ge *gammaEngine) IndexStatus() int {
-	indexLocker.Lock()
-	defer indexLocker.Unlock()
 	return int(C.GetIndexStatus(ge.gamma))
 }
 
