@@ -34,11 +34,12 @@ class MultiFieldsRangeIndex {
 
   int AddField(int field, enum DataType field_type);
 
-  int Search(const std::vector<FilterInfo> &filters,
+  int Search(const std::vector<FilterInfo> &origin_filters,
              MultiRangeQueryResults *out);
 
  private:
-  int Intersect(RangeQueryResult **results, int j, int k, RangeQueryResult *out);
+  int Intersect(RangeQueryResult **results, int j, int k,
+                RangeQueryResult *out);
   std::vector<FieldRangeIndex *> fields_;
   Profile *profile_;
   std::string path_;
