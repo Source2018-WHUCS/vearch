@@ -212,6 +212,7 @@ int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
 
   std::function<void(unsigned char *, uint)> InsertToBt =
       [&](unsigned char *key_to_add, uint key_len) {
+<<<<<<< HEAD
         NodeList *list;
         int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)&list,
                              sizeof(NodeList **));
@@ -230,10 +231,23 @@ int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
           BTERR bterr = bt_insertkey(bt->main, key_to_add, key_len, 0,
                                      static_cast<void *>(&list),
                                      sizeof(NodeList **), Update);
+=======
+        NodeList **p_list = new NodeList *;
+        int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)p_list,
+                             sizeof(NodeList *));
+
+        if (ret < 0) {
+          *p_list = new NodeList;
+          BTERR bterr = bt_insertkey(bt->main, key_to_add, key_len, 0,
+                                     static_cast<void *>(p_list),
+                                     sizeof(NodeList *), Unique);
+>>>>>>> dev
           if (bterr) {
             LOG(ERROR) << "Error " << bt->mgr->err;
           }
         }
+        (*p_list)->Add(value);
+        delete p_list;
       };
 
   if (is_numeric_) {
@@ -278,20 +292,22 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
   int max_doc = 0;
 
   int idx = 0;
+  NodeList **p_list = new NodeList *;
   if (bt_startkey(bt, key_l, lower.length()) == 0) {
     while (bt_nextkey(bt)) {
       if (bt->phase == 1) {
         if (keycmp(bt->mainkey, key_u, upper.length()) > 0) {
           break;
         }
-        NodeList *list = (NodeList *)bt->mainval->value;
-        lists.push_back(list);
+        memcpy(p_list, bt->mainval->value, sizeof(NodeList *));
+        lists.push_back(*p_list);
 
-        min_doc = std::min(min_doc, list->Min());
-        max_doc = std::max(max_doc, list->Max());
+        min_doc = std::min(min_doc, (*p_list)->Min());
+        max_doc = std::max(max_doc, (*p_list)->Max());
       }
     }
   }
+  delete p_list;
 
   bt_unlockpage(BtLockRead, bt->cacheset->latch, __LINE__);
   bt_unpinlatch(bt->cacheset->latch);
@@ -333,27 +349,35 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
 
   RangeQueryResult results_union[items.size()];
 
+  NodeList **p_list = new NodeList *;
   for (size_t i = 0; i < items.size(); ++i) {
     string item = items[i];
     const unsigned char *key_tag =
         reinterpret_cast<const unsigned char *>(item.data());
 
+<<<<<<< HEAD
     NodeList *list;
 
+=======
+>>>>>>> dev
     int min_doc = std::numeric_limits<int>::max();
     int max_doc = 0;
 
     BtDb *bt = bt_open(cache_mgr_, main_mgr_);
     int ret =
         bt_findkey(bt, const_cast<unsigned char *>(key_tag), item.length(),
+<<<<<<< HEAD
                    (unsigned char *)&list, sizeof(NodeList **));
+=======
+                   (unsigned char *)p_list, sizeof(NodeList *));
+>>>>>>> dev
     bt_close(bt);
 
     if (ret < 0) {
       return 0;
     }
-    min_doc = std::min(min_doc, list->Min());
-    max_doc = std::max(max_doc, list->Max());
+    min_doc = std::min(min_doc, (*p_list)->Min());
+    max_doc = std::max(max_doc, (*p_list)->Max());
 
     if (max_doc - min_doc + 1 <= 0) {
       return 0;
@@ -362,7 +386,7 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
     results_union[i].SetRange(min_doc, max_doc);
     results_union[i].Resize();
 
-    Node *node = list->Head();
+    Node *node = (*p_list)->Head();
     while (node != nullptr) {
       int node_num = node->Num();
       int *values = node->Value();
@@ -375,6 +399,7 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult &result) {
       node = node->Next();
     }
   }
+  delete p_list;
 
   int min_doc = std::numeric_limits<int>::max();
   int max_doc = 0;
@@ -405,6 +430,7 @@ MultiFieldsRangeIndex::MultiFieldsRangeIndex(Profile *profile) {
   fields_.resize(profile->FieldsNum());
   std::fill(fields_.begin(), fields_.end(), nullptr);
 }
+<<<<<<< HEAD
 
 MultiFieldsRangeIndex::~MultiFieldsRangeIndex() {
   for (size_t i = 0; i < fields_.size(); i++) {
@@ -415,6 +441,18 @@ MultiFieldsRangeIndex::~MultiFieldsRangeIndex() {
   }
 }
 
+=======
+
+MultiFieldsRangeIndex::~MultiFieldsRangeIndex() {
+  for (size_t i = 0; i < fields_.size(); i++) {
+    if (fields_[i]) {
+      delete fields_[i];
+      fields_[i] = nullptr;
+    }
+  }
+}
+
+>>>>>>> dev
 int MultiFieldsRangeIndex::Add(int docid, int field) {
   FieldRangeIndex *index = fields_[field];
   if (index == nullptr) {
