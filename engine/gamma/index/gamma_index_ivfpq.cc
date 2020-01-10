@@ -71,6 +71,7 @@ GammaIVFPQIndex::GammaIVFPQIndex(faiss::Index *quantizer, size_t d,
 
 #ifdef PERFORMANCE_TESTING
   search_count_ = 0;
+  add_count_ = 0;
 #endif
 }
 
@@ -275,10 +276,13 @@ bool GammaIVFPQIndex::Add(int n, const float *vec) {
   }
   indexed_vec_count_ = vid;
 #ifdef PERFORMANCE_TESTING
-  double t1 = faiss::getmillisecs();
-  if (indexed_vec_count_ % 10000 == 0) {
+  add_count_ += n;
+  if (add_count_ >= 10000) {
+    double t1 = faiss::getmillisecs();
     LOG(INFO) << "Add time [" << (t1 - t0) / n << "]ms, count "
               << indexed_vec_count_;
+    rt_invert_index_ptr_->PrintBucketSize();
+    add_count_ = 0;
   }
 #endif
   return true;

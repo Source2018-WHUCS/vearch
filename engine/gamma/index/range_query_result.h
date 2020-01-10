@@ -20,9 +20,8 @@ typedef std::vector<bool> BitmapType;
 
 // do intersection immediately
 class RangeQueryResult {
-public:
-  RangeQueryResult() : flags_(0x1 | 0x2) { Clear(); }
-  explicit RangeQueryResult(int flags) : flags_(flags) { Clear(); }
+ public:
+  RangeQueryResult() { Clear(); }
 
   bool Has(int doc) const {
     if (doc < min_ || doc > max_) {
@@ -68,7 +67,6 @@ public:
   }
 
   void Clear() {
-    // flags_ = DO NOT CLEAR
     min_ = std::numeric_limits<int>::max();
     max_ = 0;
     next_ = -1;
@@ -76,7 +74,7 @@ public:
     bitmap_.clear();
   }
 
-public:
+ public:
   void SetRange(int x, int y) {
     min_ = std::min(min_, x);
     max_ = std::max(max_, y);
@@ -93,21 +91,15 @@ public:
   int Min() const { return min_; }
   int Max() const { return max_; }
 
-  void SetFlags(int flags) {
-    flags_ = flags; // test use only
-  }
-  int Flags() { return flags_; }
-
   BitmapType &Ref() { return bitmap_; }
 
   /**
    * @return sorted docIDs
    */
-  std::vector<int> ToDocs() const; // WARNING: build dynamically
+  std::vector<int> ToDocs() const;  // WARNING: build dynamically
   void Output();
 
-private:
-  int flags_;
+ private:
   int min_;
   int max_;
 
@@ -118,8 +110,8 @@ private:
 };
 // do intersection lazily
 class MultiRangeQueryResults {
-public:
-  MultiRangeQueryResults() : flags_(0x1 | 0x2) { Clear(); }
+ public:
+  MultiRangeQueryResults() { Clear(); }
 
   ~MultiRangeQueryResults() {
     for (auto &result : all_results_) {
@@ -139,13 +131,12 @@ public:
   }
 
   void Clear() {
-    // flags_ = DO NOT CLEAR
     min_ = 0;
     max_ = std::numeric_limits<int>::max();
     all_results_.clear();
   }
 
-public:
+ public:
   void Add(RangeQueryResult *r) {
     all_results_.emplace_back(r);
 
@@ -159,11 +150,6 @@ public:
     }
   }
 
-  void SetFlags(int flags) {
-    flags_ = flags; // test use only
-  }
-  int Flags() { return flags_; }
-
   int Min() const { return min_; }
   int Max() const { return max_; }
 
@@ -176,14 +162,13 @@ public:
     return all_results_;
   }
 
-private:
-  int flags_;
+ private:
   int min_;
   int max_;
 
   std::vector<RangeQueryResult *> all_results_;
 };
 
-} // namespace tig_gamma
+}  // namespace tig_gamma
 
-#endif // SRC_SEARCHER_INDEX_RANGE_QUERY_RESULT_H_
+#endif  // SRC_SEARCHER_INDEX_RANGE_QUERY_RESULT_H_

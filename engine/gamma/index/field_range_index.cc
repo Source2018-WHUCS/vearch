@@ -104,6 +104,10 @@ class FieldRangeIndex {
 
   int Search(const string &tags, RangeQueryResult *result);
 
+  bool IsNumeric() { return is_numeric_; }
+
+  char *Delim() { return kDelim_; }
+
  private:
   BtMgr *main_mgr_;
   BtMgr *cache_mgr_;
@@ -326,7 +330,7 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
     bt_close(bt);
 
     if (ret < 0) {
-      return 0;
+      continue;
     }
     min_doc = std::min(min_doc, p_node->Min());
     max_doc = std::max(max_doc, p_node->Max());
@@ -403,25 +407,40 @@ int MultiFieldsRangeIndex::Add(int docid, int field) {
   return 0;
 }
 
-int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
+int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &origin_filters,
                                   MultiRangeQueryResults *out) {
   out->Clear();
-  int fsize = filters.size();
 
+  std::vector<FilterInfo> filters;
+
+  for (const auto &filter : origin_filters) {
+    FieldRangeIndex *index = fields_[filter.field];
+    if (index == nullptr || filter.field < 0) {
+      return -1;
+    }
+    if (not index->IsNumeric() && (filter.is_union == 0)) {
+      // type is string and operator is "and", split this filter
+      std::vector<string> items =
+          utils::split(filter.lower_value, index->Delim());
+      for (string &item : items) {
+        FilterInfo f = filter;
+        f.lower_value = item;
+        filters.push_back(f);
+      }
+      continue;
+    }
+    filters.push_back(filter);
+  }
+
+  int fsize = filters.size();
   vector<RangeQueryResult *> results(fsize);
 
   if (1 == fsize) {
-    auto &_ = filters[0];
-    if (_.is_union) {
-      out->SetFlags(out->Flags() | 0x4);
-    }
-    RangeQueryResult *result = new RangeQueryResult(out->Flags());
-    FieldRangeIndex *index = fields_[_.field];
-    if (index == nullptr || _.field < 0) {
-      return -1;
-    }
+    auto &filter = filters[0];
+    RangeQueryResult *result = new RangeQueryResult;
+    FieldRangeIndex *index = fields_[filter.field];
 
-    int retval = index->Search(_.lower_value, _.upper_value, result);
+    int retval = index->Search(filter.lower_value, filter.upper_value, result);
     if (retval > 0) {
       out->Add(result);
     }
@@ -444,13 +463,6 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
       continue;
     }
 
-    int flags = out->Flags();
-    if (filter.is_union) {
-      flags |= 0x4;
-    }
-
-    results[valuable_result + 1]->SetFlags(flags);
-
     int retval = index->Search(filter.lower_value, filter.upper_value,
                                results[valuable_result + 1]);
     if (retval < 0) {
@@ -471,9 +483,6 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
     return -1;  // universal set
   }
 
-  // t.Stop();
-  // t.Output();
-
   // When the shortest doc chain is long,
   // instead of calculating the intersection immediately, a lazy
   // mechanism is made.
@@ -484,7 +493,7 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
     return 1;  // it's hard to count the return docs
   }
 
-  RangeQueryResult *tmp = new RangeQueryResult(out->Flags());
+  RangeQueryResult *tmp = new RangeQueryResult;
   int count = Intersect(results.data(), valuable_result, shortest_idx, tmp);
   if (count > 0) {
     out->Add(tmp);
@@ -497,7 +506,6 @@ int MultiFieldsRangeIndex::Intersect(RangeQueryResult **results, int j, int k,
                                      RangeQueryResult *out) {
   assert(results != nullptr && j >= 0);
 
-  // t.Start("Intersect");
   // I want to build a smaller bitmap ...
   int min_doc = results[0]->Min();
   int max_doc = results[0]->Max();
@@ -536,9 +544,6 @@ int MultiFieldsRangeIndex::Intersect(RangeQueryResult **results, int j, int k,
     }
     docID = results[k]->Next();
   }
-
-  // t.Stop();
-  // t.Output();
 
   return count;
 }
