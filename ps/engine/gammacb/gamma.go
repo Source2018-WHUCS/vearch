@@ -24,7 +24,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/vearch/vearch/util/log"
+	"io/ioutil"
+	"reflect"
+	"sync"
+	"time"
+	"unsafe"
+
 	"github.com/vearch/vearch/config"
 	pkg "github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
@@ -33,13 +38,9 @@ import (
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/ps/engine/register"
 	"github.com/vearch/vearch/util/atomic"
+	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/util/uuid"
 	"github.com/vearch/vearch/util/vearchlog"
-	"io/ioutil"
-	"reflect"
-	"sync"
-	"time"
-	"unsafe"
 )
 
 const Name = "gamma"
@@ -101,16 +102,14 @@ func New(cfg register.EngineConfig) (engine.Engine, error) {
 		return nil, fmt.Errorf("create gamma table has err:[%d]", int(resp))
 	}
 	if len(infos) > 0 {
-		go func() {
-			code := int(C.Load(ge.gamma))
-			if code != 0 {
-				vearchlog.LogErrNotNil(fmt.Errorf("load gamma data err code:[%d]", code))
-				ge.Close()
-			}
-		}()
-	} else {
-		go ge.autoCreateIndex()
+		code := int(C.Load(ge.gamma))
+		if code != 0 {
+			vearchlog.LogErrNotNil(fmt.Errorf("load gamma data err code:[%d]", code))
+			ge.Close()
+		}
 	}
+
+	go ge.autoCreateIndex()
 
 	if log.IsDebugEnabled() {
 		go func() {
