@@ -47,8 +47,8 @@
     #raft config begin
     raft_heartbeat_port = 8898
     raft_replicate_port = 8899
-    heartbeat_interval = 300 #ms
-    raft_retain_logs = 10000
+    heartbeat-interval = 200 #ms
+    raft_retain_logs = 20000000
     raft_replica_concurrency = 1
     raft_snap_concurrency = 1
     raft_truncate_count = 20000

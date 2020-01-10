@@ -16,11 +16,12 @@ package raftstore
 
 import (
 	"context"
-	"github.com/vearch/vearch/util/log"
-	"github.com/vearch/vearch/proto"
+
+	pkg "github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
+	"github.com/vearch/vearch/util/log"
 )
 
 func (s *Store) GetDocument(ctx context.Context, readLeader bool, docID string) (*response.DocResult, error) {
@@ -95,8 +96,6 @@ func (s *Store) checkSearchable(readLeader bool) error {
 		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)
 	case entity.PA_INVALID:
 		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_INVALID)
-	case entity.PA_CANNOT_SEARCH:
-		return pkg.CodeErr(pkg.ERRCODE_PARTITION_CANNOT_SEARCH)
 	}
 
 	if readLeader && status != entity.PA_READWRITE {

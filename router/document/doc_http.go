@@ -18,17 +18,18 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/vearch/vearch/proto/request"
-	"github.com/vearch/vearch/proto/response"
-	"github.com/vearch/vearch/router/document/resp"
-	"github.com/vearch/vearch/util"
-	"github.com/vearch/vearch/util/cbjson"
 	"html/template"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/vearch/vearch/proto"
+	"github.com/vearch/vearch/proto/request"
+	"github.com/vearch/vearch/proto/response"
+	"github.com/vearch/vearch/router/document/resp"
+	"github.com/vearch/vearch/util"
+	"github.com/vearch/vearch/util/cbjson"
+
+	pkg "github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/util/uuid"
 
 	"github.com/spf13/cast"
@@ -531,8 +532,20 @@ func (handler *DocumentHandler) handleMSearchDoc(ctx context.Context, w http.Res
 		searchRequest.Size = &size
 	}
 
+	var clientType client.ClientType
+
+	switch reqArgs[ClientTypeValue] {
+	case "leader", "":
+		clientType = client.LEADER
+	case "random":
+		clientType = client.RANDOM
+	default:
+		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", fmt.Sprintf("client_type err param:[%s] , it use `leader` or `random`", reqArgs[ClientTypeValue]))
+		return ctx, true
+	}
+
 	t1 := time.Now()
-	searchResponses, nameCache, err := handler.docService.mSearchDoc(ctx, dbName, spaceName, searchRequest)
+	searchResponses, nameCache, err := handler.docService.mSearchDoc(ctx, dbName, spaceName, searchRequest, clientType)
 	if err != nil {
 		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error())
 		return ctx, true

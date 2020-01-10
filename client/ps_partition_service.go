@@ -346,43 +346,6 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 					rpcClient = this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), addrs.NodeID)
 					log.Debug("%s invoke not leader retry, PartitionID: %d, PartitionRpcAddr: %s", servicePath, request.GetPartitionID(), rpcClient.client.GetAddress(0))
 					continue
-				} else if status == pkg.ERRCODE_PARTITION_CANNOT_SEARCH {
-					var partition *entity.Partition
-
-					if partition, e = this.spaceSender.ps.Client().Master().Cache().PartitionByCache(this.spaceSender.Ctx.GetContext(), this.spaceSender.space, this.pid); e != nil {
-						break
-					}
-
-					var targetID entity.NodeID
-
-					hasSearched := func() bool {
-						for _, skip := range this.nodeIds {
-							if nodeId == skip {
-								return true
-							}
-						}
-						return false
-					}
-
-					for _, nodeId := range partition.Replicas {
-						if hasSearched() {
-							continue
-						}
-
-						this.nodeIds = append(this.nodeIds, nodeId)
-						targetID = nodeId
-						break
-					}
-
-					if nodeId == 0 {
-						e = fmt.Errorf("select all nodes:[%s] has err:[%s]", partition.Replicas, pkg.CodeErr(pkg.ERRCODE_PARTITION_CANNOT_SEARCH))
-						break
-					}
-
-					rpcClient = this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), targetID)
-					log.Debug("%s invoke can not search retry, PartitionID: %d, PartitionRpcAddr: %s", servicePath, request.GetPartitionID(), rpcClient.client.GetAddress(0))
-
-					continue
 				}
 				if e != nil {
 					log.Error("rpc client execute err.NodeID: %d,PartitionServer Address:%s,Error:%s", nodeId, rpcClient.client.GetAddress(-1), nodeId, e.Error())
