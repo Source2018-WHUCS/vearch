@@ -328,6 +328,9 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 				status int64
 				e      error
 			)
+			if log.IsDebugEnabled() {
+				log.Debug("to execute by nodeId:[%d]", nodeId)
+			}
 			rpcClient := this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), nodeId)
 			if rpcClient.client == nil {
 				resp := response.Response{Resp: nil, Status: pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING, Err: pkg.VErr(pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING)}
