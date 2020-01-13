@@ -293,10 +293,11 @@ func (this *partitionSender) getOrCreate(partition *entity.Partition, clientType
 		}
 		this.nodeIds = append(this.nodeIds, noLeaderIDs[rand.Intn(len(noLeaderIDs))])
 	case RANDOM:
+		randomID := partition.Replicas[rand.Intn(len(partition.Replicas))]
 		if log.IsDebugEnabled() {
-			log.Info("search by partition by random model")
+			log.Info("search by partition:%v by random model ID:[%d]", partition.Replicas, randomID)
 		}
-		this.nodeIds = append(this.nodeIds, partition.Replicas[rand.Intn(len(partition.Replicas))])
+		this.nodeIds = append(this.nodeIds, randomID)
 	case ALL:
 		this.nodeIds = partition.Replicas
 	}
