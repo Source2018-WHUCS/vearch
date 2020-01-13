@@ -12,7 +12,7 @@
 #include <fstream>
 #include <functional>
 #include <future>
-#include "api_generated.h"
+#include "gamma_api_generated.h"
 #include "test.h"
 
 /**
@@ -141,7 +141,6 @@ int SearchThread(void *engine, size_t num) {
         StringToByteArray(opt.vector_name), value, 0, 10000, 0.1, 0);
     SetVectorQuery(vector_querys, 0, vector_query);
 
-<<<<<<< HEAD
     Request *request = nullptr;
 
     if (opt.filter) {
@@ -193,75 +192,25 @@ int SearchThread(void *engine, size_t num) {
       request = MakeRequest(100, vector_querys, 1, nullptr, 0, nullptr, 0,
                             nullptr, 0, req_num, 0, nullptr, FALSE, 0);
     }
-=======
-    // string c1_lower = opt.profiles[idx * (opt.fields_vec.size()) + 4];
-    // string c1_upper = opt.profiles[idx * (opt.fields_vec.size()) + 4];
-    int low = 0;
-    // long upper = 99999999999;
-    int upper = 999999;
-    string c1_lower = string((char *)&low, sizeof(low));
-    string c1_upper = string((char *)&upper, sizeof(upper));
 
-    if (idx % 1000 == 0) LOG(INFO) << "idx=" << idx;
+    // {
+    //   ByteArray *response = SearchV2(engine, request);
+    //   flatbuffers::FlatBufferBuilder builder_out;
+    //   builder_out.PushBytes((const uint8_t *)response->value, response->len);
+    //   auto res = gamma_api::GetResponse(builder_out.GetCurrentBufferPointer());
 
-    string name = "field2";
-    RangeFilter **range_filters = MakeRangeFilters(2);
-    RangeFilter *range_filter =
-        MakeRangeFilter(StringToByteArray(name), StringToByteArray(c1_lower),
-                        StringToByteArray(c1_upper), false, true);
-    SetRangeFilter(range_filters, 0, range_filter);
-
-    low = 0;
-    upper = 999999;
-    c1_lower = string((char *)&low, sizeof(low));
-    c1_upper = string((char *)&upper, sizeof(upper));
-    name = "field3";
-    range_filter =
-        MakeRangeFilter(StringToByteArray(name), StringToByteArray(c1_lower),
-                        StringToByteArray(c1_upper), false, true);
-    SetRangeFilter(range_filters, 1, range_filter);
-
-    TermFilter **term_filters = MakeTermFilters(1);
-    TermFilter *term_filter;
-
-    std::string term_low = string("1315\00115248");
-    name = "field1";
-    term_filter = MakeTermFilter(StringToByteArray(name),
-                                 StringToByteArray(term_low), true);
-    SetTermFilter(term_filters, 0, term_filter);
-
-    int field_num = 2;
-    ByteArray **vec_fields = MakeByteArrays(field_num);
-    ByteArray *vec_name = StringToByteArray(opt.vector_name);
-    string id_field = "_id";
-    ByteArray *id_name = StringToByteArray(id_field);
-    vec_fields[0] = vec_name;
-    vec_fields[1] = id_name;
-    Request *request =
-        MakeRequest(10, vector_querys, 1, vec_fields, field_num, range_filters,
-                    2, term_filters, 1, req_num, 0, nullptr, TRUE, 0);
-    // Request *request = MakeRequest(10, vector_querys, 1, nullptr, 0, nullptr, 0,
-    //                                nullptr, 0, req_num, 0, nullptr, FALSE, 0);
->>>>>>> dev
-
-    {
-      ByteArray *response = SearchV2(engine, request);
-      flatbuffers::FlatBufferBuilder builder_out;
-      builder_out.PushBytes((const uint8_t *)response->value, response->len);
-      auto res = gamma_api::GetResponse(builder_out.GetCurrentBufferPointer());
-
-      for (int i = 0; i < res->results()->Length(); ++i) {
-        auto result = res->results()->Get(i);
-        int total = result->total();
-        std::string msg = result->msg()->str();
-        auto result_items = result->result_items();
-        for (int j = 0; j < result_items->Length(); ++j) {
-          auto result_item = result_items->Get(j);
-          double score = result_item->score();
-          std::string name = result_item->name()->Get(0)->str();
-        }
-      }
-    }
+    //   for (size_t i = 0; i < res->results()->Length(); ++i) {
+    //     auto result = res->results()->Get(i);
+    //     int total = result->total();
+    //     std::string msg = result->msg()->str();
+    //     auto result_items = result->result_items();
+    //     for (size_t j = 0; j < result_items->Length(); ++j) {
+    //       auto result_item = result_items->Get(j);
+    //       double score = result_item->score();
+    //       std::string name = result_item->name()->Get(0)->str();
+    //     }
+    //   }
+    // }
     Response *response = Search(engine, request);
 
     if (opt.print_doc) {

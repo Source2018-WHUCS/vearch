@@ -12,7 +12,7 @@
 #include <chrono>
 #include <iostream>
 #include <sstream>
-#include "api_generated.h"
+#include "gamma_api_generated.h"
 #include "gamma_engine.h"
 #include "log.h"
 #include "utils.h"
@@ -271,14 +271,6 @@ enum ResponseCode SetLogDictionary(ByteArray *log_dir) {
   if (!utils::isFolderExist(dir.c_str())) {
     mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   }
-  // FLAGS_log_dir = dir.c_str();
-  // FLAGS_max_log_size = 100;
-  // FLAGS_logbuflevel = -1;
-  // FLAGS_logbufsecs = 0;
-  // FLAGS_stop_logging_if_full_disk = true;
-  // google::InitGoogleLogging("gamma");
-  // google::SetStderrLogging(google::INFO);
-  // google::InstallFailureSignalHandler();
 
   el::Configurations defaultConf;
   // defaultConf.setToDefault();
@@ -305,6 +297,8 @@ enum ResponseCode SetLogDictionary(ByteArray *log_dir) {
         ss << "mv " << filename << " " << filename << "-" << mbstr;
         system(ss.str().c_str());
       });
+  
+  LOG(INFO) << "Version [" << GIT_SHA1 << "]";
   return ResponseCode::SUCCESSED;
 }
 

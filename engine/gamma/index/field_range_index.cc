@@ -190,47 +190,15 @@ int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
 
   std::function<void(unsigned char *, uint)> InsertToBt =
       [&](unsigned char *key_to_add, uint key_len) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-        NodeList *list;
-        int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)&list,
-                             sizeof(NodeList **));
-        if (ret < 0) {
-          list = new NodeList;
-        }
-        list->Add(value);
-        if (ret < 0) {
-          BTERR bterr = bt_insertkey(bt->main, key_to_add, key_len, 0,
-                                     static_cast<void *>(&list),
-                                     sizeof(NodeList **), Unique);
-          if (bterr) {
-            LOG(ERROR) << "Error " << bt->mgr->err;
-          }
-        } else {
-          BTERR bterr = bt_insertkey(bt->main, key_to_add, key_len, 0,
-                                     static_cast<void *>(&list),
-                                     sizeof(NodeList **), Update);
-=======
-        NodeList **p_list = new NodeList *;
-        int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)p_list,
-                             sizeof(NodeList *));
-=======
         Node *p_node = nullptr;
         int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)&p_node,
                              sizeof(Node *));
->>>>>>> dev
 
         if (ret < 0) {
           p_node = new Node;
           BTERR bterr = bt_insertkey(bt->main, key_to_add, key_len, 0,
-<<<<<<< HEAD
-                                     static_cast<void *>(p_list),
-                                     sizeof(NodeList *), Unique);
->>>>>>> dev
-=======
                                      static_cast<void *>(&p_node),
                                      sizeof(Node *), Unique);
->>>>>>> dev
           if (bterr) {
             LOG(ERROR) << "Error " << bt->mgr->err;
           }
@@ -351,11 +319,6 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
     const unsigned char *key_tag =
         reinterpret_cast<const unsigned char *>(item.data());
 
-<<<<<<< HEAD
-    NodeList *list;
-
-=======
->>>>>>> dev
     int min_doc = std::numeric_limits<int>::max();
     int max_doc = 0;
 
@@ -363,15 +326,7 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
     BtDb *bt = bt_open(cache_mgr_, main_mgr_);
     int ret =
         bt_findkey(bt, const_cast<unsigned char *>(key_tag), item.length(),
-<<<<<<< HEAD
-<<<<<<< HEAD
-                   (unsigned char *)&list, sizeof(NodeList **));
-=======
-                   (unsigned char *)p_list, sizeof(NodeList *));
->>>>>>> dev
-=======
                    (unsigned char *)&p_node, sizeof(Node *));
->>>>>>> dev
     bt_close(bt);
 
     if (ret < 0) {
@@ -428,7 +383,6 @@ MultiFieldsRangeIndex::MultiFieldsRangeIndex(std::string &path,
   fields_.resize(profile->FieldsNum());
   std::fill(fields_.begin(), fields_.end(), nullptr);
 }
-<<<<<<< HEAD
 
 MultiFieldsRangeIndex::~MultiFieldsRangeIndex() {
   for (size_t i = 0; i < fields_.size(); i++) {
@@ -439,18 +393,6 @@ MultiFieldsRangeIndex::~MultiFieldsRangeIndex() {
   }
 }
 
-=======
-
-MultiFieldsRangeIndex::~MultiFieldsRangeIndex() {
-  for (size_t i = 0; i < fields_.size(); i++) {
-    if (fields_[i]) {
-      delete fields_[i];
-      fields_[i] = nullptr;
-    }
-  }
-}
-
->>>>>>> dev
 int MultiFieldsRangeIndex::Add(int docid, int field) {
   FieldRangeIndex *index = fields_[field];
   if (index == nullptr) {

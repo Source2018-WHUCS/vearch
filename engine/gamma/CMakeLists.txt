@@ -9,7 +9,6 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 find_package(Faiss REQUIRED)
 
 option(BUILD_TEST "Build tests" off)
-option(BUILD_GTEST "Build gtests" on)
 option(BUILD_TOOLS "Build tools" off)
 
 #ENV VARs
@@ -25,6 +24,8 @@ set(GAMMA_VECTOR ${CMAKE_CURRENT_SOURCE_DIR}/vector)
 set(GAMMA_REALTIME ${CMAKE_CURRENT_SOURCE_DIR}/realtime)
 set(GAMMA_PROFILE ${CMAKE_CURRENT_SOURCE_DIR}/profile)
 set(GAMMA_C_API ${CMAKE_CURRENT_SOURCE_DIR}/c_api)
+set(FLATBUFFERS flatbuffers-1.11.0)
+set(FLATBUFFERS_OUT ${CMAKE_CURRENT_SOURCE_DIR}/idl/fbs-gen)
 
 set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -std=c++11 -mavx2 -msse4 -mpopcnt -fopenmp -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE -DOPEN_CORE -O0 -w -g3 -gdwarf-2")
 set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -std=c++11 -fPIC -m64 -Wall -O3 -mavx2 -msse4 -mpopcnt -fopenmp -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE -Werror=narrowing -Wno-deprecated")
@@ -53,6 +54,7 @@ include_directories(
     ${GAMMA_C_API}
     ${Faiss_INCLUDE_DIR}
     ${RocksDB_INCLUDE_DIR}
+    ${FLATBUFFERS_OUT}/c
 )
 
 #LINK LIBRARY
@@ -89,6 +91,31 @@ else (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Release Mode")
     message(STATUS "Flags:" ${CMAKE_CXX_FLAGS_RELEASE})
 endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
+
+exec_program(
+    "git"
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ARGS "log --format='[sha1]:%h [author]:%cn [time]:%ci [commit]:%s [branch]:%d' -1"
+    OUTPUT_VARIABLE VERSION_SHA1)
+
+add_definitions(-DGIT_SHA1="${VERSION_SHA1}")
+
+if(NOT EXISTS "${THIRDPARTY}/${FLATBUFFERS}")
+    execute_process(COMMAND wget https://github.com/google/flatbuffers/archive/v1.11.0.tar.gz WORKING_DIRECTORY ${THIRDPARTY})
+    execute_process(COMMAND tar xf v1.11.0.tar.gz WORKING_DIRECTORY ${THIRDPARTY})
+    execute_process(COMMAND cmake . WORKING_DIRECTORY ${THIRDPARTY}/${FLATBUFFERS})
+    execute_process(COMMAND make WORKING_DIRECTORY ${THIRDPARTY}/${FLATBUFFERS})
+    execute_process(COMMAND rm -rf v1.11.0.tar.gz WORKING_DIRECTORY ${THIRDPARTY})
+    execute_process(COMMAND rm -rf flatbuffers WORKING_DIRECTORY ${THIRDPARTY})
+    exec_program(
+        "cp"
+        ${THIRDPARTY}
+        ARGS "-r -p ${FLATBUFFERS}/include/flatbuffers .")
+    exec_program(
+        "sh"
+        ${CMAKE_CURRENT_SOURCE_DIR}/idl
+        ARGS "build.sh ${FLATBUFFERS} ${FLATBUFFERS_OUT}")
+endif()
 
 if (PERFORMANCE_TESTING STREQUAL "ON")
     message(STATUS "With preformance testing")

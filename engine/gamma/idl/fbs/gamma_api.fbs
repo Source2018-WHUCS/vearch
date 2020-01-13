@@ -1,7 +1,6 @@
 namespace gamma_api;
 
 enum SearchResultCode : byte { SUCCESS = 0, INDEX_NOT_TRAINED, SEARCH_ERROR }
-enum DataType : byte { INT = 0, LONG, FLOAT, DOUBLE, STRING, VECTOR }
 
 table ResultItem {
   score:double;
