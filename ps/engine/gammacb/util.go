@@ -25,7 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/engine/gamma/c_api/gamma_api"
+	"github.com/vearch/vearch/engine/gamma/idl/fbs-gen/go/gamma_api"
 	"github.com/vearch/vearch/proto/pspb"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine/mapping"

@@ -30,3 +30,5 @@ cloud/compile/lib/
 
 #Output of python
 build/python
+engine/gamma/third_party/flatbuffers-1.11.0/
+engine/gamma/idl/fbs-gen/
