@@ -544,10 +544,6 @@ func (handler *DocumentHandler) handleMSearchDoc(ctx context.Context, w http.Res
 		return ctx, true
 	}
 
-	if log.IsDebugEnabled() {
-		log.Debug("msearch by model:{%d}/{%s}", clientType, reqArgs[ClientTypeValue])
-	}
-
 	t1 := time.Now()
 	searchResponses, nameCache, err := handler.docService.mSearchDoc(ctx, dbName, spaceName, searchRequest, clientType)
 	if err != nil {
