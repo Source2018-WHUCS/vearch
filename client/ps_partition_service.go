@@ -17,11 +17,12 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"github.com/smallnest/rpcx/protocol"
-	"github.com/vearch/vearch/proto/request"
-	"github.com/vearch/vearch/util/server/rpc"
 	"math/rand"
 	"time"
+
+	"github.com/smallnest/rpcx/protocol"
+	"github.com/vearch/vearch/proto/request"
+	server "github.com/vearch/vearch/util/server/rpc"
 
 	"github.com/vearch/vearch/proto/response"
 
@@ -31,10 +32,10 @@ import (
 
 	"github.com/smallnest/rpcx/share"
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/util/log"
-	"github.com/vearch/vearch/proto"
+	pkg "github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/util/log"
 )
 
 type partitionSender struct {
@@ -280,6 +281,9 @@ func (this *partitionSender) getOrCreate(partition *entity.Partition, clientType
 	case LEADER:
 		this.nodeIds = append(this.nodeIds, partition.LeaderID)
 	case NOT_LEADER:
+		if log.IsDebugEnabled() {
+			log.Info("search by partition by not leader model")
+		}
 		if len(this.nodeIds) == 1 {
 			log.Warn("partition:[%d] NO_LEADER model by client_type , but only has leader ", partition.Id)
 		}
@@ -289,6 +293,9 @@ func (this *partitionSender) getOrCreate(partition *entity.Partition, clientType
 		}
 		this.nodeIds = append(this.nodeIds, noLeaderIDs[rand.Intn(len(noLeaderIDs))])
 	case RANDOM:
+		if log.IsDebugEnabled() {
+			log.Info("search by partition by random model")
+		}
 		this.nodeIds = append(this.nodeIds, partition.Replicas[rand.Intn(len(partition.Replicas))])
 	case ALL:
 		this.nodeIds = partition.Replicas
