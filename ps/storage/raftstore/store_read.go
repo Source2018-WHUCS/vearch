@@ -22,6 +22,7 @@ import (
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/util/log"
+	"github.com/vearch/vearch/util/vearchlog"
 )
 
 func (s *Store) GetDocument(ctx context.Context, readLeader bool, docID string) (*response.DocResult, error) {
@@ -71,7 +72,7 @@ func (s *Store) checkReadable(readLeader bool) error {
 	status := s.Partition.GetStatus()
 
 	if status == entity.PA_CLOSED {
-		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)
+		return vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED))
 	}
 
 	if status == entity.PA_INVALID {
@@ -93,7 +94,7 @@ func (s *Store) checkSearchable(readLeader bool) error {
 	status := s.Partition.GetStatus()
 	switch status {
 	case entity.PA_CLOSED:
-		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)
+		return vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED))
 	case entity.PA_INVALID:
 		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_INVALID)
 	}

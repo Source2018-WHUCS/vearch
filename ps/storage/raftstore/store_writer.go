@@ -27,6 +27,7 @@ import (
 	"github.com/vearch/vearch/util"
 	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/log"
+	"github.com/vearch/vearch/util/vearchlog"
 )
 
 type RaftApplyResponse struct {
@@ -228,14 +229,14 @@ func (s *Store) Flush(ctx context.Context) error {
 func (s *Store) checkWritable() error {
 	switch s.Partition.GetStatus() {
 	case entity.PA_INVALID:
-		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_INVALID)
+		return vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_INVALID))
 	case entity.PA_CLOSED:
-		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)
+		return vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED))
 	case entity.PA_READONLY:
-		return pkg.CodeErr(pkg.ERRCODE_PARTITION_NOT_LEADER)
+		return vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_NOT_LEADER))
 	case entity.PA_READWRITE:
 		return nil
 	default:
-		return pkg.CodeErr(pkg.ERRCODE_INTERNAL_ERROR)
+		return vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_INTERNAL_ERROR))
 	}
 }
