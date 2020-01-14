@@ -222,7 +222,7 @@ func (ge *gammaEngine) BuildIndex() error {
 	defer ge.counter.Decr()
 	gamma := ge.gamma
 	if gamma == nil {
-		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)
+		return vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED))
 	}
 
 	//UNINDEXED = 0, INDEXING, INDEXED
@@ -236,7 +236,7 @@ func (ge *gammaEngine) BuildIndex() error {
 		select {
 		case <-ge.ctx.Done():
 			log.Error("partition:[%d] has closed so skip wait", ge.partitionID)
-			return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)
+			return vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED))
 		default:
 		}
 
