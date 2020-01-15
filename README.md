@@ -71,6 +71,8 @@ You can report bugs or ask questions in the [issues page](https://github.com/vea
 
 For public discussion of Vearch or for questions, you can also send email to vearch-maintainers@groups.io.
 
+Our slack : https://vearchwrokspace.slack.com
+
 
 ## License
 Licensed under the Apache License, Version 2.0. For detail see [LICENSE and NOTICE](https://github.com/vearch/vearch/blob/master/LICENSE).
