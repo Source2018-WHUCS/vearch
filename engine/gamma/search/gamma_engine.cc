@@ -823,13 +823,13 @@ int GammaEngine::BuildIndex() {
 
 #else
 int GammaEngine::BuildIndex() {
+  b_running_ = true;
   if (vec_manager_->Indexing() != 0) {
     LOG(ERROR) << "Create index failed!";
     return -1;
   }
   LOG(INFO) << "vector manager indexing success!";
 
-  b_running_ = true;
   int ret = 0;
   bool has_error = false;
   while (b_running_) {
@@ -847,6 +847,7 @@ int GammaEngine::BuildIndex() {
     usleep(5000 * 1000);  // sleep 5000ms
   }
   running_cv_.notify_one();
+  LOG(INFO) << "build index exited!";
   return ret;
 }
 #endif
