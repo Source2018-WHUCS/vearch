@@ -807,6 +807,21 @@ Doc *GammaEngine::GetDoc(const std::string &id) {
   return doc;
 }
 
+#ifdef PYTHON
+int GammaEngine::BuildIndex() {
+  if(index_status_ != IndexStatus::INDEXED) {
+    if (vec_manager_->Indexing() != 0) {
+      LOG(ERROR) << "Create index failed!";
+      return -1;
+    }
+    LOG(INFO) << "vector manager indexing success!";
+    index_status_ = IndexStatus::INDEXED;
+  }
+  int ret = vec_manager_->AddRTVecsToIndex();
+  return ret;
+}
+
+#else
 int GammaEngine::BuildIndex() {
   if (vec_manager_->Indexing() != 0) {
     LOG(ERROR) << "Create index failed!";
@@ -834,6 +849,7 @@ int GammaEngine::BuildIndex() {
   running_cv_.notify_one();
   return ret;
 }
+#endif
 
 int GammaEngine::GetDocsNum() { return max_docid_ - delete_num_; }
 

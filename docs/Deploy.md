@@ -9,7 +9,7 @@
    3. Gcc >= 5 required
    4. [Faiss](https://github.com/facebookresearch/faiss) >= v1.6.0
    5. [RocksDB](https://github.com/facebook/rocksdb) == 6.2.2 ***(optional)*** . Please use `make shared_lib` which is in `RocksDB's INSTALL.md` to compile rocksdb.
-
+   6. swig >= 4, fi you want to build vearch python sdk.
 #### Compile 
    * Enter the `GOPATH` directory, `cd $GOPATH/src` `mkdir -p github/vearch` `cd github/vearch`
    * Download the source code: `git clone https://xxxxxx/vearch.git` ($vearch denotes the absolute path of vearch code)
@@ -18,7 +18,7 @@
        2. `mkdir build && cd build`
        3. `export FAISS_HOME=the installed path of faiss`
        4. `export ROCKSDB_HOME=the installed path of RocksDB` ***(optional)***
-       5. `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$vearch/ps/engine/gammacb/lib  ..`
+       5. `cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON=OFF -DCMAKE_INSTALL_PREFIX=$vearch/ps/engine/gammacb/lib  ..`
        6. `make && make install`
       
    * Compile vearch

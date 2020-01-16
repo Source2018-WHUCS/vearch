@@ -53,6 +53,9 @@ Vearch is a scalable distributed system for efficient similarity search of deep 
 ### VisualSearchAPI
 * [docs/APIVisualSearch.md](docs/APIVisualSearch.md)
 
+### PythonSDKAPI
+* [docs/APIPythonSDK.md](docs/APIPythonSDK.md)
+
 ## Document
 
 * https://vearch.readthedocs.io/en/latest

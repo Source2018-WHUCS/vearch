@@ -12,7 +12,7 @@ if [ $PYTHON_FLAG == 'ON' ]
 then
     PYTHONOUT=$ROOT/build/python
     mkdir -p $PYTHONOUT
-    PYTHONROOT=$ROOT/python
+    PYTHONROOT=$ROOT/engine/gamma/python
 fi
 
 # version value
