@@ -11,7 +11,7 @@ A simple usage
     engine_path = "files"
     max_doc_size = 100000
     engine = vearch.Engine(path, max_doc_size)
-log_path = "logs"
+    log_path = "logs"
     engine.init_log_dir(log_path)
     ```
     
@@ -39,7 +39,7 @@ log_path = "logs"
                 }
             },
         },
-}
+    }
     engine.create_table(table)
     ```
     
@@ -54,7 +54,7 @@ log_path = "logs"
        profiles["feature"] = features[i,:]
         doc_items.append(profiles)
     
-#pass list to it, even only add one doc item
+    #pass list to it, even only add one doc item
     engine.add(doc_items)
     ```
     
@@ -67,7 +67,7 @@ log_path = "logs"
             "feature": features[0,:],
         }],
     }
-result = engine.search(query)
+    result = engine.search(query)
     print(result)
     ```
     
