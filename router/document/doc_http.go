@@ -539,6 +539,8 @@ func (handler *DocumentHandler) handleMSearchDoc(ctx context.Context, w http.Res
 		clientType = client.LEADER
 	case "random":
 		clientType = client.RANDOM
+	case "not_leader":
+		clientType = client.NOT_LEADER
 	default:
 		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", fmt.Sprintf("client_type err param:[%s] , it use `leader` or `random`", reqArgs[ClientTypeValue]))
 		return ctx, true
@@ -680,6 +682,8 @@ func (handler *DocumentHandler) handleSearchDoc(ctx context.Context, w http.Resp
 		clientType = client.LEADER
 	case "random":
 		clientType = client.RANDOM
+	case "not_leader":
+		clientType = client.NOT_LEADER
 	default:
 		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", fmt.Sprintf("client_type err param:[%s] , it use `leader` or `random`", reqArgs[ClientTypeValue]))
 		return ctx, true
