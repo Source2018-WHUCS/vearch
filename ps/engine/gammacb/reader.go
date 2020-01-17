@@ -24,18 +24,20 @@ import "C"
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/vearch/vearch/engine/gamma/idl/fbs-gen/go/gamma_api"
-	"github.com/vearch/vearch/proto"
+	pkg "github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
 	"github.com/vearch/vearch/ps/engine"
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/util/vearchlog"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strconv"
-	"time"
 )
 
 const indexSn = "sn"
@@ -122,15 +124,25 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 		ri.setFields(request, req)
 	}
 
+	start := time.Now()
 	arr := C.SearchV2(ri.engine.gamma, req)
 	defer C.DestroyByteArray(arr)
 
 	resp := gamma_api.GetRootAsResponse(CbArr2ByteArray(arr), 0)
 
+	wg := sync.WaitGroup{}
 	result := make(response.SearchResponses, resp.ResultsLength())
 	for i := 0; i < len(result); i++ {
-		result[i] = ri.singleSearchResult(resp, i)
+		wg.add(1)
+		go func(i int) {
+			defer wg.Done()
+			result[i] = ri.singleSearchResult(resp, i)
+			result[i].MaxTook = int64(time.Now().Sub(start) / time.Millisecond)
+			result[i].MaxTookID = ri.engine.partitionID
+		}(i)
 	}
+
+	wg.Wait()
 
 	return result
 }
@@ -292,6 +304,6 @@ func (ri *readerImpl) DocCount(ctx context.Context) (uint64, error) {
 func (ri *readerImpl) Capacity(ctx context.Context) (int64, error) {
 	ri.engine.counter.Incr()
 	defer ri.engine.counter.Decr()
-	//ioutil2.DirSize(ri.engine.path) TODO remove it 
+	//ioutil2.DirSize(ri.engine.path) TODO remove it
 	return int64(C.GetMemoryBytes(ri.engine.gamma)), nil
 }
