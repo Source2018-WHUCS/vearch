@@ -61,6 +61,7 @@ const (
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	log.Info("start server by version:[%s] commitID:[%s]", BuildVersion, CommitID)
 	config.SetConfigVersion(BuildVersion, BuildTime, CommitID)
