@@ -558,6 +558,16 @@ func (handler *DocumentHandler) handleMSearchDoc(ctx context.Context, w http.Res
 		return ctx, true
 	}
 
+	var maxTookID uint32
+	var maxTook int64
+	for _, sr := range searchResponses {
+		if sr.MaxTook > maxTook {
+			maxTook = sr.MaxTook
+			maxTookID = sr.MaxTookID
+		}
+	}
+	log.Info("msearch use time :[%d] . max partition:[%d] use time:[%d]", (t2.Sub(t1) / time.Millisecond), maxTookID, maxTook)
+
 	resp.SendJsonBytes(ctx, w, bs)
 	return ctx, true
 }
