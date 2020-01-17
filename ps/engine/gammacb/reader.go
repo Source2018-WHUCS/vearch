@@ -133,7 +133,7 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 	wg := sync.WaitGroup{}
 	result := make(response.SearchResponses, resp.ResultsLength())
 	for i := 0; i < len(result); i++ {
-		wg.add(1)
+		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 			result[i] = ri.singleSearchResult(resp, i)
