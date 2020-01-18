@@ -131,6 +131,8 @@ func (this *partitionSender) mSearch(req *request.SearchRequest) (response.Searc
 
 	log.Info("msearch use time:", time.Now().Sub(now), "partition maxTook use time:", maxTook)
 
+	return nil, fmt.Errorf("err") //TODO remove me
+
 	for _, searchResponse := range searchResponses {
 		searchResponse.PID = req.PartitionID //set partition id to result
 	}
