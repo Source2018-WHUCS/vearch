@@ -115,11 +115,22 @@ func (this *partitionSender) mSearch(req *request.SearchRequest) (response.Searc
 	if err != nil { // must use it to get paition
 		return nil, err
 	}
+	now := time.Now()
 	result, _, err := this.getOrCreate(partition, this.spaceSender.clientType).Execute(MSearchHandler, req.Clone(partition.Id, this.spaceSender.db, this.spaceSender.space))
 	if err != nil {
 		return nil, err
 	}
 	searchResponses := *(result.(*response.SearchResponses))
+
+	var maxTook int64 = 0
+	for _, r := range searchResponses {
+		if maxTook < r.MaxTook {
+			maxTook = r.MaxTook
+		}
+	}
+
+	log.Info("msearch use time:", time.Now().Sub(now), "partition maxTook use time:", maxTook)
+
 	for _, searchResponse := range searchResponses {
 		searchResponse.PID = req.PartitionID //set partition id to result
 	}
@@ -329,8 +340,8 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 				status int64
 				e      error
 			)
-			rpcClient := this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), nodeId)
 
+			rpcClient := this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), nodeId)
 			if rpcClient.client == nil {
 				resp := response.Response{Resp: nil, Status: pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING, Err: pkg.VErr(pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING)}
 				respChain <- &resp
@@ -338,9 +349,7 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 			}
 
 			for i := 0; i < adaptRetry; i++ {
-				now := time.Now()
 				resps, status, e = rpcClient.Execute(servicePath, request)
-				log.Info("search rpc client use time ", time.Now().Sub(now))
 				if status == pkg.ERRCODE_PARTITION_NO_LEADER {
 					sleepTime = 2 * sleepTime
 					time.Sleep(sleepTime)
