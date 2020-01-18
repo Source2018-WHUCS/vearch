@@ -329,8 +329,8 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 				status int64
 				e      error
 			)
-
 			rpcClient := this.spaceSender.ps.getOrCreateRpcClient(request.Context().GetContext(), nodeId)
+
 			if rpcClient.client == nil {
 				resp := response.Response{Resp: nil, Status: pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING, Err: pkg.VErr(pkg.ERRCODE_MASTER_SERVER_IS_NOT_RUNNING)}
 				respChain <- &resp
@@ -338,7 +338,9 @@ func (this *partitionSender) Execute(servicePath string, request request.Request
 			}
 
 			for i := 0; i < adaptRetry; i++ {
+				now := time.Now()
 				resps, status, e = rpcClient.Execute(servicePath, request)
+				log.Info("search rpc client use time ", time.Now().Sub(now))
 				if status == pkg.ERRCODE_PARTITION_NO_LEADER {
 					sleepTime = 2 * sleepTime
 					time.Sleep(sleepTime)
