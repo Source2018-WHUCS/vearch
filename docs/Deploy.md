@@ -20,7 +20,20 @@
        4. `export ROCKSDB_HOME=the installed path of RocksDB` ***(optional)***
        5. `cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON=OFF -DCMAKE_INSTALL_PREFIX=$vearch/ps/engine/gammacb/lib  ..`
        6. `make && make install`
-      
+   
+    * Compile python interface, set BUILD_PYTHON=ON if you want to build python interface
+       1. `cd $vearch/engine/gamma`
+       2. `mkdir build && cd build`
+       3. `export FAISS_HOME=the installed path of faiss`
+       4. `export ROCKSDB_HOME=the installed path of RocksDB` ***(optional)***
+       5. `cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON=ON -DCMAKE_INSTALL_PREFIX=$vearch/ps/engine/gammacb/lib  ..`
+       6. `make`
+       7. `mkdir python && cd python`
+       8. `cp ../*swigvearch* .`
+       9. `cp $vearch/python/setup.py $vearch/python/vearch.py .`
+       10. `python setup.py bdis_wheel`
+       11. `pip install ./dist/vearch*.wheel`
+   
    * Compile vearch
       1. `cd $vearch`
       2. `export FAISS_HOME=the installed path of faiss`
