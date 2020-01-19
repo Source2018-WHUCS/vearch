@@ -1,8 +1,8 @@
 %module swigvearch
 
 #define VEARCH_VERSION_MAJOR 0
-#define VEARCH_VERSION_MINOR 2
-#define VEARCH_VERSION_PATCH 1
+#define VEARCH_VERSION_MINOR 3
+#define VEARCH_VERSION_PATCH 0
 
 %{
 #define SWIG_FILE_WITH_INIT
