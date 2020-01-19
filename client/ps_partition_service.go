@@ -116,7 +116,6 @@ func (this *partitionSender) mSearch(req *request.SearchRequest) (response.Searc
 		return nil, err
 	}
 	now := time.Now()
-	return nil, fmt.Errorf("err") //TODO remove me
 	result, _, err := this.getOrCreate(partition, this.spaceSender.clientType).Execute(MSearchHandler, req.Clone(partition.Id, this.spaceSender.db, this.spaceSender.space))
 	if err != nil {
 		return nil, err
