@@ -48,6 +48,7 @@ Vearch is a scalable distributed system for efficient similarity search of deep 
 
 ### LowLevelAPI
 * [docs/APILowLevel.md](docs/APILowLevel.md)
+* For GPU [docs/APILowLevel.md](docs/APILowLevelOnGPU.md)
 
 
 ### VisualSearchAPI

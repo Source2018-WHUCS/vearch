@@ -10,9 +10,11 @@
    4. [Faiss](https://github.com/facebookresearch/faiss) >= v1.6.0
    5. [RocksDB](https://github.com/facebook/rocksdb) == 6.2.2 ***(optional)*** . Please use `make shared_lib` which is in `RocksDB's INSTALL.md` to compile rocksdb.
    6. swig >= 3, if you want to build vearch python sdk.
+   7. CUDA >= 9.0, if you want GPU support.
 #### Compile 
    * Enter the `GOPATH` directory, `cd $GOPATH/src` `mkdir -p github/vearch` `cd github/vearch`
    * Download the source code: `git clone https://xxxxxx/vearch.git` ($vearch denotes the absolute path of vearch code)
+   * To add GPU Index support : change `BUILD_WITH_GPU` from `"off"` to `"on"` in `$vearch/engine/gamma/CMakeLists.txt` 
    * Compile gamma
        1. `cd $vearch/engine/gamma`
        2. `mkdir build && cd build`
