@@ -192,4 +192,3 @@
 ./vearch -conf conf.toml router
 ````
 
-## On Kubernetes
