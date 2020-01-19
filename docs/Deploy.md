@@ -34,7 +34,7 @@
        8. `cp ../*swigvearch* .`
        9. `cp $vearch/python/setup.py $vearch/python/vearch.py .`
        10. `python setup.py bdist_wheel`
-       11. `pip install ./dist/vearch*.wheel`
+       11. `pip install ./dist/vearch*.whl`
    
    * Compile vearch
       1. `cd $vearch`
