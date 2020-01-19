@@ -42,7 +42,7 @@ struct Options {
     path = "files";
     log_dir = "log";
     model_id = "model";
-    retrieval_type = "IVFPQ";
+    retrieval_type = "GPU";
     store_type = "Mmap";
     profiles.resize(max_doc_size * fields_vec.size());
     engine = nullptr;
@@ -193,24 +193,25 @@ int SearchThread(void *engine, size_t num) {
                             nullptr, 0, req_num, 0, nullptr, FALSE, 0);
     }
 
-    // {
-    //   ByteArray *response = SearchV2(engine, request);
-    //   flatbuffers::FlatBufferBuilder builder_out;
-    //   builder_out.PushBytes((const uint8_t *)response->value, response->len);
-    //   auto res = gamma_api::GetResponse(builder_out.GetCurrentBufferPointer());
+    {
+      ByteArray *response = SearchV2(engine, request);
+      flatbuffers::FlatBufferBuilder builder_out;
+      builder_out.PushBytes((const uint8_t *)response->value, response->len);
+      auto res = gamma_api::GetResponse(builder_out.GetCurrentBufferPointer());
 
-    //   for (size_t i = 0; i < res->results()->Length(); ++i) {
-    //     auto result = res->results()->Get(i);
-    //     int total = result->total();
-    //     std::string msg = result->msg()->str();
-    //     auto result_items = result->result_items();
-    //     for (size_t j = 0; j < result_items->Length(); ++j) {
-    //       auto result_item = result_items->Get(j);
-    //       double score = result_item->score();
-    //       std::string name = result_item->name()->Get(0)->str();
-    //     }
-    //   }
-    // }
+      for (int i = 0; i < res->results()->Length(); ++i) {
+        auto result = res->results()->Get(i);
+        int total = result->total();
+        std::string msg = result->msg()->str();
+        auto result_items = result->result_items();
+        for (int j = 0; j < result_items->Length(); ++j) {
+          auto result_item = result_items->Get(j);
+          double score = result_item->score();
+          std::string name = result_item->name()->Get(0)->str();
+        }
+      }
+      DestroyByteArray(response);
+    }
     Response *response = Search(engine, request);
 
     if (opt.print_doc) {

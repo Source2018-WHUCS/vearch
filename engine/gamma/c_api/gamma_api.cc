@@ -273,7 +273,6 @@ enum ResponseCode SetLogDictionary(ByteArray *log_dir) {
   }
 
   el::Configurations defaultConf;
-  // defaultConf.setToDefault();
   // To set GLOBAL configurations you may use
   el::Loggers::addFlag(el::LoggingFlag::StrictLogFileSizeCheck);
   defaultConf.setGlobally(el::ConfigurationType::Format,

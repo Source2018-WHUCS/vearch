@@ -58,11 +58,17 @@ class RangeQueryResult {
     }
 
     n_doc_ = 0;
-    for (auto i : bitmap_) {
-      if (i) {
-        n_doc_++;
+    size_t size = bitmap_.size();
+    int n = 0;
+
+#pragma omp parallel for reduction(+ : n)
+    for (size_t i = 0; i < size; ++i) {
+      if (bitmap_[i]) {
+        ++n;
       }
     }
+
+    n_doc_ = n;
     return n_doc_;
   }
 
@@ -126,6 +132,7 @@ class MultiRangeQueryResults {
     bool ret = true;
     for (auto &result : all_results_) {
       ret &= result->Has(doc);
+      if (ret == false) return ret;
     }
     return ret;
   }

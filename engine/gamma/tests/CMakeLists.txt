@@ -21,6 +21,7 @@ include_directories(gtest/include)
 link_directories(
     ../
     gtest/
+    ../index/gpu
 )
 
 foreach(source ${srcs})

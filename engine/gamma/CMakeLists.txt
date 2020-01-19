@@ -9,6 +9,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 find_package(Faiss REQUIRED)
 
 option(BUILD_TEST "Build tests" off)
+option(BUILD_WITH_GPU "Build gamma with gpu index support" off)
 option(BUILD_TOOLS "Build tools" off)
 
 #ENV VARs
@@ -30,13 +31,13 @@ set(FLATBUFFERS_OUT ${CMAKE_CURRENT_SOURCE_DIR}/idl/fbs-gen)
 set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -std=c++11 -mavx2 -msse4 -mpopcnt -fopenmp -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE -DOPEN_CORE -O0 -w -g3 -gdwarf-2")
 set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -std=c++11 -fPIC -m64 -Wall -O3 -mavx2 -msse4 -mpopcnt -fopenmp -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE -Werror=narrowing -Wno-deprecated")
 
-if (DEFINED ENV{ROCKSDB_HOME})
+if(DEFINED ENV{ROCKSDB_HOME})
     message(STATUS "RocksDB home is set=$ENV{ROCKSDB_HOME}")
     add_definitions(-DWITH_ROCKSDB)
     find_package(RocksDB REQUIRED)
-else (DEFINED ENV{ROCKSDB_HOME})
+else(DEFINED ENV{ROCKSDB_HOME})
     message(STATUS "RocksDB home isn't set, so store_type=RocksDB is not supported! ")
-endif (DEFINED ENV{ROCKSDB_HOME})
+endif(DEFINED ENV{ROCKSDB_HOME})
 
 #INCLUDE DIR
 include_directories(
@@ -81,15 +82,15 @@ set(LIB_SRCS ${DIR_SRCS})
 add_definitions(-DHAVE_NETINET_IN_H)
 add_definitions(-DFINTEGER=int)
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Debug Mode")
     message(STATUS "Flags:" ${CMAKE_CXX_FLAGS_DEBUG})
     add_definitions(-DDEBUG_) 
-else (CMAKE_BUILD_TYPE STREQUAL "Debug")
+else(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "build type" FORCE)
     message(STATUS "Release Mode")
     message(STATUS "Flags:" ${CMAKE_CXX_FLAGS_RELEASE})
-endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
+endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 exec_program(
     "git"
@@ -119,7 +120,22 @@ endif()
 if (PERFORMANCE_TESTING STREQUAL "ON")
     message(STATUS "With preformance testing")
     add_definitions(-DPERFORMANCE_TESTING) 
-endif (PERFORMANCE_TESTING STREQUAL "ON")
+endif(PERFORMANCE_TESTING STREQUAL "ON")
+
+if(BUILD_WITH_GPU)
+    message(STATUS "With GPU")
+    add_definitions(-DBUILD_GPU) 
+    
+    set(GAMMA_GPU ${CMAKE_CURRENT_SOURCE_DIR}/index/gpu)
+
+    aux_source_directory(${GAMMA_GPU} DIR_SRCS)
+
+    include_directories(
+        ${GAMMA_GPU}
+    )
+endif(BUILD_WITH_GPU)
+
+set(LIB_SRCS ${DIR_SRCS})
 
 add_library(gamma SHARED ${LIB_SRCS})
 
@@ -133,9 +149,9 @@ install(TARGETS gamma
 
 install(FILES ${GAMMA_C_API}/gamma_api.h DESTINATION include)
 
-if (BUILD_TEST)
+if(BUILD_TEST)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
-endif (BUILD_TEST)
+endif(BUILD_TEST)
 
 if(BUILD_TOOLS)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tools)
