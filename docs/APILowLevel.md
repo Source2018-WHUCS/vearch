@@ -251,7 +251,8 @@ curl -H "content-type: application/json" -XPOST -d'
           }
        ]
   },
-  "size":10
+  "size":10,
+  "parallel":false
 }
 ' {{ROUTER}}/test_vector_db/vector_space/_search
 ````
@@ -263,7 +264,7 @@ curl -H "content-type: application/json" -XPOST -d'
 * `quick` :default is false, if quick=true it not use precision sorting
 * `vector_value` :default is false, is return vector value
 * `client_type` search partition type, default is leader , `random` or `no_leader`
- 
+* `parallel`  search is parallel default is `false`
 
 ### delete Document
  
