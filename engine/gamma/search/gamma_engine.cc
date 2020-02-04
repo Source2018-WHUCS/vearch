@@ -310,11 +310,6 @@ int GammaEngine::Setup(int max_doc_size) {
 }
 
 Response *GammaEngine::Search(const Request *request) {
-#ifdef PERFORMANCE_TESTING
-  double start = utils::getmillisecs();
-  std::stringstream ss;
-#endif
-
 #ifdef DEBUG
   LOG(INFO) << "search request:" << RequestToString(request);
 #endif
@@ -391,6 +386,7 @@ Response *GammaEngine::Search(const Request *request) {
                                          // transmitted from search request
   condition.multi_vector_rank = request->multi_vector_rank == 1 ? true : false;
   condition.has_rank = request->has_rank == 1 ? true : false;
+  condition.parallel_based_on_query = request->parallel_based_on_query;
   condition.use_direct_search = use_direct_search;
 
   MultiRangeQueryResults range_query_result;
@@ -402,12 +398,8 @@ Response *GammaEngine::Search(const Request *request) {
     }
   }
 #ifdef PERFORMANCE_TESTING
-  double numeric_filter_time = utils::getmillisecs();
-  ss << "numeric filter cost [" << numeric_filter_time - start << "]ms, ";
+  condition.Perf("filter");
 #endif
-
-  // condition.min_dist = request->vec_fields[0]->min_score;
-  // condition.max_dist = request->vec_fields[0]->max_score;
 
   gamma_query.condition = &condition;
   if (request->vec_fields_num > 0) {
@@ -437,7 +429,13 @@ Response *GammaEngine::Search(const Request *request) {
       return response_results;
     }
 
+#ifdef PERFORMANCE_TESTING
+    condition.Perf("search total");
+#endif
     PackResults(gamma_results, response_results, request);
+#ifdef PERFORMANCE_TESTING
+    condition.Perf("pack results");
+#endif
   } else {
     GammaResult gamma_result;
     gamma_result.topn = request->topn;
@@ -505,10 +503,7 @@ Response *GammaEngine::Search(const Request *request) {
   }
 
 #ifdef PERFORMANCE_TESTING
-  double search_time = utils::getmillisecs();
-  ss << "search cost [" << search_time - numeric_filter_time
-     << "]ms, total cost [" << search_time - start << "]ms";
-  LOG(INFO) << ss.str();
+  LOG(INFO) << condition.OutputPerf().str();
 #endif
 
   const char *log_message = logger.Data();
@@ -809,7 +804,7 @@ Doc *GammaEngine::GetDoc(const std::string &id) {
 
 #ifdef PYTHON
 int GammaEngine::BuildIndex() {
-  if(index_status_ != IndexStatus::INDEXED) {
+  if (index_status_ != IndexStatus::INDEXED) {
     if (vec_manager_->Indexing() != 0) {
       LOG(ERROR) << "Create index failed!";
       return -1;

@@ -538,7 +538,7 @@ Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
                      TermFilter **term_filters, int term_filters_num,
                      int req_num, int direct_search_type,
                      ByteArray *online_log_level, int has_rank,
-                     int multi_vector_rank) {
+                     int multi_vector_rank, BOOL parallel_based_on_query) {
   Request *request = static_cast<Request *>(malloc(sizeof(Request)));
   memset(request, 0, sizeof(Request));
   request->topn = topn;
@@ -555,6 +555,7 @@ Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
   request->online_log_level = online_log_level;
   request->has_rank = has_rank;
   request->multi_vector_rank = multi_vector_rank;
+  request->parallel_based_on_query = parallel_based_on_query;
   return request;
 }
 
