@@ -293,7 +293,7 @@ func (this *partitionSender) getOrCreate(partition *entity.Partition, clientType
 		this.nodeIds = append(this.nodeIds, partition.LeaderID)
 	case NOT_LEADER:
 		if log.IsDebugEnabled() {
-			log.Debug("search by partition:%v by random model ID:[%d]", partition.Replicas, randomID)
+			log.Debug("search by partition:%v by not leader model by partition:[%d]", partition.Id)
 		}
 		if len(this.nodeIds) == 1 {
 			log.Warn("partition:[%d] NO_LEADER model by client_type , but only has leader ", partition.Id)
