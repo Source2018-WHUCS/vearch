@@ -98,7 +98,7 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 
 	parallelBasedOnQuery := C.char(0)
 	if request.Parallel{
-		C.char(1)
+		parallelBasedOnQuery = C.char(1)
 	}
 
 	req := C.MakeRequest(C.int(*request.Size),
@@ -171,7 +171,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 
 	parallelBasedOnQuery := C.char(0)
 	if request.Parallel{
-		C.char(1)
+		parallelBasedOnQuery = C.char(1)
 	}
 
 	req := C.MakeRequest(C.int(*request.Size),
