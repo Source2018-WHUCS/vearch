@@ -96,6 +96,11 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 		hasRank = C.int(0)
 	}
 
+	parallelBasedOnQuery := C.char(0)
+	if request.Parallel{
+		parallelBasedOnQuery = C.char(1)
+	}
+
 	req := C.MakeRequest(C.int(*request.Size),
 		nil, C.int(0),
 		nil, C.int(0),
@@ -103,6 +108,7 @@ func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchReques
 		nil, C.int(0),
 		C.int(1), C.int(0),
 		nil, hasRank, C.int(0),
+		parallelBasedOnQuery,
 	)
 
 	defer C.DestroyRequest(req)
@@ -163,6 +169,11 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 		hasRank = C.int(0)
 	}
 
+	parallelBasedOnQuery := C.char(0)
+	if request.Parallel{
+		parallelBasedOnQuery = C.char(1)
+	}
+
 	req := C.MakeRequest(C.int(*request.Size),
 		nil, C.int(0),
 		nil, C.int(0),
@@ -170,6 +181,7 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 		nil, C.int(0),
 		C.int(1), C.int(0),
 		nil, hasRank, C.int(0),
+		parallelBasedOnQuery,
 	)
 
 	defer C.DestroyRequest(req)

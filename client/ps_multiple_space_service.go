@@ -17,7 +17,6 @@ package client
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/spf13/cast"
 	pkg "github.com/vearch/vearch/proto"
@@ -119,7 +118,6 @@ func (this *multipleSpaceSender) Search(req *request.SearchRequest) *response.Se
 					respChain <- newSearchResponseWithError(par.db, par.space, 0, fmt.Errorf(cast.ToString(r)))
 				}
 			}()
-			now := time.Now()
 			respChain <- par.Search(req)
 		}(sender)
 	}
