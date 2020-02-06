@@ -14,9 +14,10 @@ std::vector<int> RangeQueryResult::ToDocs() const {
     std::vector<int> docIDs(n_doc_);
     int j = 0;
 
-    for (size_t i = 0; i < bitmap_.size(); i++) {
-      if (bitmap_[i]) {
-        docIDs[j++] = i + min_;
+    int n = max_aligned_ - min_aligned_ + 1;
+    for (int i = 0; i < n; i++) {
+      if (bitmap::test(bitmap_, i)) {
+        docIDs[j++] = i + min_aligned_;
       }
     }
 
@@ -24,10 +25,11 @@ std::vector<int> RangeQueryResult::ToDocs() const {
     return docIDs;
   } else {
     std::vector<int> docIDs;
+    int n = max_aligned_ - min_aligned_ + 1;
 
-    for (size_t i = 0; i < bitmap_.size(); i++) {
-      if (bitmap_[i]) {
-        docIDs.emplace_back(i + min_);
+    for (int i = 0; i < n; i++) {
+      if (bitmap::test(bitmap_, i)) {
+        docIDs.emplace_back(i + min_aligned_);
       }
     }
 
@@ -37,13 +39,16 @@ std::vector<int> RangeQueryResult::ToDocs() const {
 }
 
 void RangeQueryResult::Output() {
-  std::cout << "bitmap = [";
-  for (size_t i = 0; i < bitmap_.size(); i++) {
-    if (bitmap_[i]) {
-      std::cout << " " << i;
+  std::stringstream ss;
+  ss << "bitmap = [";
+  int n = max_aligned_ - min_aligned_ + 1;
+  for (int i = 0; i < n; i++) {
+    if (bitmap::test(bitmap_, i)) {
+      ss << " " << i;
     }
   }
-  std::cout << " ]\n";
+  ss << "]";
+  LOG(INFO) << ss.str();
 }
 
 std::vector<int> MultiRangeQueryResults::ToDocs() const {
