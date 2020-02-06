@@ -418,16 +418,16 @@ void GammaIVFPQIndex::search_preassigned(
   condition->parallel_mode = condition->parallel_based_on_query ? 0 : 1;
   int ni_total = -1;
   if (condition->range_query_result &&
-      condition->range_query_result->GetAllResult().size() >= 1) {
-    ni_total = condition->range_query_result->GetAllResult()[0]->Size();
+      condition->range_query_result->GetAllResult() != nullptr) {
+    ni_total = condition->range_query_result->GetAllResult()->Size();
   }
 
   // don't start parallel section if single query
   bool do_parallel = condition->parallel_mode == 0 ? n > 1 : nprobe > 1;
 
   if (condition->range_query_result &&
-      condition->range_query_result->GetAllResult().size() == 1 &&
-      condition->range_query_result->GetAllResult()[0]->Size() < 50000) {
+      condition->range_query_result->GetAllResult() != nullptr &&
+      condition->range_query_result->GetAllResult()->Size() < 50000) {
     const std::vector<int> docid_list = condition->range_query_result->ToDocs();
 
 #ifdef DEBUG

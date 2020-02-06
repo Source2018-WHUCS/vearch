@@ -54,7 +54,7 @@ void RangeQueryResult::Output() {
 std::vector<int> MultiRangeQueryResults::ToDocs() const {
   std::vector<int> docIDs;
 
-  if (not all_results_.empty()) {
+  if (all_results_ != nullptr) {
     for (int id = min_; id <= max_; id++) {
       if (Has(id)) {
         docIDs.emplace_back(id);

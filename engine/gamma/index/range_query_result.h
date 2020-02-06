@@ -133,32 +133,24 @@ class MultiRangeQueryResults {
   MultiRangeQueryResults() { Clear(); }
 
   ~MultiRangeQueryResults() {
-    for (auto &result : all_results_) {
-      delete result;
-      result = nullptr;
-    }
-    all_results_.clear();
+    delete all_results_;
+    all_results_ = nullptr;
   }
 
   // Take full advantage of multi-core while recalling
   bool Has(int doc) const {
-    bool ret = true;
-    for (auto &result : all_results_) {
-      ret &= result->Has(doc);
-      if (ret == false) return ret;
-    }
-    return ret;
+    return all_results_->Has(doc);
   }
 
   void Clear() {
     min_ = 0;
     max_ = std::numeric_limits<int>::max();
-    all_results_.clear();
+    all_results_ = nullptr;
   }
 
  public:
   void Add(RangeQueryResult *r) {
-    all_results_.emplace_back(r);
+    all_results_ = r;
 
     // the maximum of the minimum(s)
     if (r->Min() > min_) {
@@ -178,7 +170,7 @@ class MultiRangeQueryResults {
    */
   std::vector<int> ToDocs() const;
 
-  const std::vector<RangeQueryResult *> &GetAllResult() const {
+  const RangeQueryResult *GetAllResult() const {
     return all_results_;
   }
 
@@ -186,7 +178,7 @@ class MultiRangeQueryResults {
   int min_;
   int max_;
 
-  std::vector<RangeQueryResult *> all_results_;
+  RangeQueryResult *all_results_;
 };
 
 }  // namespace tig_gamma
