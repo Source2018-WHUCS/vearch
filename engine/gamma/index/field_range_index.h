@@ -43,7 +43,6 @@ class MultiFieldsRangeIndex {
   std::vector<FieldRangeIndex *> fields_;
   Profile *profile_;
   std::string path_;
-  static const int kLazyThreshold_ = 10000;
 };
 
 }  // namespace tig_gamma

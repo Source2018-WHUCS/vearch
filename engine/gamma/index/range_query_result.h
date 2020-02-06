@@ -89,7 +89,6 @@ class RangeQueryResult {
       free(bitmap_);
       bitmap_ = nullptr;
     }
-    n_doc_ = n;
 
     int bytes_count = -1;
     if (bitmap::create(bitmap_, bytes_count, n) != 0) {

@@ -355,12 +355,16 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
   auto &bit_map = result->Ref();
   int list_size = lists.size();
 
+  int total = 0;
+
   int op_len = sizeof(BM_OPERATE_TYPE) * 8;
   for (int i = 0; i < list_size; ++i) {
     Node *list = lists[i];
     char *data = list->Data();
     int min = list->MinAligned();
     int max = list->MaxAligned();
+
+    total += list->Size();
 
     if (min < min_aligned || max > max_aligned) {
       continue;
@@ -373,6 +377,8 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
       op_data_dst[j + offset] |= op_data_ori[j];
     }
   }
+
+  result->SetDocNum(total);
 
 #ifdef PERFORMANCE_TESTING
   double end = utils::getmillisecs();
@@ -443,6 +449,9 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
   if (retval <= 0) {
     return 0;
   }
+
+  int total = 0;
+
   result->SetRange(min_doc, max_doc);
   result->Resize();
 
@@ -458,6 +467,8 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
       continue;
     }
 
+    total += results_union[i].Size();
+
     BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)bitmap;
     BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data;
 
@@ -467,6 +478,7 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
     }
   }
 
+  result->SetDocNum(total);
   return retval;
 }
 
@@ -578,16 +590,6 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &origin_filters,
     return -1;  // universal set
   }
 
-  // When the shortest doc chain is long,
-  // instead of calculating the intersection immediately, a lazy
-  // mechanism is made.
-  // if (shortest > kLazyThreshold_) {
-  //   for (int i = 0; i <= valuable_result; ++i) {
-  //     out->Add(results[i]);
-  //   }
-  //   return 1;  // it's hard to count the return docs
-  // }
-
   RangeQueryResult *tmp = new RangeQueryResult;
   int count = Intersect(results.data(), valuable_result, shortest_idx, tmp);
   if (count > 0) {
@@ -604,6 +606,8 @@ int MultiFieldsRangeIndex::Intersect(RangeQueryResult **results, int j,
   // I want to build a smaller bitmap ...
   int min_doc = results[0]->MinAligned();
   int max_doc = results[0]->MaxAligned();
+
+  int total = results[0]->Size();
 
   // results[0]->Output();
 
@@ -625,6 +629,8 @@ int MultiFieldsRangeIndex::Intersect(RangeQueryResult **results, int j,
   }
   out->SetRange(min_doc, max_doc);
   out->Resize();
+
+  out->SetDocNum(total);
 
   char *&bitmap = out->Ref();
 
@@ -661,7 +667,7 @@ int MultiFieldsRangeIndex::Intersect(RangeQueryResult **results, int j,
     }
   }
 
-  return 1;
+  return total;
 }
 
 int MultiFieldsRangeIndex::AddField(int field, enum DataType field_type) {
