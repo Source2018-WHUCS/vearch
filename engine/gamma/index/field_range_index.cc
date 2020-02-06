@@ -364,11 +364,11 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
     int min = list->MinAligned();
     int max = list->MaxAligned();
 
-    total += list->Size();
-
     if (min < min_aligned || max > max_aligned) {
       continue;
     }
+
+    total += list->Size();
 
     BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)bit_map;
     BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data;

@@ -514,6 +514,8 @@ void GammaIVFPQIndex::search_preassigned(
 #endif
         compute_dis(xi, simi, idxi, recall_simi, recall_idxi);
 
+        total[i] = ni_total;
+
 #ifdef PERFORMANCE_TESTING
         if (++search_count_ % 1000 == 0) {
           double end = utils::getmillisecs();
