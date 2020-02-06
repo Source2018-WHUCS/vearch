@@ -68,7 +68,7 @@ class RangeQueryResult {
     min_ = std::numeric_limits<int>::max();
     max_ = 0;
     next_ = -1;
-    n_doc_ = 100000;
+    n_doc_ = -1;
     if (bitmap_ != nullptr) {
       free(bitmap_);
       bitmap_ = nullptr;
@@ -89,6 +89,7 @@ class RangeQueryResult {
       free(bitmap_);
       bitmap_ = nullptr;
     }
+    n_doc_ = n;
 
     int bytes_count = -1;
     if (bitmap::create(bitmap_, bytes_count, n) != 0) {

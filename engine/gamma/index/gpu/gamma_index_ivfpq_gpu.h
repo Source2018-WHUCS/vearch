@@ -34,7 +34,7 @@ class GammaIVFPQGPUIndex : public GammaIndex {
 
   bool Add(int n, const float *vec) override;
 
-  int Search(const VectorQuery *query, const GammaSearchCondition *condition,
+  int Search(const VectorQuery *query, GammaSearchCondition *condition,
              VectorResult &result) override;
 
   long GetTotalMemBytes() override;

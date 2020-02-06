@@ -345,7 +345,7 @@ bool GammaIVFPQGPUIndex::Add(int n, const float *vec) {
 }
 
 int GammaIVFPQGPUIndex::Search(const VectorQuery *query,
-                               const GammaSearchCondition *condition,
+                               GammaSearchCondition *condition,
                                VectorResult &result) {
   if (gpu_threads_.size() == 0) {
     LOG(ERROR) << "gpu index not indexed!";
