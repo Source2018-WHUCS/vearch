@@ -82,7 +82,7 @@ class RangeQueryResult {
     max_aligned_ = (max_ / 8 + 1) * 8 - 1;
   }
 
-  void Resize(bool init_value = false) {
+  void Resize() {
     int n = max_aligned_ - min_aligned_ + 1;
     assert(n > 0);
     if (bitmap_ != nullptr) {

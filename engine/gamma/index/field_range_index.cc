@@ -427,6 +427,8 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
     results_union[i].SetRange(min_aligned, max_aligned);
     results_union[i].Resize();
 
+    results_union[i].SetDocNum(p_node->Size());
+
     char *data = p_node->Data();
     char *&bitmap = results_union[i].Ref();
     BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)bitmap;
