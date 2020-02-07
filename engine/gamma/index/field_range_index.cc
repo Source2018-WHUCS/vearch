@@ -91,8 +91,7 @@ class Node {
       utils::AsyncWait(1000, FreeNodeData, (void *)old_data);
     } else if (val > max_aligned_) {
       char *data = nullptr;
-      // 2X spare space to speed up insert
-      int max_aligned = (val / op_len + 1) * op_len * 2 - 1;
+      int max_aligned = (val / op_len + 1) * op_len - 1;
 
       int bytes_count = -1;
       if (bitmap::create(data, bytes_count, max_aligned - min_aligned_ + 1) !=
