@@ -113,6 +113,8 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
     RetrievalModel model = default_model_;
     if (!strcasecmp("IVFPQ", retrieval_type_str.c_str())) {
       model = RetrievalModel::IVFPQ;
+    } else if (!strcasecmp("GPU", retrieval_type_str.c_str())) {
+      model = RetrievalModel::GPU_IVFPQ;
     } else {
       LOG(WARNING) << "NO support for retrieval type " << retrieval_type_str
                    << ", default to " << default_model_;
@@ -195,15 +197,23 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
       return -1;
     }
 
-    GammaSearchCondition condition(query.condition);
-    condition.min_dist = query.vec_query[i]->min_score;
-    condition.max_dist = query.vec_query[i]->max_score;
-    int ret_vec = iter->second->Search(query.vec_query[i], &condition,
+    // GammaSearchCondition condition(query.condition);
+    query.condition->min_dist = query.vec_query[i]->min_score;
+    query.condition->max_dist = query.vec_query[i]->max_score;
+    // condition.min_dist = query.vec_query[i]->min_score;
+    // condition.max_dist = query.vec_query[i]->max_score;
+    int ret_vec = iter->second->Search(query.vec_query[i], query.condition,
                                        all_vector_results[i]);
     if (ret_vec != 0) {
       ret = ret_vec;
     }
+#ifdef PERFORMANCE_TESTING
+    std::string msg;
+    msg += "search " + std::to_string(i);
+    query.condition->Perf(msg);
+#endif
   }
+
 
   if (query.condition->sort_by_docid) {
     for (int i = 0; i < n; i++) {
@@ -307,6 +317,9 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
     }
   }
 
+#ifdef PERFORMANCE_TESTING
+  query.condition->Perf("merge result");
+#endif
   return ret;
 }
 

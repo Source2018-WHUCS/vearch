@@ -521,6 +521,28 @@ int RealTimeMemData::Load(const std::vector<std::string> &index_dirs,
   return total_ids;
 }
 
+void RealTimeMemData::PrintBucketSize() {
+  std::vector<std::pair<size_t, int>> buckets;
+
+  for (size_t bucket_id = 0; bucket_id < _buckets_num; ++bucket_id) {
+    int bucket_size = _cur_invert_ptr->_retrieve_idx_pos[bucket_id];
+    buckets.push_back(std::make_pair(bucket_id, bucket_size));
+  }
+
+  std::sort(
+      buckets.begin(), buckets.end(),
+      [](const std::pair<size_t, int> &a, const std::pair<size_t, int> &b) {
+        return (a.second > b.second);
+      });
+
+  std::stringstream ss;
+  ss << "Bucket (id, size): ";
+  for (const auto &bucket : buckets) {
+    ss << "(" << bucket.first << ", " << bucket.second << ") ";
+  }
+  LOG(INFO) << ss.str();
+}
+
 }  // namespace realtime
 
 }  // namespace tig_gamma

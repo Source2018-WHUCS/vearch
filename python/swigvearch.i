@@ -1,8 +1,8 @@
 %module swigvearch
 
 #define VEARCH_VERSION_MAJOR 0
-#define VEARCH_VERSION_MINOR 2
-#define VEARCH_VERSION_PATCH 1
+#define VEARCH_VERSION_MINOR 3
+#define VEARCH_VERSION_PATCH 0
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -90,19 +90,12 @@ ByteArray *PointerToByteArray(const T *feature, int dimension);
 
 Config *MakeConfig(const std::string &path, int max_doc_size);
 
-DataType ConvertToDataType(int data_type);
-
 VectorInfo *MakeVectorInfo(const std::string &name, int data_type,
                            BOOL is_index, int dimension, 
                            const std::string &model_id,
                            const std::string &retrieval_type, 
                            const std::string &store_type,
                            const std::string &store_param);
-
-/*
-FieldInfo *MakeFieldInfo(ByteArray *name, int data_type,
-                         BOOL is_index);
-*/
 
 Field *MakeField(ByteArray *name, ByteArray *value,
                  enum DataType data_type);
@@ -172,40 +165,11 @@ Config *MakeConfig(const std::string &path, int max_doc_size) {
     return config;
 }
 
-DataType ConvertToDataType(int data_type) {
-    DataType dt;
-    switch (data_type)
-    {
-        case 0:
-            dt = INT;
-            break;
-        case 1:
-            dt = LONG;
-            break;
-        case 2:
-            dt = FLOAT;
-            break;
-        case 3:
-            dt = DOUBLE;
-            break;
-        case 4:
-            dt = STRING;
-            break;
-        case 5:
-            dt = VECTOR;
-            break;
-        default:
-            dt = FLOAT;
-    }
-    return dt;
-}  
-
 VectorInfo *MakeVectorInfo(const std::string &name, int data_type,
                            BOOL is_index, int dimension, const std::string &model_id,
                            const std::string &retrieval_type, const std::string &store_type,
                            const std::string &store_param) {
   ByteArray *ba_name = StringToByteArray(name);
-  DataType dt = ConvertToDataType(data_type);
   ByteArray *ba_model_id = StringToByteArray(model_id);
   ByteArray *ba_retrieval_type = StringToByteArray(retrieval_type);
   ByteArray *ba_store_type = StringToByteArray(store_type);
@@ -215,7 +179,7 @@ VectorInfo *MakeVectorInfo(const std::string &name, int data_type,
       static_cast<VectorInfo *>(malloc(sizeof(VectorInfo)));
   memset(vectorInfo, 0, sizeof(VectorInfo));
   vectorInfo->name = ba_name;
-  vectorInfo->data_type = dt;
+  vectorInfo->data_type = static_cast<enum DataType>(data_type);
   vectorInfo->is_index = is_index;
   vectorInfo->dimension = dimension;
   vectorInfo->model_id = ba_model_id;
@@ -224,17 +188,6 @@ VectorInfo *MakeVectorInfo(const std::string &name, int data_type,
   vectorInfo->store_param = ba_store_param;
   return vectorInfo;
 }
-
-/*
-FieldInfo *MakeFieldInfo(ByteArray *name, int data_type,
-                         BOOL is_index) {
-  FieldInfo *field_info = static_cast<FieldInfo *>(malloc(sizeof(FieldInfo)));
-  field_info->name = name;
-  field_info->data_type = ConvertToDataType(data_type);
-  field_info->is_index = is_index;
-  return field_info;
-}
-*/
 
 Field *MakeField(ByteArray *name, ByteArray *value,
                  enum DataType data_type) {

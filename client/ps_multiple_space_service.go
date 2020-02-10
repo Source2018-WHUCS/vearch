@@ -16,13 +16,12 @@ package client
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/proto"
+	pkg "github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/response"
-	"github.com/vearch/vearch/util/log"
-	"sync"
-	"time"
 )
 
 type multipleSpaceSender struct {
@@ -119,9 +118,7 @@ func (this *multipleSpaceSender) Search(req *request.SearchRequest) *response.Se
 					respChain <- newSearchResponseWithError(par.db, par.space, 0, fmt.Errorf(cast.ToString(r)))
 				}
 			}()
-			now := time.Now()
 			respChain <- par.Search(req)
-			log.Debug("search :[%s/%s] use time:[%s]", par.db, par.space, time.Now().Sub(now))
 		}(sender)
 	}
 
@@ -146,6 +143,7 @@ func (this *multipleSpaceSender) Search(req *request.SearchRequest) *response.Se
 			return newSearchResponseWithError(this.senders[0].db, this.senders[0].space, 0, err)
 		}
 	}
+
 	return first
 }
 

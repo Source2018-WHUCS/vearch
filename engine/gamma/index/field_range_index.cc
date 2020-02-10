@@ -22,21 +22,23 @@
 #include <sstream>
 #include <typeinfo>
 #include "log.h"
+#include "bitmap.h"
 #include "threadskv10h.h"
 #include "utils.h"
 
 using std::string;
 using std::vector;
 
+#define BM_OPERATE_TYPE long
+
 namespace tig_gamma {
 
-static void FreeNodeData(int *data) { free(data); }
+static void FreeNodeData(void *data) { free(data); }
 
 class Node {
  public:
   Node() {
     size_ = 0;
-    capacity_ = 0;
     data_ = nullptr;
     min_ = std::numeric_limits<int>::max();
     max_ = -1;
@@ -45,22 +47,78 @@ class Node {
   ~Node() { free(data_); }
 
   int Add(int val) {
-    min_ = std::min(min_, val);
-    max_ = std::max(max_, val);
+    int op_len = sizeof(BM_OPERATE_TYPE) * 8;
 
-    if (capacity_ == 0) {
-      capacity_ = 1;
-      data_ = (int *)malloc(capacity_ * sizeof(int));
-    } else if (size_ >= capacity_) {
-      capacity_ *= 2;
-      int *data = (int *)malloc(capacity_ * sizeof(int));
-      memcpy(data, data_, size_ * sizeof(int));
-      int *old_data = data_;
-      data_ = data;
-      utils::AsyncWait(1000, FreeNodeData, old_data);
+    if (size_ == 0) {
+      min_ = val;
+      max_ = val;
+      min_aligned_ = (val / op_len) * op_len;
+      max_aligned_ = (val / op_len + 1) * op_len - 1;
+      int bytes_count = -1;
+      if (bitmap::create(data_, bytes_count, max_aligned_ - min_aligned_ + 1) !=
+          0) {
+        LOG(ERROR) << "Cannot create bitmap!";
+        return -1;
+      }
+      bitmap::set(data_, val - min_aligned_);
+      ++size_;
+      return 0;
     }
 
-    data_[size_] = val;
+    if (val < min_aligned_) {
+      char *data = nullptr;
+      int min_aligned = (val / op_len) * op_len;
+
+      int bytes_count = -1;
+      if (bitmap::create(data, bytes_count, max_aligned_ - min_aligned + 1) !=
+          0) {
+        LOG(ERROR) << "Cannot create bitmap!";
+        return -1;
+      }
+
+      BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)data;
+      BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data_;
+
+      for (int i = 0; i < (max_aligned_ - min_aligned_ + 1) / op_len; ++i) {
+        op_data_dst[i + (min_aligned_ - min_aligned) / op_len] = op_data_ori[i];
+      }
+
+      bitmap::set(data, val - min_aligned);
+      auto old_data = data_;
+      data_ = data;
+      min_ = val;
+      min_aligned_ = min_aligned;
+      utils::AsyncWait(1000, FreeNodeData, (void *)old_data);
+    } else if (val > max_aligned_) {
+      char *data = nullptr;
+      int max_aligned = (val / op_len + 1) * op_len - 1;
+
+      int bytes_count = -1;
+      if (bitmap::create(data, bytes_count, max_aligned - min_aligned_ + 1) !=
+          0) {
+        LOG(ERROR) << "Cannot create bitmap!";
+        return -1;
+      }
+
+      BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)data;
+      BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data_;
+
+      for (int i = 0; i < (max_aligned_ - min_aligned_ + 1) / op_len; ++i) {
+        op_data_dst[i] = op_data_ori[i];
+      }
+
+      bitmap::set(data, val - min_aligned_);
+      auto old_data = data_;
+      data_ = data;
+      max_ = val;
+      max_aligned_ = max_aligned;
+      utils::AsyncWait(1000, FreeNodeData, (void *)old_data);
+    } else {
+      bitmap::set(data_, val - min_aligned_);
+      min_ = std::min(min_, val);
+      max_ = std::max(max_, val);
+    }
+
     ++size_;
     return 0;
   }
@@ -68,17 +126,21 @@ class Node {
   int Min() { return min_; }
   int Max() { return max_; }
 
+  int MinAligned() { return min_aligned_; }
+  int MaxAligned() { return max_aligned_; }
+
   int Size() { return size_; }
 
-  int *Data() { return data_; }
+  char *Data() { return data_; }
 
  private:
   int min_;
   int max_;
+  int min_aligned_;
+  int max_aligned_;
 
   int size_;
-  int capacity_;
-  int *data_;
+  char *data_;
 };
 
 typedef struct {
@@ -103,6 +165,10 @@ class FieldRangeIndex {
   int Search(const string &low, const string &high, RangeQueryResult *result);
 
   int Search(const string &tags, RangeQueryResult *result);
+
+  bool IsNumeric() { return is_numeric_; }
+
+  char *Delim() { return kDelim_; }
 
  private:
   BtMgr *main_mgr_;
@@ -184,23 +250,23 @@ int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
   BtDb *bt = bt_open(cache_mgr_, main_mgr_);
   unsigned char key2[key_len];
 
-  std::function<void(unsigned char *, uint)> InsertToBt =
-      [&](unsigned char *key_to_add, uint key_len) {
-        Node *p_node = nullptr;
-        int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)&p_node,
-                             sizeof(Node *));
+  std::function<void(unsigned char *, uint)> InsertToBt = [&](
+      unsigned char *key_to_add, uint key_len) {
+    Node *p_node = nullptr;
+    int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)&p_node,
+                         sizeof(Node *));
 
-        if (ret < 0) {
-          p_node = new Node;
-          BTERR bterr = bt_insertkey(bt->main, key_to_add, key_len, 0,
-                                     static_cast<void *>(&p_node),
-                                     sizeof(Node *), Unique);
-          if (bterr) {
-            LOG(ERROR) << "Error " << bt->mgr->err;
-          }
-        }
-        p_node->Add(value);
-      };
+    if (ret < 0) {
+      p_node = new Node;
+      BTERR bterr =
+          bt_insertkey(bt->main, key_to_add, key_len, 0,
+                       static_cast<void *>(&p_node), sizeof(Node *), Unique);
+      if (bterr) {
+        LOG(ERROR) << "Error " << bt->mgr->err;
+      }
+    }
+    p_node->Add(value);
+  };
 
   if (is_numeric_) {
     ReverseEndian(key, key2, key_len);
@@ -241,10 +307,11 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
                 upper.length());
 
   std::vector<Node *> lists;
-  std::vector<int> sizes;
 
   int min_doc = std::numeric_limits<int>::max();
+  int min_aligned = std::numeric_limits<int>::max();
   int max_doc = 0;
+  int max_aligned = 0;
 
   if (bt_startkey(bt, key_l, lower.length()) == 0) {
     while (bt_nextkey(bt)) {
@@ -254,11 +321,12 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
         }
         Node *p_node = nullptr;
         memcpy(&p_node, bt->mainval->value, sizeof(Node *));
-        sizes.push_back(p_node->Size());
         lists.push_back(p_node);
 
         min_doc = std::min(min_doc, p_node->Min());
+        min_aligned = std::min(min_aligned, p_node->MinAligned());
         max_doc = std::max(max_doc, p_node->Max());
+        max_aligned = std::max(max_aligned, p_node->MaxAligned());
       }
     }
   }
@@ -277,7 +345,7 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
     return 0;
   }
 
-  result->SetRange(min_doc, max_doc);
+  result->SetRange(min_aligned, max_aligned);
   result->Resize();
 #ifdef PERFORMANCE_TESTING
   double end_resize = utils::getmillisecs();
@@ -286,15 +354,30 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
   auto &bit_map = result->Ref();
   int list_size = lists.size();
 
+  int total = 0;
+
+  int op_len = sizeof(BM_OPERATE_TYPE) * 8;
   for (int i = 0; i < list_size; ++i) {
     Node *list = lists[i];
-    int size = sizes[i];
-    int *data = list->Data();
+    char *data = list->Data();
+    int min = list->MinAligned();
+    int max = list->MaxAligned();
 
-    for (int j = 0; j < size; ++j) {
-      bit_map[data[j] - min_doc] = true;
+    if (min < min_aligned || max > max_aligned) {
+      continue;
+    }
+
+    total += list->Size();
+
+    BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)bit_map;
+    BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data;
+    int offset = (min - min_aligned) / op_len;
+    for (int j = 0; j < (max - min + 1) / op_len; ++j) {
+      op_data_dst[j + offset] |= op_data_ori[j];
     }
   }
+
+  result->SetDocNum(total);
 
 #ifdef PERFORMANCE_TESTING
   double end = utils::getmillisecs();
@@ -309,6 +392,8 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
   std::vector<string> items = utils::split(tags, kDelim_);
 
   RangeQueryResult results_union[items.size()];
+
+  int op_len = sizeof(BM_OPERATE_TYPE) * 8;
 
   for (size_t i = 0; i < items.size(); ++i) {
     string item = items[i];
@@ -326,7 +411,7 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
     bt_close(bt);
 
     if (ret < 0) {
-      return 0;
+      continue;
     }
     min_doc = std::min(min_doc, p_node->Min());
     max_doc = std::max(max_doc, p_node->Max());
@@ -335,21 +420,27 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
       return 0;
     }
 
-    results_union[i].SetRange(min_doc, max_doc);
+    int min_aligned = p_node->MinAligned();
+    int max_aligned = p_node->MaxAligned();
+
+    results_union[i].SetRange(min_aligned, max_aligned);
     results_union[i].Resize();
 
-    int size = p_node->Size();
-    int *data = p_node->Data();
-    for (int j = 0; j < size; ++j) {
-      if (data[j] > max_doc) {
-        continue;
-      }
-      results_union[i].Set(data[j] - min_doc);
+    results_union[i].SetDocNum(p_node->Size());
+
+    char *data = p_node->Data();
+    char *&bitmap = results_union[i].Ref();
+    BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)bitmap;
+    BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data;
+
+    for (int j = 0; j < (max_aligned - min_aligned + 1) / op_len; ++j) {
+      op_data_dst[j] = op_data_ori[j];
     }
   }
 
   int min_doc = std::numeric_limits<int>::max();
   int max_doc = 0;
+
   for (size_t i = 0; i < items.size(); ++i) {
     min_doc = std::min(min_doc, results_union[i].Min());
     max_doc = std::max(max_doc, results_union[i].Max());
@@ -359,16 +450,36 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
   if (retval <= 0) {
     return 0;
   }
+
+  int total = 0;
+
   result->SetRange(min_doc, max_doc);
   result->Resize();
+
+  char *&bitmap = result->Ref();
+
   for (size_t i = 0; i < items.size(); ++i) {
-    int doc = results_union[i].Next();
-    while (doc >= 0) {
-      result->Set(doc - min_doc);
-      doc = results_union[i].Next();
+    char *data = results_union[i].Ref();
+
+    int min = results_union[i].Min();
+    int max = results_union[i].Max();
+
+    if (min < min_doc || max > max_doc) {
+      continue;
+    }
+
+    total += results_union[i].Size();
+
+    BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)bitmap;
+    BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data;
+
+    int offset = (min - min_doc) / op_len;
+    for (int j = 0; j < (max - min + 1) / op_len; ++j) {
+      op_data_dst[j + offset] |= op_data_ori[j];
     }
   }
 
+  result->SetDocNum(total);
   return retval;
 }
 
@@ -403,28 +514,44 @@ int MultiFieldsRangeIndex::Add(int docid, int field) {
   return 0;
 }
 
-int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
+int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &origin_filters,
                                   MultiRangeQueryResults *out) {
   out->Clear();
-  int fsize = filters.size();
 
+  std::vector<FilterInfo> filters;
+
+  for (const auto &filter : origin_filters) {
+    FieldRangeIndex *index = fields_[filter.field];
+    if (index == nullptr || filter.field < 0) {
+      return -1;
+    }
+    if (not index->IsNumeric() && (filter.is_union == 0)) {
+      // type is string and operator is "and", split this filter
+      std::vector<string> items =
+          utils::split(filter.lower_value, index->Delim());
+      for (string &item : items) {
+        FilterInfo f = filter;
+        f.lower_value = item;
+        filters.push_back(f);
+      }
+      continue;
+    }
+    filters.push_back(filter);
+  }
+
+  int fsize = filters.size();
   vector<RangeQueryResult *> results(fsize);
 
   if (1 == fsize) {
-    auto &_ = filters[0];
-    if (_.is_union) {
-      out->SetFlags(out->Flags() | 0x4);
-    }
-    RangeQueryResult *result = new RangeQueryResult(out->Flags());
-    FieldRangeIndex *index = fields_[_.field];
-    if (index == nullptr || _.field < 0) {
-      return -1;
-    }
+    auto &filter = filters[0];
+    RangeQueryResult *result = new RangeQueryResult;
+    FieldRangeIndex *index = fields_[filter.field];
 
-    int retval = index->Search(_.lower_value, _.upper_value, result);
+    int retval = index->Search(filter.lower_value, filter.upper_value, result);
     if (retval > 0) {
       out->Add(result);
     }
+    // result->Output();
     return retval;
   }
 
@@ -443,13 +570,6 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
     if (index == nullptr || filter.field < 0) {
       continue;
     }
-
-    int flags = out->Flags();
-    if (filter.is_union) {
-      flags |= 0x4;
-    }
-
-    results[valuable_result + 1]->SetFlags(flags);
 
     int retval = index->Search(filter.lower_value, filter.upper_value,
                                results[valuable_result + 1]);
@@ -471,20 +591,7 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
     return -1;  // universal set
   }
 
-  // t.Stop();
-  // t.Output();
-
-  // When the shortest doc chain is long,
-  // instead of calculating the intersection immediately, a lazy
-  // mechanism is made.
-  if (shortest > kLazyThreshold_) {
-    for (int i = 0; i <= valuable_result; ++i) {
-      out->Add(results[i]);
-    }
-    return 1;  // it's hard to count the return docs
-  }
-
-  RangeQueryResult *tmp = new RangeQueryResult(out->Flags());
+  RangeQueryResult *tmp = new RangeQueryResult;
   int count = Intersect(results.data(), valuable_result, shortest_idx, tmp);
   if (count > 0) {
     out->Add(tmp);
@@ -493,25 +600,28 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &filters,
   return count;
 }
 
-int MultiFieldsRangeIndex::Intersect(RangeQueryResult **results, int j, int k,
-                                     RangeQueryResult *out) {
+int MultiFieldsRangeIndex::Intersect(RangeQueryResult **results, int j,
+                                     int shortest_idx, RangeQueryResult *out) {
   assert(results != nullptr && j >= 0);
 
-  // t.Start("Intersect");
   // I want to build a smaller bitmap ...
-  int min_doc = results[0]->Min();
-  int max_doc = results[0]->Max();
+  int min_doc = results[0]->MinAligned();
+  int max_doc = results[0]->MaxAligned();
+
+  int total = results[0]->Size();
+
+  // results[0]->Output();
 
   for (int i = 1; i <= j; i++) {
     RangeQueryResult *r = results[i];
 
     // the maximum of the minimum(s)
-    if (r->Min() > min_doc) {
-      min_doc = r->Min();
+    if (r->MinAligned() > min_doc) {
+      min_doc = r->MinAligned();
     }
     // the minimum of the maximum(s)
-    if (r->Max() < max_doc) {
-      max_doc = r->Max();
+    if (r->MaxAligned() < max_doc) {
+      max_doc = r->MaxAligned();
     }
   }
 
@@ -521,26 +631,44 @@ int MultiFieldsRangeIndex::Intersect(RangeQueryResult **results, int j, int k,
   out->SetRange(min_doc, max_doc);
   out->Resize();
 
+  out->SetDocNum(total);
+
+  char *&bitmap = out->Ref();
+
+  int op_len = sizeof(BM_OPERATE_TYPE) * 8;
+
+  BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)bitmap;
+
   // calculate the intersection with the shortest doc chain.
-  int count = 0;
-  int docID = results[k]->Next();
-  while (docID >= 0) {
-    int i = 0;
-    while (i <= j && results[i]->Has(docID)) {
-      i++;
+  {
+    char *data = results[shortest_idx]->Ref();
+
+    BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data;
+    for (int j = 0; j < (max_doc - min_doc + 1) / op_len; ++j) {
+      op_data_dst[j] = op_data_ori[j];
     }
-    if (i > j) {
-      int pos = docID - min_doc;
-      out->Set(pos);
-      count++;
-    }
-    docID = results[k]->Next();
   }
 
-  // t.Stop();
-  // t.Output();
+  for (int i = 0; i < j; ++i) {
+    if (i == shortest_idx) {
+      continue;
+    }
+    char *data = results[i]->Ref();
+    BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data;
+    int min = results[i]->MinAligned();
+    int max = results[i]->MaxAligned();
 
-  return count;
+    if (min < min_doc || max > max_doc) {
+      continue;
+    }
+
+    int offset = (min - min_doc) / op_len;
+    for (int j = 0; j < (max - min + 1) / op_len; ++j) {
+      op_data_dst[j + offset] &= op_data_ori[j];
+    }
+  }
+
+  return total;
 }
 
 int MultiFieldsRangeIndex::AddField(int field, enum DataType field_type) {

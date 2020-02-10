@@ -24,7 +24,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/vearch/vearch/util/log"
+	"io/ioutil"
+	"reflect"
+	"sync"
+	"time"
+	"unsafe"
+
 	"github.com/vearch/vearch/config"
 	pkg "github.com/vearch/vearch/proto"
 	"github.com/vearch/vearch/proto/entity"
@@ -33,12 +38,9 @@ import (
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/ps/engine/register"
 	"github.com/vearch/vearch/util/atomic"
+	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/util/uuid"
-	"io/ioutil"
-	"reflect"
-	"sync"
-	"time"
-	"unsafe"
+	"github.com/vearch/vearch/util/vearchlog"
 )
 
 const Name = "gamma"
@@ -102,7 +104,8 @@ func New(cfg register.EngineConfig) (engine.Engine, error) {
 	if len(infos) > 0 {
 		code := int(C.Load(ge.gamma))
 		if code != 0 {
-			return nil, fmt.Errorf("load gamma data err code:[%d]", code)
+			vearchlog.LogErrNotNil(fmt.Errorf("load gamma data err code:[%d]", code))
+			ge.Close()
 		}
 	}
 
@@ -209,8 +212,6 @@ func (ge *gammaEngine) Optimize() error {
 }
 
 func (ge *gammaEngine) IndexStatus() int {
-	indexLocker.Lock()
-	defer indexLocker.Unlock()
 	return int(C.GetIndexStatus(ge.gamma))
 }
 
@@ -221,7 +222,7 @@ func (ge *gammaEngine) BuildIndex() error {
 	defer ge.counter.Decr()
 	gamma := ge.gamma
 	if gamma == nil {
-		return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)
+		return vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED))
 	}
 
 	//UNINDEXED = 0, INDEXING, INDEXED
@@ -235,7 +236,7 @@ func (ge *gammaEngine) BuildIndex() error {
 		select {
 		case <-ge.ctx.Done():
 			log.Error("partition:[%d] has closed so skip wait", ge.partitionID)
-			return pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)
+			return vearchlog.LogErrAndReturn(pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED))
 		default:
 		}
 

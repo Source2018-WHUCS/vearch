@@ -82,6 +82,8 @@ struct RealTimeMemData {
   int Load(const std::vector<std::string> &index_dirs,
            const std::string &vec_name);
 
+  void PrintBucketSize();
+  
   RTInvertBucketData *_cur_invert_ptr;
   RTInvertBucketData *_extend_invert_ptr;
 

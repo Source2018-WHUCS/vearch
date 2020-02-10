@@ -71,6 +71,7 @@ GammaIVFPQIndex::GammaIVFPQIndex(faiss::Index *quantizer, size_t d,
 
 #ifdef PERFORMANCE_TESTING
   search_count_ = 0;
+  add_count_ = 0;
 #endif
 }
 
@@ -275,17 +276,20 @@ bool GammaIVFPQIndex::Add(int n, const float *vec) {
   }
   indexed_vec_count_ = vid;
 #ifdef PERFORMANCE_TESTING
-  double t1 = faiss::getmillisecs();
-  if (indexed_vec_count_ % 10000 == 0) {
+  add_count_ += n;
+  if (add_count_ >= 10000) {
+    double t1 = faiss::getmillisecs();
     LOG(INFO) << "Add time [" << (t1 - t0) / n << "]ms, count "
               << indexed_vec_count_;
+    rt_invert_index_ptr_->PrintBucketSize();
+    add_count_ = 0;
   }
 #endif
   return true;
 }
 
 void GammaIVFPQIndex::SearchIVFPQ(int n, const float *x,
-                                  const GammaSearchCondition *condition,
+                                  GammaSearchCondition *condition,
                                   float *distances, idx_t *labels, int *total) {
   std::unique_ptr<idx_t[]> idx(new idx_t[n * nprobe]);
   std::unique_ptr<float[]> coarse_dis(new float[n * nprobe]);
@@ -299,9 +303,9 @@ void GammaIVFPQIndex::SearchIVFPQ(int n, const float *x,
 }
 
 void GammaIVFPQIndex::search_preassigned(
-    int n, const float *x, const GammaSearchCondition *condition,
-    const idx_t *keys, const float *coarse_dis, float *distances, idx_t *labels,
-    int *total, bool store_pairs, const faiss::IVFSearchParameters *params) {
+    int n, const float *x, GammaSearchCondition *condition, const idx_t *keys,
+    const float *coarse_dis, float *distances, idx_t *labels, int *total,
+    bool store_pairs, const faiss::IVFSearchParameters *params) {
   int nprobe = params ? params->nprobe : this->nprobe;
   long max_codes = params ? params->max_codes : this->max_codes;
 
@@ -408,20 +412,22 @@ void GammaIVFPQIndex::search_preassigned(
   }
 #ifdef PERFORMANCE_TESTING
   double s_start = utils::getmillisecs();
+  condition->Perf("search prepare");
 #endif
 
+  condition->parallel_mode = condition->parallel_based_on_query ? 0 : 1;
   int ni_total = -1;
   if (condition->range_query_result &&
-      condition->range_query_result->GetAllResult().size() >= 1) {
-    ni_total = condition->range_query_result->GetAllResult()[0]->Size();
+      condition->range_query_result->GetAllResult() != nullptr) {
+    ni_total = condition->range_query_result->GetAllResult()->Size();
   }
 
   // don't start parallel section if single query
   bool do_parallel = condition->parallel_mode == 0 ? n > 1 : nprobe > 1;
 
   if (condition->range_query_result &&
-      condition->range_query_result->GetAllResult().size() == 1 &&
-      condition->range_query_result->GetAllResult()[0]->Size() < 50000) {
+      condition->range_query_result->GetAllResult() != nullptr &&
+      condition->range_query_result->GetAllResult()->Size() < 50000) {
     const std::vector<int> docid_list = condition->range_query_result->ToDocs();
 
 #ifdef DEBUG
@@ -508,9 +514,11 @@ void GammaIVFPQIndex::search_preassigned(
 #endif
         compute_dis(xi, simi, idxi, recall_simi, recall_idxi);
 
+        total[i] = ni_total;
+
 #ifdef PERFORMANCE_TESTING
-        double end = utils::getmillisecs();
         if (++search_count_ % 1000 == 0) {
+          double end = utils::getmillisecs();
           LOG(INFO) << "ivfqp range filter, doc id list size="
                     << docid_list.size() << ", vid list len=" << vid_list_len
                     << "to docid cost=" << to_vid_end - s_start
@@ -574,18 +582,9 @@ void GammaIVFPQIndex::search_preassigned(
     if (condition->parallel_mode == 0) {  // parallelize over queries
 #pragma omp for
       for (int i = 0; i < n; i++) {
-#ifdef PERFORMANCE_TESTING
-        double query_start = utils::getmillisecs();
-#endif
-
         // loop over queries
         const float *xi = x + i * d;
         scanner->set_query(x + i * d);
-
-#ifdef PERFORMANCE_TESTING
-        double set_query_end = utils::getmillisecs();
-#endif
-
         float *simi = distances + i * k;
         idx_t *idxi = labels + i * k;
 
@@ -608,25 +607,7 @@ void GammaIVFPQIndex::search_preassigned(
         total[i] = ni_total;
 
         ndis += nscan;
-
-#ifdef PERFORMANCE_TESTING
-        double coarse_end = utils::getmillisecs();
-#endif
         compute_dis(xi, simi, idxi, recall_simi, recall_idxi);
-
-#ifdef PERFORMANCE_TESTING
-        double end = utils::getmillisecs();
-        if (++search_count_ % 1000 == 0) {
-          LOG(INFO) << "ivfqp query parallel "
-                    << "coarse cost=" << coarse_end - query_start
-                    << "ms, set query cost=" << set_query_end - query_start
-                    << "ms, reorder cost=" << end - coarse_end
-                    << "ms, total cost=" << end - query_start
-                    << "ms, nscan=" << nscan << ", nheap=" << nheap
-                    << ", nprobe=" << this->nprobe;
-        }
-#endif
-
       }       // parallel for
     } else {  // parallelize over inverted lists
       std::vector<idx_t> local_idx(recall_num);
@@ -680,26 +661,23 @@ void GammaIVFPQIndex::search_preassigned(
 #pragma omp single
         {
 #ifdef PERFORMANCE_TESTING
-          double coarse_end = utils::getmillisecs();
+          condition->Perf("coarse");
 #endif
           compute_dis(xi, simi, idxi, recall_simi, recall_idxi);
 
 #ifdef PERFORMANCE_TESTING
-          double s_end = utils::getmillisecs();
-          if (search_count_++ % 10000 == 0) {
-            LOG(INFO) << "ivfpq nprobe parallel: "
-                      << "coarse cost=" << coarse_end - s_start
-                      << "ms, reorder cost=" << s_end - coarse_end
-                      << "ms, total cost=" << s_end - s_start
-                      << "ms, metric type=" << metric_type
-                      << ", nprobe=" << this->nprobe
-                      << ", recall_num=" << recall_num;
-          }
+          condition->Perf("reorder");
 #endif
         }
       }
     }
   }  // parallel
+
+#ifdef PERFORMANCE_TESTING
+  std::string compute_msg = "compute ";
+  compute_msg += std::to_string(n);
+  condition->Perf(compute_msg);
+#endif
 }
 
 void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
@@ -900,7 +878,7 @@ void GammaIVFPQIndex::SearchDirectly(int n, const float *x,
 }
 
 int GammaIVFPQIndex::Search(const VectorQuery *query,
-                            const GammaSearchCondition *condition,
+                            GammaSearchCondition *condition,
                             VectorResult &result) {
   float *x = reinterpret_cast<float *>(query->value->value);
   int raw_d = raw_vec_->GetDimension();
