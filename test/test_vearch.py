@@ -4,16 +4,15 @@ import logging
 import pytest
 import requests
 import json
-import time
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 
-__author__ = 'wangjiangjuan'
+__author__ = 'wangjiangjuan' + 'jiazijian'
 __date__ = '2019-07-22 09:25:00'
 __description__ = """ """
 
-ip = "11.3.238.38" #127.0.0.1
+ip = "127.0.0.1"
 ip_db = ip + ":443"
 ip_data = ip + ":80"
 db_name = "ts_db"
@@ -93,116 +92,108 @@ logger.info("space")
 def test_createSpaceMmap():
     url = "http://" + ip_db + "/space/" + db_name +"/_create"
     headers = {"content-type": "application/json"}
-    # data = {
-    #     "name": space_name_mmap,
-    #     "dynamic_schema": "strict",
-    #     "partition_num": 3,  # "partition_num": 2-6之间
-    #     "replica_num": 3,
-    #     "engine": {
-    #         "name":"gamma",
-    #         "index_size": 400000,
-    #         "max_size": 15000000,
-    #         # "nprobe": 10,
-    #         # "metric_type": "L2",
-    #         # "ncentroids": 2048,
-    #         # "nsubvector": 64
-    #     },
-    #     "properties": {
-    #         "string": {
-    #             "type" : "keyword",
-    #             "index" : "true"
-    #         },
-    #         "int": {
-    #             "type": "integer",
-    #             "index" : "true"
-    #         },
-    #         "float": {
-    #             "type": "float",
-    #             "index" : "true"
-    #         },
-    #         "vector": {
-    #             "type": "vector",
-    #             "model_id": "img",
-    #             "dimension": 128,
-    #             "format":"normalization",
-    #             # "retrieval_type": "GPU",
-    #             # "store_type": "Mmap",
-    #             # "store_param":
-    #             #     {
-    #             #         "cache_size": 1024
-    #             #     }
-    #         },
-    #         "string_tags": {
-    #             "type": "string",
-    #             "array": True,
-    #             "index" : "true"
-    #         },
-    #         "int_tags": {
-    #             "type": "integer",
-    #             "array": True,
-    #             "index" : "true"
-    #         },
-    #         "float_tags" : {
-    #             "type": "float",
-    #             "array": True,
-    #             "index" : "true"
-    #         }
-    #     },
-    #     "models": [{
-    #         "model_id": "vgg16",
-    #         "fields": ["string"],
-    #         "out": "feature"
-    #     }]
-    # }
     data = {
         "name": "ts_space",
         "dynamic_schema": "strict",
-        "partition_num": 3,
-        "replica_num": 3,
-        "engine": {"name": "gamma", "index_size": 10000, "max_size": 20000000},
+        "partition_num": 1,
+        "replica_num": 1,
+        "engine": {
+            "name": "gamma",
+            "index_size": 10000,
+            "max_size": 10000*10000
+        },
         "properties": {
-            "sku": {
-                "type": "integer",
-                "index": "false"
-            },
-            "img_url": {
+            "string": {
                 "type": "keyword",
-                "index": "false"
+                "index": True
             },
-            "cid1": {
+            "int": {
                 "type": "integer",
-                "index": "true"
+                "index": True
             },
-            "cid2": {
-                "type": "integer",
-                "index": "true"
+            "float": {
+                "type": "float",
+                "index": True
             },
-            "cid3": {
-                "type": "integer",
-                "index": "true"
-            },
-            "spu": {
-                "type": "integer",
-                "index": "false"
-            },
-            "brand_id": {
-                "type": "integer",
-                "index": "false"
-            },
-            "feature": {
+            "vector": {
                 "type": "vector",
                 "model_id": "img",
-                "dimension": 512,
-                # "retrieval_type": "GPU",
-                "store_param": {"cache_size":40960}
+                "dimension": 128,
+                # "store_type": store_type,                  #默认 "Mmap"
+                # "store_param": {"cache_size": cache_size}, #默认 max_size*dimension*typeof(float)
+                "format": "normalization"
+            },
+            "string_tags": {
+                "type": "string",
+                "array": True,
+                "index": True
+            },
+            "int_tags": {
+                "type": "integer",
+                "array": True,
+                "index": True
+            },
+            "float_tags": {
+                "type": "float",
+                "array": True,
+                "index": True
             }
         },
         "models": [{
             "model_id": "vgg16",
-            "fields": ["url"],
+            "fields": ["string"],
             "out": "feature"
         }]
     }
+    # data = {
+    #     "name": "ts_space",
+    #     "dynamic_schema": "strict",
+    #     "partition_num": 3,
+    #     "replica_num": 3,
+    #     "engine": {"name": "gamma", "index_size": 10000, "max_size": 20000000},
+    #     "properties": {
+    #         "sku": {
+    #             "type": "integer",
+    #             "index": "false"
+    #         },
+    #         "img_url": {
+    #             "type": "keyword",
+    #             "index": "false"
+    #         },
+    #         "cid1": {
+    #             "type": "integer",
+    #             "index": "true"
+    #         },
+    #         "cid2": {
+    #             "type": "integer",
+    #             "index": "true"
+    #         },
+    #         "cid3": {
+    #             "type": "integer",
+    #             "index": "true"
+    #         },
+    #         "spu": {
+    #             "type": "integer",
+    #             "index": "false"
+    #         },
+    #         "brand_id": {
+    #             "type": "integer",
+    #             "index": "false"
+    #         },
+    #         "feature": {
+    #             "type": "vector",
+    #             "model_id": "img",
+    #             "dimension": 512,
+    #             # "retrieval_type": "GPU",
+    #             "store_param": {"cache_size":40960}
+    #         }
+    #     },
+    #     "models": [{
+    #         "model_id": "vgg16",
+    #         "fields": ["url"],
+    #         "out": "feature"
+    #     }]
+    # }
     print(url+"---"+json.dumps(data))
     response = requests.put(url, headers=headers, data=json.dumps(data))
     print("space_create---\n" + response.text)
@@ -548,142 +539,142 @@ def test_deleteSpace():
     print("deleteSpace:" + response.text)
     assert response.status_code == 200
 
-def test_deletetable():
-    url_table = "http://" + ip_db + "/space/" + db_name +"/_create"
-    url_delete = "http://" + ip_db + "/space/"+db_name+"/"+space_name_mmap
-    headers = {"content-type": "application/json"}
-    data_table = {
-        "name": "ts_space",
-        "dynamic_schema": "strict",
-        "partition_num": 3,
-        "replica_num": 1,
-        "engine": {"name": "gamma", "index_size": 10000, "max_size": 20000000},
-        "properties": {
-            "sku": {
-                "type": "integer",
-                "index": "false"
-            },
-            "img_url": {
-                "type": "keyword",
-                "index": "false"
-            },
-            "cid1": {
-                "type": "integer",
-                "index": "true"
-            },
-            "cid2": {
-                "type": "integer",
-                "index": "true"
-            },
-            "cid3": {
-                "type": "integer",
-                "index": "true"
-            },
-            "spu": {
-                "type": "integer",
-                "index": "false"
-            },
-            "brand_id": {
-                "type": "integer",
-                "index": "false"
-            },
-            "feature": {
-                "type": "vector",
-                "model_id": "img",
-                "dimension": 512,
-                # "retrieval_type": "GPU",
-                "store_param": {"cache_size": 40960}
-            }
-        },
-        "models": [{
-            "model_id": "vgg16",
-            "fields": ["url"],
-            "out": "feature"
-        }]
-    }
-    # data_table = {
-    #     "name": space_name_mmap,
-    #     "dynamic_schema": "strict",
-    #     "partition_num": 2, #"partition_num": 2-6之间
-    #     "replica_num": 1,
-    #     "engine": {"name":"gamma", "index_size":8192, "max_size":10000},
-    #     "properties": {
-    #         "string": {
-    #             "type" : "keyword",
-    #             "index" : "true"
-    #         },
-    #         "int": {
-    #             "type": "integer",
-    #             "index" : "true"
-    #         },
-    #         "float": {
-    #             "type": "float",
-    #             "index" : "true"
-    #         },
-    #         "vector": {
-    #             "type": "vector",
-    #             "model_id": "img",
-    #             "dimension": 128,
-    #             "format":"normalization"
-    #         },
-    #         "string_tags": {
-    #             "type": "string",
-    #             "array": True,
-    #             "index" : "true"
-    #         },
-    #         "int_tags": {
-    #             "type": "integer",
-    #             "array": True,
-    #             "index" : "true"
-    #         },
-    #         "float_tags" : {
-    #             "type": "float",
-    #             "array": True,
-    #             "index" : "true"
-    #         }
-    #     },
-    #     "models": [{
-    #         "model_id": "vgg16",
-    #         "fields": ["string"],
-    #         "out": "feature"
-    #     }]
-    # }
-    f = open('result.txt', 'a+')
-    for i in range(200):
-        #create table
-        response = requests.put(url_table, headers=headers, data=json.dumps(data_table))
-        print("i---",i,":space_create", response.text)
-        #instert docs 1000
-        with open(fileData, "r") as dataLine1:
-            num = 0
-            for dataLine in dataLine1:
-                idStr = dataLine.split(',', 1)[0].replace('{', '')
-                id = eval(idStr.split(':')[1])
-                data = "{"+dataLine.split(',', 1)[1]
-                url = "http://" + ip_data + "/" + db_name + "/" + space_name_mmap + "/" + id
-                # response = requests.post(url, headers=headers, data=data)
-
-                # print("i---",i,"insertWithID:", response.text,file=f)
-                # assert response.status_code == 200
-                # num += 1
-                # if(num == 1000):
-                #     break;
-        #delete table
-        response = requests.delete(url_delete)
-        print("i---",i, ":delete space", response.text)
-        # time.sleep(5)
-    f.close()
+# def test_deletetable():
+#     url_table = "http://" + ip_db + "/space/" + db_name +"/_create"
+#     url_delete = "http://" + ip_db + "/space/"+db_name+"/"+space_name_mmap
+#     headers = {"content-type": "application/json"}
+#     data_table = {
+#         "name": "ts_space",
+#         "dynamic_schema": "strict",
+#         "partition_num": 3,
+#         "replica_num": 1,
+#         "engine": {"name": "gamma", "index_size": 10000, "max_size": 20000000},
+#         "properties": {
+#             "sku": {
+#                 "type": "integer",
+#                 "index": "false"
+#             },
+#             "img_url": {
+#                 "type": "keyword",
+#                 "index": "false"
+#             },
+#             "cid1": {
+#                 "type": "integer",
+#                 "index": "true"
+#             },
+#             "cid2": {
+#                 "type": "integer",
+#                 "index": "true"
+#             },
+#             "cid3": {
+#                 "type": "integer",
+#                 "index": "true"
+#             },
+#             "spu": {
+#                 "type": "integer",
+#                 "index": "false"
+#             },
+#             "brand_id": {
+#                 "type": "integer",
+#                 "index": "false"
+#             },
+#             "feature": {
+#                 "type": "vector",
+#                 "model_id": "img",
+#                 "dimension": 512,
+#                 # "retrieval_type": "GPU",
+#                 "store_param": {"cache_size": 40960}
+#             }
+#         },
+#         "models": [{
+#             "model_id": "vgg16",
+#             "fields": ["url"],
+#             "out": "feature"
+#         }]
+#     }
+#     # data_table = {
+#     #     "name": space_name_mmap,
+#     #     "dynamic_schema": "strict",
+#     #     "partition_num": 2, #"partition_num": 2-6之间
+#     #     "replica_num": 1,
+#     #     "engine": {"name":"gamma", "index_size":8192, "max_size":10000},
+#     #     "properties": {
+#     #         "string": {
+#     #             "type" : "keyword",
+#     #             "index" : "true"
+#     #         },
+#     #         "int": {
+#     #             "type": "integer",
+#     #             "index" : "true"
+#     #         },
+#     #         "float": {
+#     #             "type": "float",
+#     #             "index" : "true"
+#     #         },
+#     #         "vector": {
+#     #             "type": "vector",
+#     #             "model_id": "img",
+#     #             "dimension": 128,
+#     #             "format":"normalization"
+#     #         },
+#     #         "string_tags": {
+#     #             "type": "string",
+#     #             "array": True,
+#     #             "index" : "true"
+#     #         },
+#     #         "int_tags": {
+#     #             "type": "integer",
+#     #             "array": True,
+#     #             "index" : "true"
+#     #         },
+#     #         "float_tags" : {
+#     #             "type": "float",
+#     #             "array": True,
+#     #             "index" : "true"
+#     #         }
+#     #     },
+#     #     "models": [{
+#     #         "model_id": "vgg16",
+#     #         "fields": ["string"],
+#     #         "out": "feature"
+#     #     }]
+#     # }
+#     f = open('result.txt', 'a+')
+#     for i in range(200):
+#         #create table
+#         response = requests.put(url_table, headers=headers, data=json.dumps(data_table))
+#         print("i---",i,":space_create", response.text)
+#         #instert docs 1000
+#         with open(fileData, "r") as dataLine1:
+#             num = 0
+#             for dataLine in dataLine1:
+#                 idStr = dataLine.split(',', 1)[0].replace('{', '')
+#                 id = eval(idStr.split(':')[1])
+#                 data = "{"+dataLine.split(',', 1)[1]
+#                 url = "http://" + ip_data + "/" + db_name + "/" + space_name_mmap + "/" + id
+#                 # response = requests.post(url, headers=headers, data=data)
+#
+#                 # print("i---",i,"insertWithID:", response.text,file=f)
+#                 # assert response.status_code == 200
+#                 # num += 1
+#                 # if(num == 1000):
+#                 #     break;
+#         #delete table
+#         response = requests.delete(url_delete)
+#         print("i---",i, ":delete space", response.text)
+#         # time.sleep(5)
+#     f.close()
 
 
 logger.info("rocksdb")
-def test_createSpacerocksdb():
+def test_createspacerocksdb():
     url = "http://" + ip_db + "/space/" + db_name +"/_create"
     headers = {"content-type": "application/json"}
     data = {
         "name": space_name_rocksdb,
         "dynamic_schema": "strict",
-        "partition_num": 3,  # "partition_num": 2-6之间
-        "replica_num": 3,
+        "partition_num": 1,  # "partition_num": 2-6之间
+        "replica_num": 1,
         "engine": {
             "name":"gamma",
             "index_size": 400000,
@@ -696,15 +687,15 @@ def test_createSpacerocksdb():
         "properties": {
             "string": {
                 "type" : "keyword",
-                "index" : "true"
+                "index" : True
             },
             "int": {
                 "type": "integer",
-                "index" : "true"
+                "index" : True
             },
             "float": {
                 "type": "float",
-                "index" : "true"
+                "index" : True
             },
             "vector": {
                 "type": "vector",
@@ -721,17 +712,17 @@ def test_createSpacerocksdb():
             "string_tags": {
                 "type": "string",
                 "array": True,
-                "index" : "true"
+                "index" : True
             },
             "int_tags": {
                 "type": "integer",
                 "array": True,
-                "index" : "true"
+                "index" : True
             },
             "float_tags" : {
                 "type": "float",
                 "array": True,
-                "index" : "true"
+                "index" : True
             }
         },
         "models": [{
@@ -1134,132 +1125,132 @@ def test_deleteSpaceRocksdb():
     print("deleteSpace:" + response.text)
     assert response.status_code == 200
 
-def test_deletetableRocksdb():
-    url_table = "http://" + ip_db + "/space/" + db_name +"/_create"
-    url_delete = "http://" + ip_db + "/space/"+db_name+"/"+space_name_rocksdb
-    headers = {"content-type": "application/json"}
-    # data_table = {
-    #     "name": "ts_space",
-    #     "dynamic_schema": "strict",
-    #     "partition_num": 3,
-    #     "replica_num": 3,
-    #     "engine": {"name": "gamma", "index_size": 10000, "max_size": 20000000},
-    #     "properties": {
-    #         "sku": {
-    #             "type": "integer",
-    #             "index": "false"
-    #         },
-    #         "img_url": {
-    #             "type": "keyword",
-    #             "index": "false"
-    #         },
-    #         "cid1": {
-    #             "type": "integer",
-    #             "index": "true"
-    #         },
-    #         "cid2": {
-    #             "type": "integer",
-    #             "index": "true"
-    #         },
-    #         "cid3": {
-    #             "type": "integer",
-    #             "index": "true"
-    #         },
-    #         "spu": {
-    #             "type": "integer",
-    #             "index": "false"
-    #         },
-    #         "brand_id": {
-    #             "type": "integer",
-    #             "index": "false"
-    #         },
-    #         "feature": {
-    #             "type": "vector",
-    #             "model_id": "img",
-    #             "dimension": 512,
-    #             # "retrieval_type": "GPU",
-    #             "store_param": {"cache_size": 40960}
-    #         }
-    #     },
-    #     "models": [{
-    #         "model_id": "vgg16",
-    #         "fields": ["url"],
-    #         "out": "feature"
-    #     }]
-    # }
-    data_table = {
-        "name": space_name_rocksdb,
-        "dynamic_schema": "strict",
-        "partition_num": 2, #"partition_num": 2-6之间
-        "replica_num": 1,
-        "engine": {"name":"gamma", "index_size":8192, "max_size":100000},
-        "properties": {
-            "string": {
-                "type" : "keyword",
-                "index" : "true"
-            },
-            "int": {
-                "type": "integer",
-                "index" : "true"
-            },
-            "float": {
-                "type": "float",
-                "index" : "true"
-            },
-            "vector": {
-                "type": "vector",
-                "model_id": "img",
-                "dimension": 128,
-                "format":"normalization"
-            },
-            "string_tags": {
-                "type": "string",
-                "array": True,
-                "index" : "true"
-            },
-            "int_tags": {
-                "type": "integer",
-                "array": True,
-                "index" : "true"
-            },
-            "float_tags" : {
-                "type": "float",
-                "array": True,
-                "index" : "true"
-            }
-        },
-        "models": [{
-            "model_id": "vgg16",
-            "fields": ["string"],
-            "out": "feature"
-        }]
-    }
-    f = open('result.txt', 'a+')
-    for i in range(200):
-        #create table
-        response = requests.put(url_table, headers=headers, data=json.dumps(data_table))
-        print("i---",i,":space_create", response.text)
-        #instert docs 1000
-        with open(fileData, "r") as dataLine1:
-            num = 0
-            for dataLine in dataLine1:
-                idStr = dataLine.split(',', 1)[0].replace('{', '')
-                id = eval(idStr.split(':')[1])
-                data = "{"+dataLine.split(',', 1)[1]
-                url = "http://" + ip_data + "/" + db_name + "/" + space_name_mmap + "/" + id
-                # response = requests.post(url, headers=headers, data=data)
-
-                # print("i---",i,"insertWithID:", response.text,file=f)
-                # assert response.status_code == 200
-                # num += 1
-                # if(num == 1000):
-                #     break;
-        #delete table
-        response = requests.delete(url_delete)
-        print("i---",i, ":delete space", response.text)
-        # time.sleep(5)
-    f.close()
-
+# def test_deletetableRocksdb():
+#     url_table = "http://" + ip_db + "/space/" + db_name +"/_create"
+#     url_delete = "http://" + ip_db + "/space/"+db_name+"/"+space_name_rocksdb
+#     headers = {"content-type": "application/json"}
+#     # data_table = {
+#     #     "name": "ts_space",
+#     #     "dynamic_schema": "strict",
+#     #     "partition_num": 3,
+#     #     "replica_num": 3,
+#     #     "engine": {"name": "gamma", "index_size": 10000, "max_size": 20000000},
+#     #     "properties": {
+#     #         "sku": {
+#     #             "type": "integer",
+#     #             "index": "false"
+#     #         },
+#     #         "img_url": {
+#     #             "type": "keyword",
+#     #             "index": "false"
+#     #         },
+#     #         "cid1": {
+#     #             "type": "integer",
+#     #             "index": "true"
+#     #         },
+#     #         "cid2": {
+#     #             "type": "integer",
+#     #             "index": "true"
+#     #         },
+#     #         "cid3": {
+#     #             "type": "integer",
+#     #             "index": "true"
+#     #         },
+#     #         "spu": {
+#     #             "type": "integer",
+#     #             "index": "false"
+#     #         },
+#     #         "brand_id": {
+#     #             "type": "integer",
+#     #             "index": "false"
+#     #         },
+#     #         "feature": {
+#     #             "type": "vector",
+#     #             "model_id": "img",
+#     #             "dimension": 512,
+#     #             # "retrieval_type": "GPU",
+#     #             "store_param": {"cache_size": 40960}
+#     #         }
+#     #     },
+#     #     "models": [{
+#     #         "model_id": "vgg16",
+#     #         "fields": ["url"],
+#     #         "out": "feature"
+#     #     }]
+#     # }
+#     data_table = {
+#         "name": space_name_rocksdb,
+#         "dynamic_schema": "strict",
+#         "partition_num": 3, #"partition_num": 2-6之间
+#         "replica_num": 1,
+#         "engine": {"name":"gamma", "index_size":8192, "max_size":100000},
+#         "properties": {
+#             "string": {
+#                 "type" : "keyword",
+#                 "index" : True
+#             },
+#             "int": {
+#                 "type": "integer",
+#                 "index" : True
+#             },
+#             "float": {
+#                 "type": "float",
+#                 "index" : True
+#             },
+#             "vector": {
+#                 "type": "vector",
+#                 "model_id": "img",
+#                 "dimension": 128,
+#                 "format":"normalization"
+#             },
+#             "string_tags": {
+#                 "type": "string",
+#                 "array": True,
+#                 "index" : True
+#             },
+#             "int_tags": {
+#                 "type": "integer",
+#                 "array": True,
+#                 "index" : True
+#             },
+#             "float_tags" : {
+#                 "type": "float",
+#                 "array": True,
+#                 "index" : True
+#             }
+#         },
+#         "models": [{
+#             "model_id": "vgg16",
+#             "fields": ["string"],
+#             "out": "feature"
+#         }]
+#     }
+#     f = open('result.txt', 'a+')
+#     for i in range(200):
+#         #create table
+#         response = requests.put(url_table, headers=headers, data=json.dumps(data_table))
+#         print("i---",i,":space_create", response.text)
+#         #instert docs 1000
+#         with open(fileData, "r") as dataLine1:
+#             num = 0
+#             for dataLine in dataLine1:
+#                 idStr = dataLine.split(',', 1)[0].replace('{', '')
+#                 id = eval(idStr.split(':')[1])
+#                 data = "{"+dataLine.split(',', 1)[1]
+#                 url = "http://" + ip_data + "/" + db_name + "/" + space_name_mmap + "/" + id
+#                 # response = requests.post(url, headers=headers, data=data)
+#
+#                 # print("i---",i,"insertWithID:", response.text,file=f)
+#                 # assert response.status_code == 200
+#                 # num += 1
+#                 # if(num == 1000):
+#                 #     break;
+#         #delete table
+#         response = requests.delete(url_delete)
+#         print("i---",i, ":delete space", response.text)
+#         # time.sleep(5)
+#     f.close()
+#
 
 def test_deleteDB():
     url = "http://" + ip_db + "/db/"+db_name
