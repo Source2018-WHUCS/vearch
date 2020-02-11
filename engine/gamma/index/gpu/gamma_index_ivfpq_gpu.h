@@ -44,7 +44,7 @@ class GammaIVFPQGPUIndex : public GammaIndex {
 
  private:
   int GPUSearch(int n, const float *x, int k, float *distances, long *labels,
-                const GammaSearchCondition *, std::stringstream &perf_ss);
+                GammaSearchCondition *, std::stringstream &perf_ss);
 
   int GPUThread(moodycamel::BlockingConcurrentQueue<GPUItem *> *items_q);
 

@@ -33,20 +33,35 @@ using std::vector;
 
 namespace tig_gamma {
 
-static void FreeNodeData(void *data) { free(data); }
-
 class Node {
  public:
   Node() {
     size_ = 0;
-    data_ = nullptr;
+    data_dense_ = nullptr;
+    data_sparse_ = nullptr;
     min_ = std::numeric_limits<int>::max();
     max_ = -1;
+    capacity_ = 0;
+    type_ = Dense;
   }
 
-  ~Node() { free(data_); }
+  ~Node() {
+    if (data_dense_) {
+      free(data_dense_);
+      data_dense_ = nullptr;
+    }
+    if (data_sparse_) {
+      free(data_sparse_);
+      data_sparse_ = nullptr;
+    }
+  }
 
-  int Add(int val) {
+  typedef enum NodeType {
+    Dense,
+    Sparse
+  } NodeType;
+
+  int AddDense(int val, ResourceQueue *res_q) {
     int op_len = sizeof(BM_OPERATE_TYPE) * 8;
 
     if (size_ == 0) {
@@ -55,12 +70,12 @@ class Node {
       min_aligned_ = (val / op_len) * op_len;
       max_aligned_ = (val / op_len + 1) * op_len - 1;
       int bytes_count = -1;
-      if (bitmap::create(data_, bytes_count, max_aligned_ - min_aligned_ + 1) !=
-          0) {
+      if (bitmap::create(data_dense_, bytes_count,
+                         max_aligned_ - min_aligned_ + 1) != 0) {
         LOG(ERROR) << "Cannot create bitmap!";
         return -1;
       }
-      bitmap::set(data_, val - min_aligned_);
+      bitmap::set(data_dense_, val - min_aligned_);
       ++size_;
       return 0;
     }
@@ -77,18 +92,19 @@ class Node {
       }
 
       BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)data;
-      BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data_;
+      BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data_dense_;
 
       for (int i = 0; i < (max_aligned_ - min_aligned_ + 1) / op_len; ++i) {
         op_data_dst[i + (min_aligned_ - min_aligned) / op_len] = op_data_ori[i];
       }
 
       bitmap::set(data, val - min_aligned);
-      auto old_data = data_;
-      data_ = data;
+      auto old_data = data_dense_;
+      data_dense_ = data;
       min_ = val;
       min_aligned_ = min_aligned;
-      utils::AsyncWait(1000, FreeNodeData, (void *)old_data);
+      ResourceToRecovery *res = new ResourceToRecovery(old_data);
+      res_q->enqueue(res);
     } else if (val > max_aligned_) {
       char *data = nullptr;
       int max_aligned = (val / op_len + 1) * op_len - 1;
@@ -101,25 +117,84 @@ class Node {
       }
 
       BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)data;
-      BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data_;
+      BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data_dense_;
 
       for (int i = 0; i < (max_aligned_ - min_aligned_ + 1) / op_len; ++i) {
         op_data_dst[i] = op_data_ori[i];
       }
 
       bitmap::set(data, val - min_aligned_);
-      auto old_data = data_;
-      data_ = data;
+      auto old_data = data_dense_;
+      data_dense_ = data;
       max_ = val;
       max_aligned_ = max_aligned;
-      utils::AsyncWait(1000, FreeNodeData, (void *)old_data);
+      ResourceToRecovery *res = new ResourceToRecovery(old_data);
+      res_q->enqueue(res);
     } else {
-      bitmap::set(data_, val - min_aligned_);
+      bitmap::set(data_dense_, val - min_aligned_);
       min_ = std::min(min_, val);
       max_ = std::max(max_, val);
     }
 
     ++size_;
+    return 0;
+  }
+
+  int AddSparse(int val, ResourceQueue *res_q) {
+    min_ = std::min(min_, val);
+    max_ = std::max(max_, val);
+    if (capacity_ == 0) {
+      capacity_ = 1;
+      data_sparse_ = (int *)malloc(capacity_ * sizeof(int));
+    } else if (size_ >= capacity_) {
+      capacity_ *= 2;
+      int *data = (int *)malloc(capacity_ * sizeof(int));
+      memcpy(data, data_sparse_, size_ * sizeof(int));
+      int *old_data = data_sparse_;
+      data_sparse_ = data;
+      ResourceToRecovery *res = new ResourceToRecovery(old_data);
+      res_q->enqueue(res);
+    }
+    data_sparse_[size_] = val;
+
+    ++size_;
+    return 0;
+  }
+
+  int Add(int val, ResourceQueue *res_q) {
+    if (type_ == Dense) {
+      int offset = max_ - min_;
+      if (offset > 100000) {
+        if ((size_ * 1.) / offset < 0.1) {
+          ConvertToSparse(res_q);
+          return AddSparse(val, res_q);
+        }
+      }
+      return AddDense(val, res_q);
+    } else {
+      return AddSparse(val, res_q);
+    }
+  }
+
+  int ConvertToSparse(ResourceQueue *res_q) {
+    data_sparse_ = (int *)malloc(size_ * sizeof(int));
+    int offset = max_aligned_ - min_aligned_ + 1;
+    int idx = 0;
+    for (int i = 0; i < offset; ++i) {
+      if (bitmap::test(data_dense_, i)) {
+        if (idx >= size_) {
+          LOG(WARNING) << "idx [" << idx << "] size [" << size_ << "] i [" << i
+                       << "] offset [" << offset << "]";
+          break;
+        }
+        data_sparse_[idx] = i + min_aligned_;
+        ++idx;
+      }
+    }
+    ResourceToRecovery *res = new ResourceToRecovery(data_dense_);
+    res_q->enqueue(res);
+    capacity_ = size_;
+    type_ = Sparse;
     return 0;
   }
 
@@ -130,8 +205,10 @@ class Node {
   int MaxAligned() { return max_aligned_; }
 
   int Size() { return size_; }
+  NodeType Type() { return type_; }
 
-  char *Data() { return data_; }
+  char *DataDense() { return data_dense_; }
+  int *DataSparse() { return data_sparse_; }
 
  private:
   int min_;
@@ -139,11 +216,14 @@ class Node {
   int min_aligned_;
   int max_aligned_;
 
+  NodeType type_;
+  int capacity_;  // for sparse node
   int size_;
-  char *data_;
+  char *data_dense_;
+  int *data_sparse_;
 };
 
-typedef struct {
+typedef struct BTreeParameters {
   uint mainleafxtra;
   uint maxleaves;
   uint poolsize;
@@ -160,7 +240,7 @@ class FieldRangeIndex {
                   BTreeParameters &bt_param);
   ~FieldRangeIndex();
 
-  int Add(unsigned char *key, uint key_len, int value);
+  int Add(unsigned char *key, uint key_len, int value, ResourceQueue *res_q);
 
   int Search(const string &low, const string &high, RangeQueryResult *result);
 
@@ -246,7 +326,8 @@ static int ReverseEndian(const unsigned char *in, unsigned char *out,
   return 0;
 }
 
-int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
+int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value,
+                         ResourceQueue *res_q) {
   BtDb *bt = bt_open(cache_mgr_, main_mgr_);
   unsigned char key2[key_len];
 
@@ -265,7 +346,7 @@ int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value) {
         LOG(ERROR) << "Error " << bt->mgr->err;
       }
     }
-    p_node->Add(value);
+    p_node->Add(value, res_q);
   };
 
   if (is_numeric_) {
@@ -351,7 +432,7 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
   double end_resize = utils::getmillisecs();
 #endif
 
-  auto &bit_map = result->Ref();
+  auto &bitmap = result->Ref();
   int list_size = lists.size();
 
   int total = 0;
@@ -359,21 +440,39 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
   int op_len = sizeof(BM_OPERATE_TYPE) * 8;
   for (int i = 0; i < list_size; ++i) {
     Node *list = lists[i];
-    char *data = list->Data();
-    int min = list->MinAligned();
-    int max = list->MaxAligned();
+    Node::NodeType node_type = list->Type();
+    if (node_type == Node::NodeType::Dense) {
+      char *data = list->DataDense();
+      int min = list->MinAligned();
+      int max = list->MaxAligned();
 
-    if (min < min_aligned || max > max_aligned) {
-      continue;
-    }
+      if (min < min_aligned || max > max_aligned) {
+        continue;
+      }
 
-    total += list->Size();
+      total += list->Size();
 
-    BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)bit_map;
-    BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data;
-    int offset = (min - min_aligned) / op_len;
-    for (int j = 0; j < (max - min + 1) / op_len; ++j) {
-      op_data_dst[j + offset] |= op_data_ori[j];
+      BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)bitmap;
+      BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data;
+      int offset = (min - min_aligned) / op_len;
+      for (int j = 0; j < (max - min + 1) / op_len; ++j) {
+        op_data_dst[j + offset] |= op_data_ori[j];
+      }
+    } else {
+      int *data = list->DataSparse();
+      int min = list->Min();
+      int max = list->Max();
+      int size = list->Size();
+
+      if (min < min_doc || max > max_doc) {
+        continue;
+      }
+
+      total += list->Size();
+
+      for (int j = 0; j < size; ++j) {
+        bitmap::set(bitmap, data[j]);
+      }
     }
   }
 
@@ -428,13 +527,22 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
 
     results_union[i].SetDocNum(p_node->Size());
 
-    char *data = p_node->Data();
     char *&bitmap = results_union[i].Ref();
-    BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)bitmap;
-    BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data;
+    if (p_node->Type() == Node::NodeType::Dense) {
+      char *data = p_node->DataDense();
+      BM_OPERATE_TYPE *op_data_dst = (BM_OPERATE_TYPE *)bitmap;
+      BM_OPERATE_TYPE *op_data_ori = (BM_OPERATE_TYPE *)data;
 
-    for (int j = 0; j < (max_aligned - min_aligned + 1) / op_len; ++j) {
-      op_data_dst[j] = op_data_ori[j];
+      for (int j = 0; j < (max_aligned - min_aligned + 1) / op_len; ++j) {
+        op_data_dst[j] = op_data_ori[j];
+      }
+    } else {
+      int *data = p_node->DataSparse();
+      int size = p_node->Size();
+      int min = p_node->Min();
+      for (int j = 0; j < size; ++j) {
+        bitmap::set(bitmap, data[j]);
+      }
     }
   }
 
@@ -489,15 +597,44 @@ MultiFieldsRangeIndex::MultiFieldsRangeIndex(std::string &path,
   profile_ = profile;
   fields_.resize(profile->FieldsNum());
   std::fill(fields_.begin(), fields_.end(), nullptr);
+  resource_recovery_q = new ResourceQueue;
+  auto func_recovery =
+      std::bind(&MultiFieldsRangeIndex::ResourceRecoveryWorker, this);
+  std::thread t(func_recovery);
+  t.detach();
 }
 
 MultiFieldsRangeIndex::~MultiFieldsRangeIndex() {
+  b_running_ = false;
   for (size_t i = 0; i < fields_.size(); i++) {
     if (fields_[i]) {
       delete fields_[i];
       fields_[i] = nullptr;
     }
   }
+  std::mutex running_mutex;
+  std::unique_lock<std::mutex> lk(running_mutex);
+  running_cv_.wait(lk);
+  delete resource_recovery_q;
+  resource_recovery_q = nullptr;
+}
+
+void MultiFieldsRangeIndex::ResourceRecoveryWorker() {
+  while (b_running_) {
+    ResourceToRecovery *res = nullptr;
+    bool ret = resource_recovery_q->wait_dequeue_timed(res, 1000);
+    if (not ret) {
+      continue;
+    }
+    auto deadline = res->Deadline();
+    auto now = std::chrono::system_clock::now();
+    if (now < deadline) {
+      std::this_thread::sleep_for(deadline - now);
+    }
+    delete res;
+  }
+  LOG(INFO) << "ResourceRecoveryWorker exited!";
+  running_cv_.notify_one();
 }
 
 int MultiFieldsRangeIndex::Add(int docid, int field) {
@@ -509,7 +646,7 @@ int MultiFieldsRangeIndex::Add(int docid, int field) {
   unsigned char *key;
   int key_len = 0;
   profile_->GetFieldRawValue(docid, field, &key, key_len);
-  index->Add(key, key_len, docid);
+  index->Add(key, key_len, docid, resource_recovery_q);
 
   return 0;
 }

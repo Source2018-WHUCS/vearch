@@ -497,7 +497,7 @@ int GammaIVFPQGPUIndex::GPUThread(
 
 int GammaIVFPQGPUIndex::GPUSearch(int n, const float *x, int k,
                                   float *distances, long *labels,
-                                  const GammaSearchCondition *condition,
+                                  GammaSearchCondition *condition,
                                   std::stringstream &perf_ss) {
   auto recall_num = condition->recall_num;
   if (recall_num > kMaxRecallNum) {

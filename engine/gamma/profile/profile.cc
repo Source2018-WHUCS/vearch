@@ -244,7 +244,7 @@ int Profile::Add(const std::vector<Field *> &fields, int doc_id,
   }
 
   if (fields.size() != attr_idx_map_.size()) {
-    LOG(ERROR) << "Filed num [" << fields.size() << "not equal to ["
+    LOG(ERROR) << "Field num [" << fields.size() << "] not equal to ["
                << attr_idx_map_.size() << "]";
     return -1;
   }
