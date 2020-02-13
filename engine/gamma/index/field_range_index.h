@@ -11,8 +11,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <chrono>
-#include <condition_variable>
 #include "gamma_api.h"
 #include "profile.h"
 #include "range_query_result.h"
@@ -29,7 +27,7 @@ typedef struct {
 
 class ResourceToRecovery {
  public:
-  ResourceToRecovery(void *data, int after = 1) {
+  explicit ResourceToRecovery(void *data, int after = 1) {
     deadline_ = std::chrono::system_clock::now() + std::chrono::seconds(after);
     data_ = data;
   }
@@ -60,6 +58,8 @@ class MultiFieldsRangeIndex {
 
   int Add(int docid, int field);
 
+  int Delete(int docid, int field);
+
   int AddField(int field, enum DataType field_type);
 
   int Search(const std::vector<FilterInfo> &origin_filters,
@@ -73,7 +73,7 @@ class MultiFieldsRangeIndex {
   Profile *profile_;
   std::string path_;
   bool b_running_;
-  std::condition_variable running_cv_;
+  bool b_worker_running_;
   ResourceQueue *resource_recovery_q;
 };
 

@@ -28,17 +28,18 @@ class GammaIndexFactory {
       LOG(ERROR) << "docids_bitmap is NULL!";
       return nullptr;
     }
+    LOG(INFO) << "Create index model [" << model << "]";
+
+    if (dimension % ivfpq_param->nsubvector != 0) {
+      dimension =
+          (dimension / ivfpq_param->nsubvector + 1) * ivfpq_param->nsubvector;
+      LOG(INFO) << "Dimension [" << raw_vec->GetDimension()
+                << "] cannot divide by nsubvector [" << ivfpq_param->nsubvector
+                << "], adjusted to [" << dimension << "]";
+    }
+
     switch (model) {
       case IVFPQ: {
-        if (dimension % ivfpq_param->nsubvector != 0) {
-          dimension = (dimension / ivfpq_param->nsubvector + 1) *
-                      ivfpq_param->nsubvector;
-          LOG(INFO) << "Dimension [" << raw_vec->GetDimension()
-                    << "] cannot divide by nsubvector ["
-                    << ivfpq_param->nsubvector << "], adjusted to ["
-                    << dimension << "]";
-        }
-
         faiss::IndexFlatL2 *coarse_quantizer =
             new faiss::IndexFlatL2(dimension);
 

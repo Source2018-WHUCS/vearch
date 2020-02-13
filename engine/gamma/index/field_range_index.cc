@@ -46,13 +46,16 @@ class Node {
   }
 
   ~Node() {
-    if (data_dense_) {
-      free(data_dense_);
-      data_dense_ = nullptr;
-    }
-    if (data_sparse_) {
-      free(data_sparse_);
-      data_sparse_ = nullptr;
+    if (type_ == Dense) {
+      if (data_dense_) {
+        free(data_dense_);
+        data_dense_ = nullptr;
+      }
+    } else {
+      if (data_sparse_) {
+        free(data_sparse_);
+        data_sparse_ = nullptr;
+      }
     }
   }
 
@@ -70,6 +73,11 @@ class Node {
       min_aligned_ = (val / op_len) * op_len;
       max_aligned_ = (val / op_len + 1) * op_len - 1;
       int bytes_count = -1;
+      if (data_dense_) {
+        free(data_dense_);
+        data_dense_ = nullptr;
+      }
+
       if (bitmap::create(data_dense_, bytes_count,
                          max_aligned_ - min_aligned_ + 1) != 0) {
         LOG(ERROR) << "Cannot create bitmap!";
@@ -107,7 +115,8 @@ class Node {
       res_q->enqueue(res);
     } else if (val > max_aligned_) {
       char *data = nullptr;
-      int max_aligned = (val / op_len + 1) * op_len - 1;
+      // 2X spare space to speed up insert
+      int max_aligned = (val / op_len + 1) * op_len * 2 - 1;
 
       int bytes_count = -1;
       if (bitmap::create(data, bytes_count, max_aligned - min_aligned_ + 1) !=
@@ -141,8 +150,15 @@ class Node {
   }
 
   int AddSparse(int val, ResourceQueue *res_q) {
+    int op_len = sizeof(BM_OPERATE_TYPE) * 8;
     min_ = std::min(min_, val);
     max_ = std::max(max_, val);
+    if (val < min_aligned_) {
+      min_aligned_ = (val / op_len) * op_len;
+    } else if (val > max_aligned_) {
+      max_aligned_ = (val / op_len + 1) * op_len - 1;
+    }
+
     if (capacity_ == 0) {
       capacity_ = 1;
       data_sparse_ = (int *)malloc(capacity_ * sizeof(int));
@@ -198,6 +214,46 @@ class Node {
     return 0;
   }
 
+  int DeleteDense(int val, ResourceQueue *res_q) {
+    int op_len = sizeof(BM_OPERATE_TYPE) * 8;
+    int pos = val - min_aligned_;
+    if (pos < 0 || val > max_aligned_) {
+      LOG(ERROR) << "Cannot delete [" << val << "]";
+      return -1;
+    }
+    --size_;
+    bitmap::unset(data_dense_, pos);
+    return 0;
+  }
+
+  int DeleteSparse(int val, ResourceQueue *res_q) {
+    int i = 0;
+    for (; i < size_; ++i) {
+      if (data_sparse_[i] == val) {
+        break;
+      }
+    }
+
+    if (i == size_) {
+      LOG(ERROR) << "Cannot delete [" << val << "]";
+      return -1;
+    }
+    for (int j = i; j < size_ - 1; ++j) {
+      data_sparse_[j] = data_sparse_[j + 1];
+    }
+
+    --size_;
+    return 0;
+  }
+
+  int Delete(int val, ResourceQueue *res_q) {
+    if (type_ == Dense) {
+      return DeleteDense(val, res_q);
+    } else {
+      return DeleteSparse(val, res_q);
+    }
+  }
+
   int Min() { return min_; }
   int Max() { return max_; }
 
@@ -241,6 +297,8 @@ class FieldRangeIndex {
   ~FieldRangeIndex();
 
   int Add(unsigned char *key, uint key_len, int value, ResourceQueue *res_q);
+
+  int Delete(unsigned char *key, uint key_len, int value, ResourceQueue *res_q);
 
   int Search(const string &low, const string &high, RangeQueryResult *result);
 
@@ -370,6 +428,45 @@ int FieldRangeIndex::Add(unsigned char *key, uint key_len, int value,
   return 0;
 }
 
+int FieldRangeIndex::Delete(unsigned char *key, uint key_len, int value,
+                         ResourceQueue *res_q) {
+  BtDb *bt = bt_open(cache_mgr_, main_mgr_);
+  unsigned char key2[key_len];
+
+  std::function<void(unsigned char *, uint)> DeleteFromBt = [&](
+      unsigned char *key_to_add, uint key_len) {
+    Node *p_node = nullptr;
+    int ret = bt_findkey(bt, key_to_add, key_len, (unsigned char *)&p_node,
+                         sizeof(Node *));
+
+    if (ret < 0) {
+      LOG(ERROR) << "Cannot find field [" << key << "]";
+      return;
+    }
+    p_node->Delete(value, res_q);
+  };
+
+  if (is_numeric_) {
+    ReverseEndian(key, key2, key_len);
+    DeleteFromBt(key2, key_len);
+  } else {
+    char key_s[key_len + 1];
+    memcpy(key_s, key, key_len);
+    key_s[key_len] = 0;
+
+    char *p, *k;
+    k = strtok_r(key_s, kDelim_, &p);
+    while (k != nullptr) {
+      DeleteFromBt(reinterpret_cast<unsigned char *>(k), strlen(k));
+      k = strtok_r(NULL, kDelim_, &p);
+    }
+  }
+
+  bt_close(bt);
+
+  return 0;
+}
+
 int FieldRangeIndex::Search(const string &lower, const string &upper,
                             RangeQueryResult *result) {
   if (!is_numeric_) {
@@ -471,7 +568,7 @@ int FieldRangeIndex::Search(const string &lower, const string &upper,
       total += list->Size();
 
       for (int j = 0; j < size; ++j) {
-        bitmap::set(bitmap, data[j]);
+        bitmap::set(bitmap, data[j] - min_aligned);
       }
     }
   }
@@ -539,9 +636,8 @@ int FieldRangeIndex::Search(const string &tags, RangeQueryResult *result) {
     } else {
       int *data = p_node->DataSparse();
       int size = p_node->Size();
-      int min = p_node->Min();
       for (int j = 0; j < size; ++j) {
-        bitmap::set(bitmap, data[j]);
+        bitmap::set(bitmap, data[j] - min_aligned);
       }
     }
   }
@@ -597,6 +693,9 @@ MultiFieldsRangeIndex::MultiFieldsRangeIndex(std::string &path,
   profile_ = profile;
   fields_.resize(profile->FieldsNum());
   std::fill(fields_.begin(), fields_.end(), nullptr);
+
+  b_worker_running_ = true;
+  b_running_ = true;
   resource_recovery_q = new ResourceQueue;
   auto func_recovery =
       std::bind(&MultiFieldsRangeIndex::ResourceRecoveryWorker, this);
@@ -612,9 +711,11 @@ MultiFieldsRangeIndex::~MultiFieldsRangeIndex() {
       fields_[i] = nullptr;
     }
   }
-  std::mutex running_mutex;
-  std::unique_lock<std::mutex> lk(running_mutex);
-  running_cv_.wait(lk);
+
+  while (b_worker_running_) {
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+
   delete resource_recovery_q;
   resource_recovery_q = nullptr;
 }
@@ -634,7 +735,7 @@ void MultiFieldsRangeIndex::ResourceRecoveryWorker() {
     delete res;
   }
   LOG(INFO) << "ResourceRecoveryWorker exited!";
-  running_cv_.notify_one();
+  b_worker_running_ = false;
 }
 
 int MultiFieldsRangeIndex::Add(int docid, int field) {
@@ -647,6 +748,20 @@ int MultiFieldsRangeIndex::Add(int docid, int field) {
   int key_len = 0;
   profile_->GetFieldRawValue(docid, field, &key, key_len);
   index->Add(key, key_len, docid, resource_recovery_q);
+
+  return 0;
+}
+
+int MultiFieldsRangeIndex::Delete(int docid, int field) {
+  FieldRangeIndex *index = fields_[field];
+  if (index == nullptr) {
+    return 0;
+  }
+
+  unsigned char *key;
+  int key_len = 0;
+  profile_->GetFieldRawValue(docid, field, &key, key_len);
+  index->Delete(key, key_len, docid, resource_recovery_q);
 
   return 0;
 }
