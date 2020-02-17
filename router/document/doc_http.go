@@ -51,7 +51,6 @@ const (
 	UrlQueryURISort         = "sort"
 	UrlQueryTimeout         = "timeout"
 	ClientTypeValue         = "client_type"
-	OnlyIDValue         = "only_id"
 )
 
 const (
@@ -555,23 +554,12 @@ func (handler *DocumentHandler) handleMSearchDoc(ctx context.Context, w http.Res
 	}
 	t2 := time.Now()
 
-	//onlyID := false
-	//if reqArgs[OnlyIDValue] != "" {
-	//	onlyID = cast.ToBool(reqArgs[OnlyIDValue])
-	//}
 
-	var bs []byte
-	if true {
-		bs = searchResponses.ToIDContent()
-	}else{
-		bs, err = searchResponses.ToContent(searchRequest.From, *searchRequest.Size, nameCache, typedKeys, t2.Sub(t1))
-		if err != nil {
-			resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error())
-			return ctx, true
-		}
+	bs, err := searchResponses.ToContent(searchRequest.From, *searchRequest.Size, nameCache, typedKeys, t2.Sub(t1))
+	if err != nil {
+		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error())
+		return ctx, true
 	}
-
-
 
 	var maxTookID uint32
 	var maxTook int64
