@@ -93,7 +93,7 @@ func (this *docService) getDocs(ctx context.Context, dbName string, spaceName st
 	return this.client.PS().B().Space(dbName, spaceName).SetRoutingValue(reqArgs[UrlQueryRouting]).GetDocs(docIDs)
 }
 
-func (this *docService) mSearchIDs(ctx context.Context, dbName string, spaceName string, searchRequest *request.SearchRequest, clientType client.ClientType) (byte[], error) {
+func (this *docService) mSearchIDs(ctx context.Context, dbName string, spaceName string, searchRequest *request.SearchRequest, clientType client.ClientType) ([]byte, error) {
 	searchSpaces, _, err := this.parseDBSpacePair(ctx, dbName, spaceName)
 	if err != nil {
 		return  nil, err
