@@ -555,10 +555,10 @@ func (handler *DocumentHandler) handleMSearchDoc(ctx context.Context, w http.Res
 	}
 	t2 := time.Now()
 
-	onlyID := false
-	if reqArgs[OnlyIDValue] != "" {
-		onlyID = cast.ToBool(reqArgs[OnlyIDValue])
-	}
+	//onlyID := false
+	//if reqArgs[OnlyIDValue] != "" {
+	//	onlyID = cast.ToBool(reqArgs[OnlyIDValue])
+	//}
 
 	var bs []byte
 	if true {
