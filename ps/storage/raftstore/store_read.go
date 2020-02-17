@@ -58,7 +58,7 @@ func (s *Store) MSearchIDs(ctx context.Context, readLeader bool, query *request.
 	if err := s.checkSearchable(readLeader); err != nil {
 		return nil, err
 	}
-	return s.Engine.Reader().MSearchIDs(ctx, query), nil
+	return s.Engine.Reader().MSearchIDs(ctx, query)
 }
 
 func (s *Store) MSearch(ctx context.Context, readLeader bool, query *request.SearchRequest) (result response.SearchResponses, err error) {

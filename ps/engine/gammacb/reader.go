@@ -326,7 +326,7 @@ func (ri *readerImpl) singleSearchResultIDs(reps *gamma_api.Response, index int)
 		item := new(gamma_api.ResultItem)
 		searchResult.ResultItems(item, i)
 		value := string(item.Value(0))
-		append(ids, value)
+		ids = append(ids, value)
 	}
 
 	return ids,nil
