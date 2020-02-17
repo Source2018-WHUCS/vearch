@@ -28,12 +28,12 @@ type multipleSpaceSender struct {
 	senders []*spaceSender
 }
 
-var cache response.SearchResponses
+var result_cache response.SearchResponses
 
 func (this *multipleSpaceSender) MSearch(req *request.SearchRequest) (result response.SearchResponses) {
 
-	if  cache != nil {
-		return cache ;
+	if  result_cache != nil {
+		return result_cache ;
 	}
 	var wg sync.WaitGroup
 	respChain := make(chan struct {
@@ -74,7 +74,7 @@ func (this *multipleSpaceSender) MSearch(req *request.SearchRequest) (result res
 			return response.SearchResponses{newSearchResponseWithError(r.sender.db, r.sender.space, 0, err)}
 		}
 	}
-	cache = result ;
+	result_cache = result
 	return result
 }
 
