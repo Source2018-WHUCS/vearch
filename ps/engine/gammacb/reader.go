@@ -22,6 +22,7 @@ package gammacb
 */
 import "C"
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -78,6 +79,97 @@ func (ri *readerImpl) GetDocs(ctx context.Context, docIDs []string) []*response.
 	}
 
 	return docs
+}
+
+
+func (ri *readerImpl) MSearchIDs(ctx context.Context, request *request.SearchRequest) ([]byte,error) {
+	ri.engine.counter.Incr()
+	defer ri.engine.counter.Decr()
+
+	gamma := ri.engine.gamma
+	if gamma == nil {
+		return nil, pkg.CodeErr(pkg.ERRCODE_PARTITION_IS_CLOSED)
+	}
+
+	builder := &queryBuilder{mapping: ri.engine.GetMapping()}
+
+	hasRank := C.int(1)
+	if request.Quick {
+		hasRank = C.int(0)
+	}
+
+	parallelBasedOnQuery := C.char(0)
+	if request.Parallel{
+		parallelBasedOnQuery = C.char(1)
+	}
+
+	req := C.MakeRequest(C.int(*request.Size),
+		nil, C.int(0),
+		nil, C.int(0),
+		nil, C.int(0),
+		nil, C.int(0),
+		C.int(1), C.int(0),
+		nil, hasRank, C.int(0),
+		parallelBasedOnQuery,
+	)
+
+	defer C.DestroyRequest(req)
+	if err := builder.parseQuery(request.Query, req); err != nil {
+		return nil, fmt.Errorf("parse query has err:[%s] query:[%s]", err.Error(), string(request.Query))
+	}
+
+	if len(request.Fields) == 0 && request.VectorValue {
+		request.Fields = make([]string, 0, 10)
+		_ = ri.engine.indexMapping.RangeField(func(key string, value *mapping.DocumentMapping) error {
+			request.Fields = append(request.Fields, key)
+			return nil
+		})
+
+		request.Fields = append(request.Fields, mapping.IdField)
+	}
+
+	if len(request.Fields) > 0 {
+		ri.setFields(request, req)
+	}
+
+	arr := C.SearchV2(ri.engine.gamma, req)
+	defer C.DestroyByteArray(arr)
+
+	resp := gamma_api.GetRootAsResponse(CbArr2ByteArray(arr), 0)
+
+	wg := sync.WaitGroup{}
+	result := make([][]string, resp.ResultsLength())
+	for i := 0; i < len(result); i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			var err error
+			if result[i], err = ri.singleSearchResultIDs(resp, i) ; err != nil {
+				panic(err)
+			}
+
+		}(i)
+	}
+
+	wg.Wait()
+
+	bs := bytes.Buffer{}
+
+	for i, ids := range result{
+		if i!= 0{
+			bs.WriteString(";")
+		}
+		for j, id := range ids{
+			if j!= 0{
+				bs.WriteString(",")
+			}
+
+			bs.WriteString(id)
+		}
+	}
+
+
+	return bs.Bytes(),nil
 }
 
 func (ri *readerImpl) MSearch(ctx context.Context, request *request.SearchRequest) response.SearchResponses {
@@ -215,6 +307,29 @@ func (ri *readerImpl) Search(ctx context.Context, request *request.SearchRequest
 
 	return result
 
+}
+
+
+func (ri *readerImpl) singleSearchResultIDs(reps *gamma_api.Response, index int) ([]string, error) {
+	searchResult := new(gamma_api.SearchResult)
+	reps.Results(searchResult, index)
+	if searchResult.ResultCode() > 0 {
+		msg := string(searchResult.Msg()) + ", code:[%d]"
+		return nil, fmt.Errorf(msg, searchResult.ResultCode())
+	}
+
+	l := searchResult.ResultItemsLength()
+
+	ids := make([]string,0,l)
+
+	for i := 0; i < l; i++ {
+		item := new(gamma_api.ResultItem)
+		searchResult.ResultItems(item, i)
+		value := string(item.Value(0))
+		append(ids, value)
+	}
+
+	return ids,nil
 }
 
 func (ri *readerImpl) singleSearchResult(reps *gamma_api.Response, index int) *response.SearchResponse {

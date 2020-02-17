@@ -286,6 +286,18 @@ func (ge *gammaEngine) Doc2DocResultCGO(doc *C.struct_Doc) *response.DocResult {
 	return &result
 }
 
+func (ge *gammaEngine) ResultItem2DocResult(item *gamma_api.ResultItem) () {
+	result := ge.Doc2DocResult(item)
+	result.Score = float64(item.Score())
+	result.Extra = item.Extra()
+	result.SortValues = []sortorder.SortValue{
+		&sortorder.FloatSortValue{
+			Val: result.Score,
+		},
+	}
+	return result
+}
+
 func (ge *gammaEngine) ResultItem2DocResult(item *gamma_api.ResultItem) *response.DocResult {
 	result := ge.Doc2DocResult(item)
 	result.Score = float64(item.Score())
