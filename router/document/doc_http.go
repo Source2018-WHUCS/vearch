@@ -561,7 +561,7 @@ func (handler *DocumentHandler) handleMSearchDoc(ctx context.Context, w http.Res
 	}
 
 	var bs []byte
-	if onlyID {
+	if true {
 		bs = searchResponses.ToIDContent()
 	}else{
 		bs, err = searchResponses.ToContent(searchRequest.From, *searchRequest.Size, nameCache, typedKeys, t2.Sub(t1))
