@@ -358,6 +358,7 @@ enum ResponseCode CreateTable(void *engine, Table *table);
  * @return ResponseCode
  */
 enum ResponseCode AddDoc(void *engine, Doc *doc);
+enum ResponseCode BinaryAddDoc(void *engine, Doc *doc);
 
 /** add a doc to table, if doc existed, update it
  *
@@ -625,6 +626,44 @@ typedef struct Request {
                                 // FALSE: parallelize over inverted lists
 } Request;
 
+/* sequence of vecs is the same as vec_fields */
+typedef struct BinaryRequest {
+  int req_num;
+  int topn;
+
+  int *vec_id;  // binary vector id
+  ByteArray **xa;
+  ByteArray **xb;
+  int *d;
+
+  int direct_search_type;  // -1: no direct search, 0: auto, 1: always direct
+                           // search, default 0
+
+  VectorQuery **vec_fields;
+  int vec_fields_num;
+
+  ByteArray **fields;
+  int fields_num;
+
+  RangeFilter **range_filters;
+  int range_filters_num;
+
+  TermFilter **term_filters;
+  int term_filters_num;
+  enum DistanceMetricType metric_type;
+
+  // online log level: debug|info|warn|error|none
+  ByteArray *online_log_level;
+
+  int has_rank;  // whether it needs ranking after recalling from PQ index.
+                 // default 0, has not rank; 1, has rank
+  int multi_vector_rank;  // whether it needs ranking after merging the
+                          // searching result of multi-vectors. default 0, has
+                          // not rank; 1, has rank
+  BOOL parallel_based_on_query;  // TRUE: parallelize over queries
+                                 // FALSE: parallelize over inverted lists
+} BinaryRequest;
+
 /** make a Request
  *
  * @param topn                top n similar results
@@ -659,6 +698,13 @@ Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
  */
 enum ResponseCode DestroyRequest(Request *request);
 
+BinaryRequest *MakeBinaryRequest(int n, ByteArray **xa, ByteArray **xb, int *d, int *vec_id,
+    VectorQuery **vec_fields, int vec_fields_num);
+
+enum ResponseCode DestroyBinaryRequest(BinaryRequest *request);
+
+ByteArray *GetBinaryVector(void *engine, int vec_id);
+
 typedef struct ResultItem {
   double score;
   Doc *doc;
@@ -690,6 +736,8 @@ typedef struct Response {
  * @return response, need to call @DestroyResponse to destroy
  */
 Response *Search(void *engine, Request *request);
+
+Response *BinarySearch(void *engine, BinaryRequest *request);
 
 /** query vectors to index with serialized result
  *

@@ -31,7 +31,7 @@ enum class ResultCode : std::uint16_t {
 };
 
 enum VectorStorageType { Mmap, RocksDB };
-enum RetrievalModel { IVFPQ, GPU_IVFPQ };
+enum RetrievalModel { IVFPQ, GPU_IVFPQ, HAMMING };
 
 struct VectorDocField {
   std::string name;
@@ -161,6 +161,33 @@ struct GammaQuery {
   }
 
   ~GammaQuery() {}
+  VectorQuery **vec_query;
+  int vec_num;
+  GammaSearchCondition *condition;
+  utils::OnlineLogger *logger;
+};
+
+struct GammaBinaryQuery {
+  GammaBinaryQuery() {
+    vec_query = nullptr;
+    vec_num = 0;
+    condition = nullptr;
+    logger = nullptr;
+  }
+
+  ~GammaBinaryQuery() {}
+
+  int *vec_id; // binary vector id
+  std::vector<int> start_pos;
+  std::vector<int> sequence_len;
+
+  ByteArray **xa;
+  ByteArray **xb;
+  int *d;
+  int n;
+
+  bool get_vec;
+
   VectorQuery **vec_query;
   int vec_num;
   GammaSearchCondition *condition;

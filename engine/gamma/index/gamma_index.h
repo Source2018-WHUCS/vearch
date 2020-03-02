@@ -126,11 +126,18 @@ struct GammaIndex {
 
   virtual int AddRTVecsToIndex() = 0;
   virtual bool Add(int n, const float *vec) = 0;
+  virtual bool Add(int n, const uint8_t *vec) { return true; };
+
+  virtual ByteArray *GetBinaryVector(int vec_id) { return nullptr; };
 
   /** assign the vectors, then call search_preassign */
   virtual int Search(const VectorQuery *query,
                      GammaSearchCondition *condition,
                      VectorResult &result) = 0;
+
+  virtual int BinarySearch(const GammaBinaryQuery &q, const VectorQuery *query,
+                     GammaSearchCondition *condition,
+                     VectorResult &result) { return 0; };
 
   virtual long GetTotalMemBytes() = 0;
 
