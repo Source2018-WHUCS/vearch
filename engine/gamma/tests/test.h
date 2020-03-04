@@ -52,6 +52,14 @@ inline ByteArray *FloatToByteArray(const float *feature, int dimension) {
   return ba;
 }
 
+inline ByteArray *Uint8ToByteArray(const uint8_t* feature, int dimension) {
+  ByteArray *ba = static_cast<ByteArray *>(malloc(sizeof(ByteArray)));
+  ba->len = dimension * sizeof(uint8_t);
+  ba->value = static_cast<char *>(malloc(ba->len));
+  memcpy((void *)ba->value, (void *)feature, ba->len);
+  return ba;
+}
+
 string ByteArrayToString(const ByteArray *ba) {
   assert(ba != nullptr);
   if (ba->value == nullptr || ba->len <= 0) return string("");

@@ -186,16 +186,15 @@ if (BUILD_PYTHON STREQUAL "ON")
 
     # set the flags
     set(CMAKE_SWIG_FLAGS "-DSWIGWORDSIZE64")
-    set(SWIGVEARCH_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../python/swigvearch.i)    
+    
     # Set the properties for the interface file.
-    set_property(SOURCE ${SWIGVEARCH_PATH} PROPERTY CPLUSPLUS ON)
+    set_property(SOURCE ./python/swigvearch.i PROPERTY CPLUSPLUS ON)
     
     if(POLICY CMP0078)
         cmake_policy(SET CMP0078 NEW)
     endif()
     
-    swig_add_library( swigvearch LANGUAGE python SOURCES
-        ${SWIGVEARCH_PATH} ${LIB_SRCS} )
+    swig_add_library( swigvearch LANGUAGE python SOURCES ./python/swigvearch.i ${LIB_SRCS} )
 
     swig_link_libraries( swigvearch ${LIBRARIES} )
 

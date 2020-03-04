@@ -445,19 +445,15 @@ Response *GammaEngine::Search(const Request *request) {
 
     const auto range_result = range_query_result.GetAllResult();
     if (range_result == nullptr && request->term_filters_num > 0) {
-      LOG(INFO) << "request->term_filters_num [" << request->term_filters_num
-                << "]";
       for (int i = 0; i < request->term_filters_num; ++i) {
         TermFilter *filter = request->term_filters[i];
 
         string value = string(filter->field->value, filter->field->len);
         string key = string(filter->value->value, filter->value->len);
-        LOG(INFO) << "value [" << value << "], key [" << key << "]";
 
         int doc_id = -1;
         int ret = profile_->GetDocIDByKey(key, doc_id);
         if (ret != 0) {
-          LOG(ERROR) << "Get doc id error, key [" << key << "]";
           continue;
         }
 
@@ -470,16 +466,13 @@ Response *GammaEngine::Search(const Request *request) {
         int ret = vec_manager_->GetVector(fields_ids, vec);
         if (ret == 0) {
           int idx = 0;
+          VectorDoc *doc = gamma_result.docs[gamma_result.results_count];
           for (const auto &field_id : fields_ids) {
             int id = field_id.second;
-            gamma_result.docs[gamma_result.results_count]->docid = id;
-            ByteArray *s = MakeByteArray(vec[idx].c_str(), vec[idx].length());
-            gamma_result.docs[gamma_result.results_count]->fields[idx].source =
-                s->value;
-            gamma_result.docs[gamma_result.results_count]
-                ->fields[idx]
-                .source_len = s->len;
-            free(s);
+            doc->docid = id;
+            doc->fields[idx].name = vec[idx];
+            doc->fields[idx].source = nullptr;
+            doc->fields[idx].source_len = 0;
             ++idx;
           }
           ++gamma_result.results_count;
@@ -567,14 +560,14 @@ Response *GammaEngine::BinarySearch(const BinaryRequest *request) {
   gamma_query.logger = &logger;
   gamma_query.vec_query = request->vec_fields;
   gamma_query.vec_num = request->vec_fields_num;
-  
+
   gamma_query.vec_id = request->vec_id;
 
   gamma_query.xa = request->xa;
   gamma_query.xb = request->xb;
   gamma_query.d = request->d;
   gamma_query.n = request->req_num;
-  
+
   GammaSearchCondition condition;
   condition.topn = request->topn;
   condition.parallel_mode = 1;  // default to parallelize over inverted list
@@ -1364,8 +1357,8 @@ ResultItem *GammaEngine::PackResultItem(const VectorDoc *vec_doc,
 }
 
 int GammaEngine::PackBinaryResults(const GammaResult *gamma_results,
-                             Response *response_results,
-                             const BinaryRequest *request) {
+                                   Response *response_results,
+                                   const BinaryRequest *request) {
   for (int i = 0; i < response_results->req_num; ++i) {
     SearchResult *result = response_results->results[i];
     result->total = gamma_results[i].total;
@@ -1386,7 +1379,7 @@ int GammaEngine::PackBinaryResults(const GammaResult *gamma_results,
 }
 
 ResultItem *GammaEngine::PackBinaryResultItem(const VectorDoc *vec_doc,
-                                        const BinaryRequest *request) {
+                                              const BinaryRequest *request) {
   ResultItem *result_item = new ResultItem;
   result_item->score = vec_doc->score;
 
