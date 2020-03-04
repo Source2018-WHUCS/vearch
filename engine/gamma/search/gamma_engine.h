@@ -28,14 +28,17 @@ class GammaEngine {
   int Setup(int max_doc_size);
 
   Response *Search(const Request *request);
+  Response *BinarySearch(const BinaryRequest *request);
 
   int CreateTable(const Table *table);
 
   int Add(const Doc *doc);
-
+  int BinaryAdd(const Doc *doc);
   int AddOrUpdate(const Doc *doc);
 
   int Update(const Doc *doc);
+
+  ByteArray *GetBinaryVector(int vec_id);
 
   /**
    * Delete doc
@@ -99,6 +102,11 @@ class GammaEngine {
                   const Request *request);
 
   ResultItem *PackResultItem(const VectorDoc *vec_doc, const Request *request);
+
+  int PackBinaryResults(const GammaResult *gamma_results, Response *response_results,
+                  const BinaryRequest *request);
+
+  ResultItem *PackBinaryResultItem(const VectorDoc *vec_doc, const BinaryRequest *request);
 
   int MultiRangeQuery(const Request *request, GammaSearchCondition &condition,
                       Response *response_results,

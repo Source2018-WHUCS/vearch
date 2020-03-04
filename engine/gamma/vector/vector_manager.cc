@@ -115,6 +115,8 @@ int VectorManager::CreateVectorTable(VectorInfo **vectors_info, int vectors_num,
       model = RetrievalModel::IVFPQ;
     } else if (!strcasecmp("GPU", retrieval_type_str.c_str())) {
       model = RetrievalModel::GPU_IVFPQ;
+    } else if (!strcasecmp("HAMMING", retrieval_type_str.c_str())) {
+      model = RetrievalModel::HAMMING;
     } else {
       LOG(WARNING) << "NO support for retrieval type " << retrieval_type_str
                    << ", default to " << default_model_;
@@ -142,6 +144,27 @@ int VectorManager::AddToStore(int docid, std::vector<Field *> &fields) {
       return -1;
     }
     raw_vectors_[name]->Add(docid, fields[i]);
+  }
+  return 0;
+}
+
+int VectorManager::BinaryAddToStore(int docid, std::vector<Field *> &fields) {
+  for (unsigned int i = 0; i < fields.size(); i++) {
+    std::string name =
+        std::string(fields[i]->name->value, fields[i]->name->len);
+    // if (raw_vectors_.find(name) == raw_vectors_.end()) {
+    //   LOG(ERROR) << "Cannot find raw vector [" << name << "]";
+    //   return -1;
+    // }
+    // raw_vectors_[name]->Add(docid, fields[i]);
+    const auto &iter = vector_indexes_.find(name);
+    if (iter == vector_indexes_.end()) {
+      LOG(ERROR) << "Cannot find index [" << name << "]";
+      continue;
+    }
+    GammaIndex *index = iter->second;
+    if (index->Add(fields[i]->value->len, reinterpret_cast<uint8_t *>(fields[i]->value->value)))
+      return 0;  // don't update
   }
   return 0;
 }
@@ -197,15 +220,23 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
       return -1;
     }
 
-    GammaSearchCondition condition(query.condition);
-    condition.min_dist = query.vec_query[i]->min_score;
-    condition.max_dist = query.vec_query[i]->max_score;
-    int ret_vec = iter->second->Search(query.vec_query[i], &condition,
+    // GammaSearchCondition condition(query.condition);
+    query.condition->min_dist = query.vec_query[i]->min_score;
+    query.condition->max_dist = query.vec_query[i]->max_score;
+    // condition.min_dist = query.vec_query[i]->min_score;
+    // condition.max_dist = query.vec_query[i]->max_score;
+    int ret_vec = iter->second->Search(query.vec_query[i], query.condition,
                                        all_vector_results[i]);
     if (ret_vec != 0) {
       ret = ret_vec;
     }
+#ifdef PERFORMANCE_TESTING
+    std::string msg;
+    msg += "search " + std::to_string(i);
+    query.condition->Perf(msg);
+#endif
   }
+
 
   if (query.condition->sort_by_docid) {
     for (int i = 0; i < n; i++) {
@@ -309,7 +340,173 @@ int VectorManager::Search(const GammaQuery &query, GammaResult *results) {
     }
   }
 
+#ifdef PERFORMANCE_TESTING
+  query.condition->Perf("merge result");
+#endif
   return ret;
+}
+
+int VectorManager::BinarySearch(const GammaBinaryQuery &query, GammaResult *results) {
+  int ret = 0, n = 0;
+
+  VectorResult all_vector_results[query.vec_num];
+
+  query.condition->sort_by_docid = query.vec_num > 1 ? true : false;
+  query.condition->metric_type =
+      static_cast<DistanceMetricType>(ivfpq_param_->metric_type);
+  std::string vec_names[query.vec_num];
+  for (int i = 0; i < query.vec_num; i++) {
+    std::string name = std::string(query.vec_query[i]->name->value,
+                                   query.vec_query[i]->name->len);
+    vec_names[i] = name;
+    const auto &iter = vector_indexes_.find(name);
+    if (iter == vector_indexes_.end()) {
+      LOG(ERROR) << "Query name " << name
+                 << " not exist in created vector table";
+      return -1;
+    }
+
+    GammaIndex *index = iter->second;
+
+    // int d = index->raw_vec_->GetDimension();
+    int d = iter->second->d_ / 8;
+    n = 1;
+    if (!all_vector_results[i].init(query.n, query.condition->topn)) {
+      LOG(ERROR) << "Query name " << name << "init vector result error";
+      return -1;
+    }
+
+    // GammaSearchCondition condition(query.condition);
+    query.condition->min_dist = query.vec_query[i]->min_score;
+    query.condition->max_dist = query.vec_query[i]->max_score;
+    // condition.min_dist = query.vec_query[i]->min_score;
+    // condition.max_dist = query.vec_query[i]->max_score;
+    int ret_vec = iter->second->BinarySearch(query, query.vec_query[i], query.condition,
+                                       all_vector_results[i]);
+    if (ret_vec != 0) {
+      ret = ret_vec;
+    }
+#ifdef PERFORMANCE_TESTING
+    std::string msg;
+    msg += "search " + std::to_string(i);
+    query.condition->Perf(msg);
+#endif
+  }
+
+
+  if (query.condition->sort_by_docid) {
+    for (int i = 0; i < n; i++) {
+      int start_docid = 0, common_docid_count = 0, common_idx = 0;
+      double score = 0;
+      bool has_common_docid = true;
+      if (!results[i].init(query.condition->topn, vec_names, query.vec_num)) {
+        LOG(ERROR) << "init gamma result(sort by docid) error, topn="
+                   << query.condition->topn
+                   << ", vector number=" << query.vec_num;
+        return -1;
+      }
+      while (start_docid < INT_MAX) {
+        for (int j = 0; j < query.vec_num; j++) {
+          float vec_dist = 0;
+          char *source = nullptr;
+          int source_len = 0;
+          int cur_docid = all_vector_results[j].seek(i, start_docid, vec_dist,
+                                                     source, source_len);
+          if (cur_docid == start_docid) {
+            common_docid_count++;
+            double field_score = query.vec_query[j]->has_boost == 1
+                                     ? (vec_dist * query.vec_query[j]->boost)
+                                     : vec_dist;
+            score += field_score;
+            results[i].docs[common_idx]->fields[j].score = field_score;
+            results[i].docs[common_idx]->fields[j].source = source;
+            results[i].docs[common_idx]->fields[j].source_len = source_len;
+            if (common_docid_count == query.vec_num) {
+              results[i].docs[common_idx]->docid = start_docid;
+              results[i].docs[common_idx++]->score = score;
+              results[i].total = all_vector_results[j].total[i] > 0
+                                     ? all_vector_results[j].total[i]
+                                     : results[i].total;
+
+              start_docid++;
+              common_docid_count = 0;
+              score = 0;
+            }
+          } else if (cur_docid > start_docid) {
+            common_docid_count = 0;
+            start_docid = cur_docid;
+            score = 0;
+          } else {
+            has_common_docid = false;
+            break;
+          }
+        }
+        if (!has_common_docid) break;
+      }
+      results[i].results_count = common_idx;
+      LOG(INFO) << "count [" << common_idx << "]";
+      if (query.condition->multi_vector_rank) {
+        switch (query.condition->metric_type) {
+          case InnerProduct:
+            std::sort(results[i].docs, results[i].docs + common_idx,
+                      InnerProductCmp);
+            break;
+          case L2:
+            std::sort(results[i].docs, results[i].docs + common_idx, L2Cmp);
+            break;
+          default:
+            LOG(ERROR) << "invalid metric_type="
+                       << query.condition->metric_type;
+        }
+      }
+    }
+  } else {
+    for (int i = 0; i < n; i++) {
+      // double score = 0;
+      if (!results[i].init(query.condition->topn, vec_names, query.vec_num)) {
+        LOG(ERROR) << "init gamma result error, topn=" << query.condition->topn
+                   << ", vector number=" << query.vec_num;
+        return -1;
+      }
+      results[i].total = all_vector_results[0].total[i] > 0
+                             ? all_vector_results[0].total[i]
+                             : results[i].total;
+      int pos = 0, topn = all_vector_results[0].topn;
+      for (int j = 0; j < topn; j++) {
+        int real_pos = i * topn + j;
+        if (all_vector_results[0].docids[real_pos] == -1) continue;
+        results[i].docs[pos]->docid = all_vector_results[0].docids[real_pos];
+
+        results[i].docs[pos]->fields[0].source =
+            all_vector_results[0].sources[real_pos];
+        results[i].docs[pos]->fields[0].source_len =
+            all_vector_results[0].source_lens[real_pos];
+
+        double score = all_vector_results[0].dists[real_pos];
+
+        score = query.vec_query[0]->has_boost == 1
+                    ? (score * query.vec_query[0]->boost)
+                    : score;
+
+        results[i].docs[pos]->fields[0].score = score;
+        results[i].docs[pos]->score = score;
+        pos++;
+      }
+      results[i].results_count = pos;
+    }
+  }
+
+#ifdef PERFORMANCE_TESTING
+  query.condition->Perf("merge result");
+#endif
+  return ret;
+}
+
+ByteArray *VectorManager::GetBinaryVector(int vec_id) {
+  for (const auto &it : vector_indexes_) {
+    GammaIndex *index = it.second;
+    return index->GetBinaryVector(vec_id);
+  }
 }
 
 int VectorManager::GetVector(

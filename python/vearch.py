@@ -22,7 +22,7 @@ import numpy as np
 import copy 
 import pickle
 import uuid
-
+from ctypes import *
 from .swigvearch import *
 
 ###########################################
@@ -39,13 +39,12 @@ numpy_dtype_map = {
     np.dtype('float64'): 'Double'   
 }
 
-def byte_array_to_numpy(ba):
+def byte_array_to_numpy(ba, dtype):
     ''' convert byte array to numpy array
         ba: byte array
     '''
-    dtype = np.dtype('float32')
-    vector = ByteArrayToFloatVector(ba)
-    numpy_array = np.asarray(vector, dtype)
+    vector = eval("ByteArrayTo" + numpy_dtype_map[dtype] + "Vector")(ba)
+    numpy_array = np.asarray(vector, dtype=dtype)
     return numpy_array
 
 def normalize_numpy_array(numpy_array):
@@ -175,10 +174,6 @@ class EngineTable:
         message["message"] = "table model"
 
         self.valid_key(self.model, "name", **message)
-
-        if not self.model["name"] == "IVFPQ":
-            ex = Exception("Unsupported model, now only support IVFPQ")
-            raise ex
 
         self.valid_key(self.model, "ncentroids", \
                 "nprobe", "nsubvector", "metric_type", **message)
@@ -379,10 +374,12 @@ class EngineTable:
         vectors_info = MakeVectorInfos(vectors_info_size)
         field_num = 0
         vector_num = 0
+        dtype = np.dtype('float32')
         for key in self.properties:
             if self.get_field_type(key) == DataTypes.VECTOR:
                 info = self.get_vector_info(key)
-
+                if info["retrieval_type"].upper() == "HAMMING":
+                    dtype = np.dtype('uint8')
                 vector_info = MakeVectorInfo( \
                     key, info["type"],\
                     info["index"], info["dimension"], \
@@ -400,7 +397,7 @@ class EngineTable:
                     info["index"])
                 SetFieldInfo(fields_info, field_num, field_info)
                 field_num += 1
-        return (fields_info, fields_info_size, vectors_info, vectors_info_size)
+        return (fields_info, fields_info_size, vectors_info, vectors_info_size, dtype)
 
     def parse_model_param(self):
         ''' parse table model' info, because
@@ -430,13 +427,13 @@ class EngineTable:
 
         model_param, model_type = self.parse_model_param()
 
-        fields_info, fields_info_size, vectors_info, vectors_info_size = self.parse_field_info()
+        fields_info, fields_info_size, vectors_info, vectors_info_size, dtype= self.parse_field_info()
 
         table_info = MakeTable(table_name, fields_info, \
             fields_info_size, vectors_info, \
             vectors_info_size, model_param)
 
-        return table_info
+        return (table_info, dtype)
 
 class Item:
     ''' Document Item will be added to engine, 
@@ -448,7 +445,7 @@ class Item:
         ''' init document item
             info: document info
         '''
-        self.info = info
+        self.info = copy.deepcopy(info)
 
     def valid(self, table):
         ''' check document item
@@ -467,9 +464,9 @@ class Item:
                 raise ex
 
         #should also check item's value
-        return True        
+        return True
 
-    def create_doc_item(self, table, doc_id):
+    def create_doc_item(self, table, doc_id, dtype):
         ''' tanslate document info to the way 
             engine can accept.
             table: table info
@@ -487,7 +484,7 @@ class Item:
 
             if data_type == DataTypes.VECTOR:
                 if isinstance(self.info[key], list):
-                    self.info[key] = np.asarray(self.info[key], dtype="float32")
+                    self.info[key] = np.asarray(self.info[key], dtype=dtype)
                 metric_type = table.get_metric_type()
                 if metric_type == 0:
                     self.info[key], norm = normalize_numpy_array(self.info[key])
@@ -624,13 +621,17 @@ class Query:
         if condition != None and "multi_vector_rank" in condition:
             self.condition["multi_vector_rank"] = condition["multi_vector_rank"]
 
+        self.condition["parallel_based_on_query"] = 0
+        if condition != None and "parallel_based_on_query" in condition:
+            self.condition["parallel_based_on_query"] = condition["parallel_based_on_query"]
+
     def init_return_fields(self, fields=None):
         ''' init query return fields info
             fields: what field will return in search result.
         '''
         self.fields = fields     
 
-    def parse_vector_query(self, table):
+    def parse_vector_query(self, table, dtype):
         ''' parse query vector and tanslate it to
             the way engine can accept. req_num shows
             how many query vectors
@@ -646,17 +647,19 @@ class Query:
         # In this situation, it's searching with
         # only one vector field, but maybe one or multi
         # vector
+
         if len(self.vector) == 1:
             if isinstance(self.vector[0]["feature"], list):
-                self.vector[0]["feature"] = np.asarray(self.vector[0]["feature"], dtype="float32")
+                self.vector[0]["feature"] = np.asarray(self.vector[0]["feature"], dtype=dtype)
             shape = self.vector[0]["feature"].shape
             if len(shape) != 1:
                 req_num = shape[0]
 
         for i in range(0, len(self.vector)):
             metric_type = table.get_metric_type()
+
             if isinstance(self.vector[i]["feature"], list):
-                self.vector[i]["feature"] = np.asarray(self.vector[i]["feature"], dtype="float32")
+                self.vector[i]["feature"] = np.asarray(self.vector[i]["feature"], dtype=dtype)
             if metric_type == 0:
                 self.vector[i]["feature"], _ = normalize_numpy_array(self.vector[i]["feature"])
             
@@ -776,10 +779,36 @@ class Query:
 
         return (range_filters, range_size, term_filters, term_size)
 
-    def create_query_request(self, table):
+    def create_query_binary_request(self, table, alignments, dtype):
         '''convert query dict to engine query request
         '''
-        vector_querys, vector_querys_size, req_num = self.parse_vector_query(table)
+        vector_querys, vector_querys_size, req_num = self.parse_vector_query(table, dtype)
+        n = len(alignments)
+        d = []
+        vec_ids = []
+        bytearray1 = MakeByteArrays(n)
+        bytearray2 = MakeByteArrays(n)
+        for i in range(0, n):
+            d.append(len(alignments[i][0]))
+            vec_ids.append(i)
+            seq_array1 = np.asarray(alignments[i][0], dtype=dtype)
+            seq_array2 = np.asarray(alignments[i][1], dtype=dtype)
+            SetByteArray(bytearray1, i, numpy_to_byte_array(seq_array1))
+            SetByteArray(bytearray2, i, numpy_to_byte_array(seq_array2))
+        
+        request = MakeBinaryRequest(n, \
+                    bytearray1, \
+                    bytearray2, \
+                    swig_ptr(np.asarray(d, dtype="int32")), \
+                    swig_ptr(np.asarray(vec_ids, dtype="int32")), \
+                    vector_querys, vector_querys_size)
+        
+        return request
+
+    def create_query_request(self, table, dtype):
+        '''convert query dict to engine query request
+        '''
+        vector_querys, vector_querys_size, req_num = self.parse_vector_query(table, dtype)
         
         fields, fields_size = table.get_return_fields(self.fields)
 
@@ -793,7 +822,8 @@ class Query:
                     self.condition["direct_search_type"], \
                     StringToByteArray(self.condition["online_log_level"]), \
                     self.condition["has_rank"], \
-                    self.condition["multi_vector_rank"]);
+                    self.condition["multi_vector_rank"], \
+                    self.condition["parallel_based_on_query"])
 
         return request
 
@@ -806,6 +836,7 @@ class Engine:
     def __init__(self, path, max_doc_size):
         self.path = path
         self.max_doc_size = max_doc_size
+        self.total_added_num = 0
         self.init()
 
     def init(self):
@@ -844,7 +875,7 @@ class Engine:
         '''
         table = EngineTable(table_info)
         self.table = table
-        engine_table = table.create_engine_table()
+        engine_table, self.dtype = table.create_engine_table()
 
         response_code = CreateTable(self.engine, engine_table)
 
@@ -858,17 +889,23 @@ class Engine:
             return: unique docs' id for docs
         '''
         #first add doc to table to save
-        docs_id = []
+        doc_ids = []
         for doc_info in docs_info:
             doc_item = Item(doc_info)
             doc_id = self.create_id()
-            doc = doc_item.create_doc_item(self.table, doc_id)
-            AddOrUpdateDoc(self.engine, doc)
-            docs_id.append(doc_id)
+            doc = doc_item.create_doc_item(self.table, doc_id, self.dtype)
+            if self.dtype == np.dtype("uint8"):
+                BinaryAddDoc(self.engine, doc)
+            else:
+                AddOrUpdateDoc(self.engine, doc)
+            doc_ids.append(doc_id)
             DestroyDoc(doc)
+            self.total_added_num += 1
         #then build index for them
-        self.build_index()
-        return docs_id
+        if self.dtype != np.dtype("uint8"):
+            self.build_index()
+        
+        return doc_ids
 
     def build_index(self):
         ''' build index for added docs
@@ -885,11 +922,11 @@ class Engine:
         index_status = GetIndexStatus(self.engine)
         return index_status_map[index_status]
 
-    def del_doc(self, id):
+    def del_doc(self, doc_id):
         ''' delete doc
             id: delete doc' id
         '''
-        response_code = DelDoc(self.engine, StringToByteArray(id))
+        response_code = DelDoc(self.engine, StringToByteArray(doc_id))
         return response_code
 
     def del_doc_by_query(self, query_info):
@@ -897,19 +934,19 @@ class Engine:
             query_info: what kind docs want to delete
         '''
         query = Query(query_info)
-        request = query.create_query_request(self.table)
+        request = query.create_query_request(self.table, self.dtype)
         response_code = DelDocByQuery(self.engine, request)
         DestroyRequest(request)
         return response_code
 
-    def update_doc(self, doc_info, id):
+    def update_doc(self, doc_info, doc_id):
         ''' update doc's info, now don't support to update
             string.
             doc_info: doc's new info
             id: which doc want to be updated
         '''
         doc_item = Item(doc_info)
-        doc = doc_item.create_doc_item(self.table, id)
+        doc = doc_item.create_doc_item(self.table, doc_id, self.dtype)
         response_code = UpdateDoc(self.engine, doc)
         DestroyDoc(doc)
         return response_code
@@ -919,13 +956,39 @@ class Engine:
             query_info: search info
         '''
         query = Query(query_info)
-        request = query.create_query_request(self.table)
+        request = query.create_query_request(self.table, self.dtype)
         response = Search(self.engine, request)
         result = self.get_query_result(response, query.fields)
 
         DestroyRequest(request)
         DestroyResponse(response)
 
+        return result
+
+    def get_all_feature(self):
+        binary_array = []
+        for vec_id in range(self.get_total_added_num()):
+            feature = self.get_feature_sequence(vec_id)
+            binary_array.append(feature)
+        return binary_array
+            
+    def get_feature_sequence(self, vec_id):
+        binary_vector = GetBinaryVector(self.engine, vec_id)
+        binary_array = np.asarray(ByteArrayToByteVector(binary_vector), dtype=self.dtype)
+        return binary_array
+
+    def binary_search(self, query_info, alignments):
+        ''' search in table
+            query_info: search info
+        '''
+        query = Query(query_info)
+        request = query.create_query_binary_request(self.table, alignments, self.dtype)
+        response = BinarySearch(self.engine, request)
+        result = self.get_query_result(response, query.fields)
+        sorted_result = sorted(result[0]["results"], key=lambda keys:keys['score'], reverse=True)
+        result[0]["results"] = sorted_result
+        DestroyBinaryRequest(request)
+        DestroyResponse(response)
         return result
 
     def get_doc_by_id(self, doc_id):
@@ -942,6 +1005,9 @@ class Engine:
         '''
         num = GetDocsNum(self.engine)
         return num
+
+    def get_total_added_num(self):
+        return self.total_added_num
 
     def get_memory_bytes(self):
         ''' get how much memory used
@@ -963,6 +1029,7 @@ class Engine:
             table["model"]["metric_type"] = "L2"
 
         table["properties"] = self.table.properties
+        table["dtype"] = self.dtype
 
         with open(save_table_path, 'wb') as handle:
             pickle.dump(table, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -986,6 +1053,7 @@ class Engine:
         with open(load_table_path, 'rb') as handle:
             table = pickle.load(handle)
 
+        self.dtype = table["dtype"]
         self.table = EngineTable(table, True)
 
         load_norm_path = self.path + "/norm.pickle"
@@ -1008,7 +1076,7 @@ class Engine:
             name = ByteArrayToString(field.name)
 
             if field.data_type == DataTypes.VECTOR:
-                fields_info[name] = byte_array_to_numpy(field.value)
+                fields_info[name] = byte_array_to_numpy(field.value, self.dtype)
             else:
                 data_type = data_type_map[field.data_type]
                 value = eval("ByteArrayTo" + data_type)(field.value)

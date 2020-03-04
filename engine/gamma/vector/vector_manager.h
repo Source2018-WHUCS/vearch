@@ -31,6 +31,7 @@ class VectorManager {
                         IVFPQParameters *ivfpq_param);
 
   int AddToStore(int docid, std::vector<Field *> &fields);
+  int BinaryAddToStore(int docid, std::vector<Field *> &fields);
 
   int Indexing();
 
@@ -38,9 +39,12 @@ class VectorManager {
 
   // int Add(int docid, const std::vector<Field *> &field_vecs);
   int Search(const GammaQuery &query, GammaResult *results);
+  int BinarySearch(const GammaBinaryQuery &query, GammaResult *results);
 
   int GetVector(const std::vector<std::pair<std::string, int>> &fields_ids,
                 std::vector<std::string> &vec, bool is_bytearray = false);
+
+  ByteArray *GetBinaryVector(int vec_id);
 
   long GetTotalMemBytes() {
     long index_total_mem_bytes = 0;

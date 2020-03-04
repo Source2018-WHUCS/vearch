@@ -31,6 +31,18 @@ using std::vector;
 namespace tig_gamma {
 namespace gamma_gpu {
 
+static inline void ConvertVectorDim(size_t num, int raw_d, int d,
+                                    const float *raw_vec, float *vec) {
+  memset(vec, 0, num * d * sizeof(float));
+
+#pragma omp parallel for
+  for (size_t i = 0; i < num; ++i) {
+    for (int j = 0; j < raw_d; ++j) {
+      vec[i * d + j] = raw_vec[i * raw_d + j];
+    }
+  }
+}
+
 namespace {
 const int kMaxBatch = 200;       // max search batch num
 const int kMaxRecallNum = 1024;  // max recall num
@@ -110,7 +122,7 @@ class GPUItem {
     std::unique_lock<std::mutex> lck(mtx_);
     while (not done_) {
       cv_.wait_for(lck, std::chrono::seconds(1),
-                   [this]() -> bool { return done_; });
+                   [this]()->bool { return done_; });
     }
     return 0;
   }
@@ -269,8 +281,22 @@ int GammaIVFPQGPUIndex::Indexing() {
     int num = vectors_count > 100000 ? 100000 : vectors_count;
     ScopeVector scope_vec;
     raw_vec_->GetVectorHeader(0, num, scope_vec);
+    int raw_d = raw_vec_->GetDimension();
+    float *train_vec = nullptr;
+
+    if (d_ > raw_d) {
+      float *vec = new float[num * d_];
+      ConvertVectorDim(num, raw_d, d_, scope_vec.Get(), vec);
+      train_vec = vec;
+    } else {
+      train_vec = const_cast<float *>(scope_vec.Get());
+    }
     LOG(INFO) << num;
-    gpu_index_->train(num, scope_vec.Get());
+    gpu_index_->train(num, train_vec);
+
+    if (d_ > raw_d) {
+      delete train_vec;
+    }
   }));
 
   std::for_each(workers.begin(), workers.end(),
@@ -322,9 +348,23 @@ int GammaIVFPQGPUIndex::AddRTVecsToIndex() {
                                 indexed_vec_count_ + count_per_index,
                                 vector_head);
 
-      if (!Add(count_per_index, vector_head.Get())) {
+      int raw_d = raw_vec_->GetDimension();
+      float *add_vec = nullptr;
+
+      if (d_ > raw_d) {
+        float *vec = new float[count_per_index * d_];
+        ConvertVectorDim(count_per_index, raw_d, d_, vector_head.Get(), vec);
+        add_vec = vec;
+      } else {
+        add_vec = const_cast<float *>(vector_head.Get());
+      }
+
+      if (!Add(count_per_index, add_vec)) {
         LOG(ERROR) << "add index from docid " << start_docid << " error!";
         ret = -2;
+      }
+      if (d_ > raw_d) {
+        delete add_vec;
       }
     }
   }
@@ -345,15 +385,16 @@ bool GammaIVFPQGPUIndex::Add(int n, const float *vec) {
 }
 
 int GammaIVFPQGPUIndex::Search(const VectorQuery *query,
-                               const GammaSearchCondition *condition,
+                               GammaSearchCondition *condition,
                                VectorResult &result) {
+  int raw_d = raw_vec_->GetDimension();
   if (gpu_threads_.size() == 0) {
     LOG(ERROR) << "gpu index not indexed!";
     return -1;
   }
 
   float *xq = reinterpret_cast<float *>(query->value->value);
-  int n = query->value->len / (d_ * sizeof(float));
+  int n = query->value->len / (raw_d * sizeof(float));
   if (n > kMaxReqNum) {
     LOG(ERROR) << "req num [" << n << "] should not larger than [" << kMaxReqNum
                << "]";
@@ -364,8 +405,22 @@ int GammaIVFPQGPUIndex::Search(const VectorQuery *query,
 #ifdef PERFORMANCE_TESTING
   double start = utils::getmillisecs();
 #endif
-  GPUSearch(n, xq, condition->topn, result.dists, result.docids, condition,
+
+  float *vec_q = nullptr;
+
+  if (d_ > raw_d) {
+    float *vec = new float[n * d_];
+    ConvertVectorDim(n, raw_d, d_, xq, vec);
+    vec_q = vec;
+  } else {
+    vec_q = xq;
+  }
+  GPUSearch(n, vec_q, condition->topn, result.dists, result.docids, condition,
             perf_ss);
+
+  if (d_ > raw_d) {
+    delete vec_q;
+  }
 
 #ifdef PERFORMANCE_TESTING
   double gpu_search_end = utils::getmillisecs();
@@ -497,7 +552,7 @@ int GammaIVFPQGPUIndex::GPUThread(
 
 int GammaIVFPQGPUIndex::GPUSearch(int n, const float *x, int k,
                                   float *distances, long *labels,
-                                  const GammaSearchCondition *condition,
+                                  GammaSearchCondition *condition,
                                   std::stringstream &perf_ss) {
   auto recall_num = condition->recall_num;
   if (recall_num > kMaxRecallNum) {
@@ -531,7 +586,7 @@ int GammaIVFPQGPUIndex::GPUSearch(int n, const float *x, int k,
   double end1 = utils::getmillisecs();
 
   // set filter
-  auto is_filterable = [this, condition](long docid) -> bool {
+  auto is_filterable = [ this, condition ](long docid)->bool {
     auto *num = condition->range_query_result;
 
     return bitmap::test(docids_bitmap_, docid) || (num && not num->Has(docid));
@@ -606,7 +661,7 @@ int GammaIVFPQGPUIndex::GPUSearch(int n, const float *x, int k,
         }
 
         if (condition->sort_by_docid) {
-          vector<std::pair<long, float>> id_sim_pairs(k);
+          vector<std::pair<long, float> > id_sim_pairs(k);
           for (int z = 0; z < k; ++z) {
             id_sim_pairs[z] = std::move(std::make_pair(idxi[z], simi[z]));
           }

@@ -95,7 +95,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 exec_program(
     "git"
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ARGS "log --format='[sha1]:%h [author]:%cn [time]:%ci [commit]:%s [branch]:%d' -1"
+    ARGS "log --format='[sha1]:%h [author]:%cn [time]:%ci [branch]:%d' -1"
     OUTPUT_VARIABLE VERSION_SHA1)
 
 add_definitions(-DGIT_SHA1="${VERSION_SHA1}")
@@ -186,15 +186,15 @@ if (BUILD_PYTHON STREQUAL "ON")
 
     # set the flags
     set(CMAKE_SWIG_FLAGS "-DSWIGWORDSIZE64")
-    set(SWIGVEARCH_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../python/swigvearch.i) 
+    
     # Set the properties for the interface file.
-    set_property(SOURCE ${SWIGVEARCH_PATH} PROPERTY CPLUSPLUS ON)
+    set_property(SOURCE ./python/swigvearch.i PROPERTY CPLUSPLUS ON)
     
     if(POLICY CMP0078)
         cmake_policy(SET CMP0078 NEW)
     endif()
     
-    swig_add_library( swigvearch LANGUAGE python SOURCES ${SWIGVEARCH_PATH} ${LIB_SRCS} )
+    swig_add_library( swigvearch LANGUAGE python SOURCES ./python/swigvearch.i ${LIB_SRCS} )
 
     swig_link_libraries( swigvearch ${LIBRARIES} )
 

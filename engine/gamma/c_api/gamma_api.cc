@@ -325,6 +325,12 @@ enum ResponseCode CreateTable(void *engine, Table *table) {
   return ret;
 }
 
+enum ResponseCode BinaryAddDoc(void *engine, Doc *doc) {
+  enum ResponseCode ret = static_cast<enum ResponseCode>(
+      static_cast<tig_gamma::GammaEngine *>(engine)->BinaryAdd(doc));
+  return ret;
+}
+
 enum ResponseCode AddDoc(void *engine, Doc *doc) {
   enum ResponseCode ret = static_cast<enum ResponseCode>(
       static_cast<tig_gamma::GammaEngine *>(engine)->Add(doc));
@@ -538,7 +544,7 @@ Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
                      TermFilter **term_filters, int term_filters_num,
                      int req_num, int direct_search_type,
                      ByteArray *online_log_level, int has_rank,
-                     int multi_vector_rank) {
+                     int multi_vector_rank, BOOL parallel_based_on_query) {
   Request *request = static_cast<Request *>(malloc(sizeof(Request)));
   memset(request, 0, sizeof(Request));
   request->topn = topn;
@@ -555,6 +561,7 @@ Request *MakeRequest(int topn, VectorQuery **vec_fields, int vec_fields_num,
   request->online_log_level = online_log_level;
   request->has_rank = has_rank;
   request->multi_vector_rank = multi_vector_rank;
+  request->parallel_based_on_query = parallel_based_on_query;
   return request;
 }
 
@@ -570,8 +577,67 @@ enum ResponseCode DestroyRequest(Request *request) {
   return ResponseCode::SUCCESSED;
 }
 
+BinaryRequest *MakeBinaryRequest(int n, ByteArray **xa, ByteArray **xb, int *d, int *vec_id, 
+    VectorQuery **vec_fields, int vec_fields_num) {
+  BinaryRequest *request =
+      static_cast<BinaryRequest *>(malloc(sizeof(BinaryRequest)));
+  memset(request, 0, sizeof(BinaryRequest));
+
+  for (int i = 0; i < vec_fields_num; ++i) {
+    VectorQuery *q = vec_fields[i];
+    std::string name = std::string(q->name->value, q->name->len);
+    LOG(INFO) << "search vec name [" << name << "]";
+  }
+  request->topn = n;
+  request->vec_id = vec_id;
+  request->xa = xa;
+  request->xb = xb;
+  request->d = d;
+  request->req_num = n;
+  request->vec_fields = vec_fields;
+  request->vec_fields_num = vec_fields_num;
+  request->fields = nullptr;;
+  request->fields_num = 0;
+  request->range_filters = nullptr;
+  request->range_filters_num = 0;
+  request->term_filters = nullptr;
+  request->term_filters_num = 0;
+  request->direct_search_type = 0;
+  request->online_log_level = nullptr;
+  request->has_rank = 0;
+  request->multi_vector_rank = 0;
+  request->parallel_based_on_query = 0;
+  return request;
+}
+
+ByteArray *GetBinaryVector(void *engine, int vec_id) {
+  return static_cast<tig_gamma::GammaEngine *>(engine)->GetBinaryVector(vec_id);
+}
+
+enum ResponseCode DestroyBinaryRequest(BinaryRequest *request) {
+  if (request != nullptr) {
+    for (int i = 0; i < request->req_num; ++i) {
+      DestroyByteArray(request->xa[i]);
+      DestroyByteArray(request->xb[i]);
+    }
+    //free(request->d);
+    //free(request->vec_id);
+    DestroyVectorQuerys(request->vec_fields, request->vec_fields_num);
+    DestroyByteArrays(request->fields, request->fields_num);
+    DestroyRangeFilters(request->range_filters, request->range_filters_num);
+    DestroyTermFilters(request->term_filters, request->term_filters_num);
+    DestroyByteArray(request->online_log_level);
+    free(request);
+  }
+  return ResponseCode::SUCCESSED;
+}
+
 Response *Search(void *engine, Request *request) {
   return static_cast<tig_gamma::GammaEngine *>(engine)->Search(request);
+}
+
+Response *BinarySearch(void *engine, BinaryRequest *request) {
+  return static_cast<tig_gamma::GammaEngine *>(engine)->BinarySearch(request);
 }
 
 ByteArray *SearchV2(void *engine, Request *request) {
