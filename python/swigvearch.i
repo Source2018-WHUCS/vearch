@@ -97,6 +97,12 @@ VectorInfo *MakeVectorInfo(const std::string &name, int data_type,
                            const std::string &store_type,
                            const std::string &store_param);
 
+std::vector<unsigned char> ByteArrayToByteVector(ByteArray *value);
+/*
+FieldInfo *MakeFieldInfo(ByteArray *name, int data_type,
+                         BOOL is_index);
+*/
+
 Field *MakeField(ByteArray *name, ByteArray *value,
                  enum DataType data_type);
 
@@ -135,6 +141,13 @@ std::vector<T> ByteArrayToVector(ByteArray *value) {
   int len = value->len / sizeof(T) - 1;
   std::vector<T> vec(len);
   memcpy(vec.data(), value->value + sizeof(int), value->len);
+  return vec;
+}
+
+std::vector<unsigned char> ByteArrayToByteVector(ByteArray *value) {
+  int len = value->len / sizeof(unsigned char);
+  std::vector<unsigned char> vec(len);
+  memcpy(vec.data(), value->value, value->len);
   return vec;
 }
 
@@ -227,7 +240,6 @@ Field *MakeField(ByteArray *name, ByteArray *value,
 %template(ByteArrayToLongVector) ByteArrayToVector<long>;
 %template(ByteArrayToULongVector) ByteArrayToVector<unsigned long>;
 %template(ByteArrayToCharVector) ByteArrayToVector<char>;
-%template(ByteArrayToUCharVector) ByteArrayToVector<unsigned char>;
 %template(ByteArrayToFloatVector) ByteArrayToVector<float>;
 %template(ByteArrayToDoubleVector) ByteArrayToVector<double>;
 

@@ -42,6 +42,7 @@ Vearch is a scalable distributed system for efficient similarity search of deep 
 
 * Vearch can be leveraged to build a complete visual search system to index billions of images. The image retrieval plugin for object detection and feature extraction is also required. For more information, please refer to [docs/Quickstart.md](docs/Quickstart.md).
 
+* Vearch Python SDK enables vearch to use locally. Vearch python sdk can be installed easily by pip install vearch. For more information, please refer to [docs/APIPythonSDK.md](docs/APIPythonSDK.md).
 
 ## APIs and Use Cases
 

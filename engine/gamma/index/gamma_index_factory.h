@@ -10,6 +10,7 @@
 
 #include "gamma_common_data.h"
 #include "gamma_index_ivfpq.h"
+#include "gamma_index_binary_flat.h"
 #ifdef BUILD_GPU
 #include "gamma_index_ivfpq_gpu.h"
 #endif
@@ -28,17 +29,18 @@ class GammaIndexFactory {
       LOG(ERROR) << "docids_bitmap is NULL!";
       return nullptr;
     }
+    LOG(INFO) << "Create index model [" << model << "]";
+
+    if (dimension % ivfpq_param->nsubvector != 0) {
+      dimension =
+          (dimension / ivfpq_param->nsubvector + 1) * ivfpq_param->nsubvector;
+      LOG(INFO) << "Dimension [" << raw_vec->GetDimension()
+                << "] cannot divide by nsubvector [" << ivfpq_param->nsubvector
+                << "], adjusted to [" << dimension << "]";
+    }
+
     switch (model) {
       case IVFPQ: {
-        if (dimension % ivfpq_param->nsubvector != 0) {
-          dimension = (dimension / ivfpq_param->nsubvector + 1) *
-                      ivfpq_param->nsubvector;
-          LOG(INFO) << "Dimension [" << raw_vec->GetDimension()
-                    << "] cannot divide by nsubvector ["
-                    << ivfpq_param->nsubvector << "], adjusted to ["
-                    << dimension << "]";
-        }
-
         faiss::IndexFlatL2 *coarse_quantizer =
             new faiss::IndexFlatL2(dimension);
 
@@ -46,6 +48,11 @@ class GammaIndexFactory {
             coarse_quantizer, dimension, ivfpq_param->ncentroids,
             ivfpq_param->nsubvector, ivfpq_param->nbits_per_idx, docids_bitmap,
             raw_vec, ivfpq_param->nprobe);
+        break;
+      }
+      case HAMMING: {
+        return (GammaIndex *)new gamma_hamming::GammaHammingFlatIndex(
+            dimension, docids_bitmap, raw_vec);
         break;
       }
 #ifdef BUILD_GPU

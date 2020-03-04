@@ -242,14 +242,28 @@ int Profile::Add(const std::vector<Field *> &fields, int doc_id,
     LOG(ERROR) << "Doc num reached upper limit [" << max_profile_size_ << "]";
     return -1;
   }
+
+  if (fields.size() != attr_idx_map_.size()) {
+    LOG(ERROR) << "Field num [" << fields.size() << "] not equal to ["
+               << attr_idx_map_.size() << "]";
+    return -1;
+  }
+  std::vector<Field *> fields_reorder(fields.size());
   string key;
   for (size_t i = 0; i < fields.size(); ++i) {
     const auto field_value = fields[i];
     const string &name =
         std::string(field_value->name->value, field_value->name->len);
+
+    auto it = attr_idx_map_.find(name);
+    if (it == attr_idx_map_.end()) {
+      LOG(ERROR) << "Unknown field " << name;
+      continue;
+    }
+    int field_idx = it->second;
+    fields_reorder[field_idx] = field_value;
     if (name == "_id") {
       key = string(field_value->value->value, field_value->value->len);
-      break;
     }
   }
 #ifdef DEBUG__
@@ -266,8 +280,8 @@ int Profile::Add(const std::vector<Field *> &fields, int doc_id,
 
   item_to_docid_.insert(key, doc_id);
 
-  for (size_t i = 0; i < fields.size(); ++i) {
-    const auto field_value = fields[i];
+  for (size_t i = 0; i < fields_reorder.size(); ++i) {
+    const auto field_value = fields_reorder[i];
     const string &name =
         std::string(field_value->name->value, field_value->name->len);
 
@@ -472,7 +486,7 @@ int Profile::GetFieldString(int docid, int field_id, char **value) const {
 
 int Profile::GetFieldRawValue(int docid, int field_id, unsigned char **value,
                               int &data_len) {
-  if ((docid < 0) or (field_id < 0 || field_id >= field_num_)) return -1;
+  if ((docid < 0)or(field_id < 0 || field_id >= field_num_)) return -1;
 
   enum DataType data_type = attrs_[field_id];
   if (data_type != DataType::STRING) {

@@ -1025,18 +1025,17 @@ struct GammaIVFPQIndex : GammaIndex, faiss::IndexIVFPQ {
 
   bool Add(int n, const float *vec) override;
 
-  int Search(const VectorQuery *query, const GammaSearchCondition *condition,
+  int Search(const VectorQuery *query, GammaSearchCondition *condition,
              VectorResult &result) override;
 
   void search_preassigned(int n, const float *x,
-                          const GammaSearchCondition *condition,
-                          const idx_t *assign, const float *centroid_dis,
-                          float *distances, idx_t *labels, int *total,
-                          bool store_pairs,
+                          GammaSearchCondition *condition, const idx_t *assign,
+                          const float *centroid_dis, float *distances,
+                          idx_t *labels, int *total, bool store_pairs,
                           const faiss::IVFSearchParameters *params = nullptr);
 
   // assign the vectors, then call search_preassign
-  void SearchIVFPQ(int n, const float *x, const GammaSearchCondition *condition,
+  void SearchIVFPQ(int n, const float *x, GammaSearchCondition *condition,
                    float *distances, idx_t *labels, int *total);
 
   void SearchDirectly(int n, const float *x,
