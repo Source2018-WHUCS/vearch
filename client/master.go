@@ -18,11 +18,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/vearch/vearch/util/errutil"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/vearch/vearch/util/errutil"
 
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/util"
@@ -191,6 +192,20 @@ func (m *masterClient) QueryServers(ctx context.Context) ([]*entity.Server, erro
 // QuerySpaces query spaces by dbID
 func (m *masterClient) QuerySpaces(ctx context.Context, dbID int64) ([]*entity.Space, error) {
 	return m.QuerySpacesByKey(ctx, fmt.Sprintf("%s%d/", entity.PrefixSpace, dbID))
+}
+
+// QueryRouter query router ip list by key
+func (m *masterClient) QueryRouter(ctx context.Context, key string) ([]string, error) {
+	_, bytesRouterIP, err := m.PrefixScan(ctx, fmt.Sprintf("%s%s/", entity.PrefixRouter, key))
+	if err != nil {
+		return nil, err
+	}
+	routerIPs := make([]string, 0, len(bytesRouterIP))
+	for _, bs := range bytesRouterIP {
+		routerIPs = append(routerIPs, string(bs))
+		log.Debugf("find key: [%s], routerIP: [%s]", key, string(bs))
+	}
+	return routerIPs, nil
 }
 
 // QuerySpacesByKey scan space by space prefix
@@ -434,6 +449,44 @@ func (m *masterClient) Register(ctx context.Context, clusterName string, nodeID 
 	}
 
 	return server, nil
+}
+
+// RegisterRouter register router nodeid to master, return ip
+func (m *masterClient) RegisterRouter(ctx context.Context, clusterName string, timeout time.Duration) (res string, err error) {
+	form := url.Values{}
+	form.Add("clusterName", clusterName)
+
+	masterServer.reset()
+	var response []byte
+	for {
+		keyNumber, err := masterServer.getKey()
+		if err != nil {
+			return "", err
+		}
+
+		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
+		query.SetAddress(m.cfg.Masters[keyNumber].ApiUrl())
+		query.SetMethod(http.MethodPost)
+		query.SetQuery(form.Encode())
+		query.SetUrlPath("/register_router")
+		query.SetTimeout(60)
+		log.Debug("master api Register url: %s", query.GetUrl())
+		response, err = query.Do()
+		log.Debug("master api Register response: %v", string(response))
+		if err == nil {
+			break
+		}
+		log.Debug("master api Register err: %v", err)
+
+		masterServer.next()
+	}
+
+	data, err := parseRegisterData(response)
+	if err != nil {
+		return "", err
+	}
+
+	return string(data[1 : len(data)-1]), nil
 }
 
 // RegisterPartition register partition

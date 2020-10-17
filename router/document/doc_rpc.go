@@ -177,6 +177,70 @@ func (handler *RpcHandler) MSearch(ctx context.Context, req *vearchpb.MSearchReq
 	return reply, nil
 }
 
+func (handler *RpcHandler) SearchByID(ctx context.Context, req *vearchpb.SearchRequest) (reply *vearchpb.SearchResponse, err error) {
+	defer Cost("SearchByID", time.Now())
+	reply = &vearchpb.SearchResponse{}
+	vfs := req.GetVecFields()
+	if len(vfs) < 1 {
+		msg := fmt.Sprintf("param have error, the length of field[vec_fields] is [%d]", len(vfs))
+		log.Error(msg)
+		reply.Head = setErrHead(vearchpb.NewErrorInfo(vearchpb.ErrorEnum_PARAM_ERROR, msg))
+		return
+	}
+	pKeys := make([]string, len(vfs))
+	for idx, vf := range vfs {
+		pKeys[idx] = string(vf.Value)
+	}
+	getReq := &vearchpb.GetRequest{Head: req.Head, PrimaryKeys: pKeys}
+	getRes, err := handler.Get(ctx, getReq)
+	if err != nil {
+		msg := fmt.Sprintf("SearchByID: get key[%s] failed, err:[%s]", strings.Join(pKeys, ","), err.Error())
+		log.Error(msg)
+		reply.Head = setErrHead(vearchpb.NewErrorInfo(vearchpb.ErrorEnum_INTERNAL_ERROR, msg))
+		return
+	}
+	vErr := getRes.GetHead().Err
+	if vErr.Code != vearchpb.ErrorEnum_SUCCESS {
+		msg := fmt.Sprintf("SearchByID: get key[%s] failed, err:[%s]", strings.Join(pKeys, ","), vErr.Msg)
+		log.Error(msg)
+		reply.Head = setErrHead(vearchpb.NewErrorInfo(vErr.Code, msg))
+		return
+	}
+
+	if len(getRes.GetItems()) != len(vfs) {
+		msg := fmt.Sprintf("SearchByID: get key[%s] failed, err:[%v]", strings.Join(pKeys, ","), getRes.GetItems())
+		log.Error(msg)
+		reply.Head = setErrHead(vearchpb.NewErrorInfo(vearchpb.ErrorEnum_INTERNAL_ERROR, msg))
+		return
+	}
+	// rank items
+	items := make([]*vearchpb.Item, len(vfs))
+	for _, item := range getRes.GetItems() {
+		for idx, key := range pKeys {
+			if item.Doc.PKey == key {
+				items[idx] = item
+				break
+			}
+		}
+	}
+
+	for idx, item := range getRes.GetItems() {
+		if item.GetErr() != nil && item.GetErr().Code != vearchpb.ErrorEnum_SUCCESS {
+			msg := fmt.Sprintf("SearchByID: get key[%s] failed, err:[%s]", item.Doc.PKey, item.GetErr().Msg)
+			log.Error(msg)
+			reply.Head = setErrHead(vearchpb.NewErrorInfo(item.GetErr().Code, msg))
+			return
+		}
+		for _, field := range item.Doc.Fields {
+			if field.Name == vfs[idx].Name {
+				vfs[idx].Value = field.Value[4:]
+			}
+		}
+	}
+
+	return handler.Search(ctx, req)
+}
+
 func (handler *RpcHandler) Bulk(ctx context.Context, req *vearchpb.BulkRequest) (reply *vearchpb.BulkResponse, err error) {
 	defer Cost("bulk", time.Now())
 	res, err := handler.deal(ctx, req)

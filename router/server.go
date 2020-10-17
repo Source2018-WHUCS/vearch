@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"regexp"
-	"strings"
 	"time"
 
 	limit "github.com/juju/ratelimit"
@@ -25,6 +23,7 @@ import (
 
 type Server struct {
 	ctx        context.Context
+	cli        *client.Client
 	httpServer *netutil.Server
 	rpcServer  *grpc.Server
 	cancelFunc context.CancelFunc
@@ -78,6 +77,7 @@ func NewServer(ctx context.Context) (*Server, error) {
 	return &Server{
 		httpServer: httpServer,
 		ctx:        routerCtx,
+		cli:        cli,
 		cancelFunc: routerCancel,
 		rpcServer:  rpcServer,
 	}, nil
@@ -85,21 +85,23 @@ func NewServer(ctx context.Context) (*Server, error) {
 
 func (server *Server) Start() error {
 	//find ip for server
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		panic(err)
-	}
-	for _, i := range ifaces {
-		addrs, _ := i.Addrs()
-		for _, addr := range addrs {
-			match, _ := regexp.MatchString(`^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$`, addr.String())
-			if !match {
-				continue
-			}
-			slit := strings.Split(addr.String(), "/")
-			mserver.SetIp(slit[0], false)
-			break
+	/*
+		var routerIP string
+		conn, err := net.Dial("udp", "google.com:80")
+		if err != nil {
+			panic(fmt.Sprintf("conn master failed, err: [%s]", err.Error()))
 		}
+		routerIP = strings.Split(conn.LocalAddr().String(), ":")[0]
+		conn.Close()
+	*/
+	routerIP, err := server.cli.Master().RegisterRouter(server.ctx, config.Conf().Global.Name, 100*time.Millisecond)
+	if err != nil {
+		panic(fmt.Sprintf("conn master failed, err: [%s]", err.Error()))
+	}
+	log.Debugf("Get router ip: [%s]", routerIP)
+	mserver.SetIp(routerIP, false)
+	if config.Conf().Router.RpcPort > 0 {
+		server.StartHeartbeatJob(fmt.Sprintf("%s:%d", routerIP, config.Conf().Router.RpcPort))
 	}
 
 	if port := config.Conf().Router.MonitorPort; port > 0 {
