@@ -1,10 +1,10 @@
+[submodule "engine"]
+	path = engine
+	url = http://coding.jd.com/vearch/gamma.git
+	branch = dev
 [submodule "python"]
 	path = python
 	url = https://github.com/vearch/vearch-python
 [submodule "plugin"]
 	path = plugin
-	url = http://coding.jd.com/vearch/python-algorithm-sdk
-[submodule "engine"]
-	path = engine
-	url = http://coding.jd.com/vearch/gamma.git
-	branch = dev
+	url = https://coding.jd.com/vearch/python-algorithm-sdk

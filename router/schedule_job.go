@@ -32,7 +32,7 @@ func (s *Server) StartHeartbeatJob(addr string) {
 		log.Debugf("register key: [%s], routerIP: [%s]", key, addr)
 		keepaliveC, err := s.cli.Master().Store.KeepAlive(s.ctx, entity.RouterKey(key, addr), []byte(addr), time.Second*KeepAliveTime)
 		if err != nil {
-			log.Error("KeepAlive err: ", err.Error())
+			log.Error("KeepAlive err: %s", err.Error())
 			return
 		}
 
@@ -47,11 +47,11 @@ func (s *Server) StartHeartbeatJob(addr string) {
 					time.Sleep(2 * time.Second)
 					keepaliveC, err = s.cli.Master().Store.KeepAlive(s.ctx, entity.RouterKey(key, addr), []byte(addr), time.Second*KeepAliveTime)
 					if err != nil {
-						log.Error("KeepAlive err: ", err.Error())
+						log.Errorf("KeepAlive err: %s", err.Error())
 					}
 					continue
 				}
-				log.Info("Receive keepalive, leaseId: %d, ttl:%d", ka.ID, ka.TTL)
+				log.Debugf("Receive keepalive, leaseId: %d, ttl:%d", ka.ID, ka.TTL)
 			}
 		}
 	}()

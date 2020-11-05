@@ -15,6 +15,7 @@
 package document
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -24,12 +25,13 @@ import (
 	"github.com/spf13/cast"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/config"
+	"github.com/vearch/vearch/monitor"
 	"github.com/vearch/vearch/proto/vearchpb"
 	"github.com/vearch/vearch/util/log"
 	"google.golang.org/grpc"
 )
 
-const defaultTimeOutMs = 10 * 1000
+const defaultTimeOutMs = 1 * 1000
 
 type Request interface {
 	GetHead() *vearchpb.RequestHead
@@ -111,6 +113,7 @@ func (handler *RpcHandler) Get(ctx context.Context, req *vearchpb.GetRequest) (r
 
 func (handler *RpcHandler) Add(ctx context.Context, req *vearchpb.AddRequest) (reply *vearchpb.AddResponse, err error) {
 	defer Cost("Add", time.Now())
+	defer monitor.Profiler("handleReplaceDoc", time.Now())
 	res, err := handler.deal(ctx, req)
 	if err != nil {
 		return nil, err
@@ -178,6 +181,11 @@ func (handler *RpcHandler) MSearch(ctx context.Context, req *vearchpb.MSearchReq
 }
 
 func (handler *RpcHandler) SearchByID(ctx context.Context, req *vearchpb.SearchRequest) (reply *vearchpb.SearchResponse, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = vearchpb.NewError(vearchpb.ErrorEnum_RECOVER, errors.New(cast.ToString(r)))
+		}
+	}()
 	defer Cost("SearchByID", time.Now())
 	reply = &vearchpb.SearchResponse{}
 	vfs := req.GetVecFields()
@@ -187,10 +195,17 @@ func (handler *RpcHandler) SearchByID(ctx context.Context, req *vearchpb.SearchR
 		reply.Head = setErrHead(vearchpb.NewErrorInfo(vearchpb.ErrorEnum_PARAM_ERROR, msg))
 		return
 	}
-	pKeys := make([]string, len(vfs))
-	for idx, vf := range vfs {
-		pKeys[idx] = string(vf.Value)
+	// pKeys := make([]string, len(vfs))
+	var keyValue string = string(vfs[0].Value)
+	for _, vf := range vfs {
+		if keyValue != string(vf.Value) {
+			msg := fmt.Sprintf("param have error, the value between SearchRequest.VecFields must be same, receive [%s -- %s] ", keyValue, string(vf.Value))
+			log.Error(msg)
+			reply.Head = setErrHead(vearchpb.NewErrorInfo(vearchpb.ErrorEnum_PARAM_ERROR, msg))
+			return
+		}
 	}
+	pKeys := strings.Split(keyValue, ",")
 	getReq := &vearchpb.GetRequest{Head: req.Head, PrimaryKeys: pKeys}
 	getRes, err := handler.Get(ctx, getReq)
 	if err != nil {
@@ -207,14 +222,14 @@ func (handler *RpcHandler) SearchByID(ctx context.Context, req *vearchpb.SearchR
 		return
 	}
 
-	if len(getRes.GetItems()) != len(vfs) {
-		msg := fmt.Sprintf("SearchByID: get key[%s] failed, err:[%v]", strings.Join(pKeys, ","), getRes.GetItems())
+	if len(getRes.GetItems()) != int(req.GetReqNum()) {
+		msg := fmt.Sprintf("SearchByID: get keys[%s] failed, err:[%v]", strings.Join(pKeys, ","), getRes.GetItems())
 		log.Error(msg)
 		reply.Head = setErrHead(vearchpb.NewErrorInfo(vearchpb.ErrorEnum_INTERNAL_ERROR, msg))
 		return
 	}
 	// rank items
-	items := make([]*vearchpb.Item, len(vfs))
+	items := make([]*vearchpb.Item, len(pKeys))
 	for _, item := range getRes.GetItems() {
 		for idx, key := range pKeys {
 			if item.Doc.PKey == key {
@@ -224,18 +239,23 @@ func (handler *RpcHandler) SearchByID(ctx context.Context, req *vearchpb.SearchR
 		}
 	}
 
-	for idx, item := range getRes.GetItems() {
-		if item.GetErr() != nil && item.GetErr().Code != vearchpb.ErrorEnum_SUCCESS {
-			msg := fmt.Sprintf("SearchByID: get key[%s] failed, err:[%s]", item.Doc.PKey, item.GetErr().Msg)
-			log.Error(msg)
-			reply.Head = setErrHead(vearchpb.NewErrorInfo(item.GetErr().Code, msg))
-			return
-		}
-		for _, field := range item.Doc.Fields {
-			if field.Name == vfs[idx].Name {
-				vfs[idx].Value = field.Value[4:]
+	for _, vf := range vfs {
+		var buf bytes.Buffer
+		for _, item := range getRes.GetItems() {
+			if item.GetErr() != nil && item.GetErr().Code != vearchpb.ErrorEnum_SUCCESS {
+				msg := fmt.Sprintf("SearchByID: get key[%s] failed, err:[%s]", item.Doc.PKey, item.GetErr().Msg)
+				log.Error(msg)
+				reply.Head = setErrHead(vearchpb.NewErrorInfo(item.GetErr().Code, msg))
+				return
+			}
+			for _, field := range item.Doc.Fields {
+				if field.Name == vf.Name {
+					buf.Write(field.Value[4:])
+					break
+				}
 			}
 		}
+		vf.Value = buf.Bytes()
 	}
 
 	return handler.Search(ctx, req)
@@ -290,7 +310,7 @@ func (handler *RpcHandler) deal(ctx context.Context, req Request) (reply interfa
 // Cost record how long the function use
 func Cost(name string, t time.Time) {
 	engTime := time.Now()
-	log.Info("%s cost: [%v]", name, engTime.Sub(t))
+	log.Debugf("%s cost: [%v]", name, engTime.Sub(t))
 }
 
 func (handler *RpcHandler) setTimeout(ctx context.Context, head *vearchpb.RequestHead) (context.Context, context.CancelFunc) {
