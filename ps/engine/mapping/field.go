@@ -19,13 +19,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/vearch/vearch/util"
 	"github.com/vearch/vearch/util/cbbytes"
-	"strings"
 
 	"github.com/mmcloughlin/geohash"
 	"github.com/spf13/cast"
-	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/proto/vearchpb"
 )
 
 const (
@@ -40,8 +41,9 @@ const (
 	IgnoredField    = "_ignored"
 	RoutingField    = "_routing"
 	MetaField       = "_meta"
-	VersionField    = "_version"
-	SlotField       = "_slot"
+
+	//	VersionField    = "_version"
+	//	SlotField       = "_slot"
 )
 
 var FieldsIndex = map[string]int{
@@ -56,14 +58,14 @@ var FieldsIndex = map[string]int{
 	IgnoredField:    9,
 	RoutingField:    10,
 	MetaField:       11,
-	VersionField:    12,
-	SlotField:       13,
+	//	VersionField:    12,
+	//	SlotField:       13,
 }
 
 // control the default behavior for dynamic fields (those not explicitly mapped)
 var (
-	withOutIndex = pspb.FieldOption_Null
-	withIndex    = pspb.FieldOption_Index
+	withOutIndex = vearchpb.FieldOption_Null
+	withIndex    = vearchpb.FieldOption_Index
 )
 
 type FieldMapping struct {
@@ -78,15 +80,16 @@ func NewFieldMapping(name string, i FieldMappingI) *FieldMapping {
 
 func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 	tmp := struct {
-		Type          string          `json:"type"`
-		Index         *bool            `json:"index,omitempty"`
-		Format        *string         `json:"format,omitempty"`
-		Dimension     int             `json:"dimension,omitempty"`
-		ModelId       string          `json:"model_id,omitempty"`
-		RetrievalType *string         `json:"retrieval_type,omitempty"`
-		StoreType     *string         `json:"store_type,omitempty"`
-		StoreParam    json.RawMessage `json:"store_param,omitempty"`
-		Array         bool            `json:"array,omitempty"`
+		Type      string  `json:"type"`
+		Index     *bool   `json:"index,omitempty"`
+		Format    *string `json:"format,omitempty"`
+		Dimension int     `json:"dimension,omitempty"`
+		ModelId   string  `json:"model_id,omitempty"`
+		//		RetrievalType *string         `json:"retrieval_type,omitempty"`
+		StoreType  *string         `json:"store_type,omitempty"`
+		StoreParam json.RawMessage `json:"store_param,omitempty"`
+		Array      bool            `json:"array,omitempty"`
+		HasSource  bool            `json:"has_source,omitempty"`
 	}{}
 	err := json.Unmarshal(data, &tmp)
 	if err != nil {
@@ -99,8 +102,10 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 		fieldMapping = NewStringFieldMapping("")
 	case "date":
 		fieldMapping = NewDateFieldMapping("")
-	case "long", "integer", "short", "byte":
+	case "integer", "short", "byte":
 		fieldMapping = NewIntegerFieldMapping("")
+	case "long":
+		fieldMapping = NewLongFieldMapping("")
 	case "double", "float":
 		fieldMapping = NewFloatFieldMapping("")
 	case "boolean", "bool":
@@ -112,17 +117,24 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 		if tmp.Dimension == 0 {
 			return fmt.Errorf("dimension can not zero by field : [%s] ", string(data))
 		}
-		if tmp.RetrievalType != nil && *tmp.RetrievalType != "" {
+		/*if tmp.RetrievalType != nil && *tmp.RetrievalType != "" {
 			fieldMapping.(*VectortFieldMapping).RetrievalType = *tmp.RetrievalType
-		}
+		} else {
+			return fmt.Errorf("retrieval_type can not null by field : [%s] ", string(data))
+		}*/
 		if tmp.StoreType != nil && *tmp.StoreType != "" {
-			if *tmp.StoreType != "Mmap" && *tmp.StoreType != "RocksDB" {
-				return fmt.Errorf("vector field:[%s] not support this store type:[%s] it only Mmap or RocksDB", fieldMapping.FieldName(), tmp.StoreType)
+			if *tmp.StoreType != "Mmap" && *tmp.StoreType != "RocksDB" && *tmp.StoreType != "MemoryOnly" {
+				return fmt.Errorf("vector field:[%s] not support this store type:[%s] it only Mmap or RocksDB or MemoryOnly", fieldMapping.FieldName(), tmp.StoreType)
 			}
 			fieldMapping.(*VectortFieldMapping).StoreType = *tmp.StoreType
 		}
 		if tmp.StoreParam != nil && len(tmp.StoreParam) > 0 {
 			fieldMapping.(*VectortFieldMapping).StoreParam = tmp.StoreParam
+		}
+		if tmp.HasSource {
+			fieldMapping.(*VectortFieldMapping).HasSource = tmp.HasSource
+		} else {
+			fieldMapping.(*VectortFieldMapping).HasSource = false
 		}
 
 	default:
@@ -133,9 +145,9 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 
 	//set index
 	if tmp.Index != nil {
-		if *tmp.Index{
-			fieldMapping.Base().Option |= pspb.FieldOption_Index
-		}else{
+		if *tmp.Index {
+			fieldMapping.Base().Option |= vearchpb.FieldOption_Index
+		} else {
 			fieldMapping.Base().Option = fieldMapping.Base().Option & withOutIndex
 		}
 	}
@@ -176,13 +188,13 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 
 type FieldMappingI interface {
 	FieldName() string
-	FieldType() pspb.FieldType
-	Options() pspb.FieldOption
+	FieldType() vearchpb.FieldType
+	Options() vearchpb.FieldOption
 	Base() *BaseFieldMapping
 	IsArray() bool
 }
 
-func NewBaseFieldMapping(name string, fieldType pspb.FieldType, boost float64, option pspb.FieldOption) *BaseFieldMapping {
+func NewBaseFieldMapping(name string, fieldType vearchpb.FieldType, boost float64, option vearchpb.FieldOption) *BaseFieldMapping {
 	return &BaseFieldMapping{
 		Type:   fieldType,
 		Name:   name,
@@ -192,11 +204,11 @@ func NewBaseFieldMapping(name string, fieldType pspb.FieldType, boost float64, o
 }
 
 type BaseFieldMapping struct {
-	Type   pspb.FieldType   `json:"type"`
-	Name   string           `json:"_"`
-	Boost  float64          `json:"boost,omitempty"`
-	Option pspb.FieldOption `json:"option,omitempty"`
-	Array  bool             `json:"array,omitempty"`
+	Type   vearchpb.FieldType   `json:"type"`
+	Name   string               `json:"_"`
+	Boost  float64              `json:"boost,omitempty"`
+	Option vearchpb.FieldOption `json:"option,omitempty"`
+	Array  bool                 `json:"array,omitempty"`
 }
 
 func (f *BaseFieldMapping) Base() *BaseFieldMapping {
@@ -207,11 +219,11 @@ func (f *BaseFieldMapping) FieldName() string {
 	return f.Name
 }
 
-func (f *BaseFieldMapping) FieldType() pspb.FieldType {
+func (f *BaseFieldMapping) FieldType() vearchpb.FieldType {
 	return f.Type
 }
 
-func (f *BaseFieldMapping) Options() pspb.FieldOption {
+func (f *BaseFieldMapping) Options() vearchpb.FieldOption {
 	return f.Option
 }
 
@@ -226,7 +238,7 @@ type StringFieldMapping struct {
 
 func NewStringFieldMapping(name string) *StringFieldMapping {
 	return &StringFieldMapping{
-		BaseFieldMapping: NewBaseFieldMapping(name, pspb.FieldType_STRING, 1, pspb.FieldOption_Null),
+		BaseFieldMapping: NewBaseFieldMapping(name, vearchpb.FieldType_STRING, 1, vearchpb.FieldOption_Null),
 	}
 }
 
@@ -239,14 +251,21 @@ type NumericFieldMapping struct {
 
 func NewIntegerFieldMapping(name string) *NumericFieldMapping {
 	return &NumericFieldMapping{
-		BaseFieldMapping: NewBaseFieldMapping(name, pspb.FieldType_INT, 1, pspb.FieldOption_Null),
+		BaseFieldMapping: NewBaseFieldMapping(name, vearchpb.FieldType_INT, 1, vearchpb.FieldOption_Null),
+		Coerce:           true,
+	}
+}
+
+func NewLongFieldMapping(name string) *NumericFieldMapping {
+	return &NumericFieldMapping{
+		BaseFieldMapping: NewBaseFieldMapping(name, vearchpb.FieldType_LONG, 1, vearchpb.FieldOption_Null),
 		Coerce:           true,
 	}
 }
 
 func NewFloatFieldMapping(name string) *NumericFieldMapping {
 	return &NumericFieldMapping{
-		BaseFieldMapping: NewBaseFieldMapping(name, pspb.FieldType_FLOAT, 1, pspb.FieldOption_Null),
+		BaseFieldMapping: NewBaseFieldMapping(name, vearchpb.FieldType_FLOAT, 1, vearchpb.FieldOption_Null),
 		Coerce:           true,
 	}
 }
@@ -261,7 +280,7 @@ type DateFieldMapping struct {
 
 func NewDateFieldMapping(name string) *DateFieldMapping {
 	return &DateFieldMapping{
-		BaseFieldMapping: NewBaseFieldMapping(name, pspb.FieldType_DATE, 1, pspb.FieldOption_Null),
+		BaseFieldMapping: NewBaseFieldMapping(name, vearchpb.FieldType_DATE, 1, vearchpb.FieldOption_Null),
 	}
 }
 
@@ -272,7 +291,7 @@ type BooleanFieldMapping struct {
 
 func NewBooleanFieldMapping(name string) *BooleanFieldMapping {
 	return &BooleanFieldMapping{
-		BaseFieldMapping: NewBaseFieldMapping(name, pspb.FieldType_BOOL, 1, pspb.FieldOption_Null),
+		BaseFieldMapping: NewBaseFieldMapping(name, vearchpb.FieldType_BOOL, 1, vearchpb.FieldOption_Null),
 	}
 }
 
@@ -284,57 +303,78 @@ type GeoPointFieldMapping struct {
 
 func NewGeoPointFieldMapping(name string) *GeoPointFieldMapping {
 	return &GeoPointFieldMapping{
-		BaseFieldMapping: NewBaseFieldMapping(name, pspb.FieldType_GEOPOINT, 1, pspb.FieldOption_Null),
+		BaseFieldMapping: NewBaseFieldMapping(name, vearchpb.FieldType_GEOPOINT, 1, vearchpb.FieldOption_Null),
 		IgnoreZValue:     true,
 	}
 }
 
 type VectortFieldMapping struct {
 	*BaseFieldMapping
-	Dimension     int     `json:"dimension"`
-	ModelId       string  `json:"model_id"`
-	Format        *string `json:"format,omitempty"`         //default is "normalization", "normal" , if set "no" others it will not format
-	RetrievalType string  `json:"retrieval_type,omitempty"` // "IVFPQ", "PACINS","GPU" ...
-	StoreType     string  `json:"store_type,omitempty"`     // "Mmap", "RocksDB"
-	StoreParam    []byte  `json:"store_param,omitempty"`
+	Dimension int     `json:"dimension"`
+	ModelId   string  `json:"model_id"`
+	Format    *string `json:"format,omitempty"` //default is "normalization", "normal" , if set "no" others it will not format
+	//	RetrievalType string  `json:"retrieval_type,omitempty"` // "IVFPQ", "PACINS","GPU" ...
+	StoreType  string `json:"store_type,omitempty"` // "Mmap", "RocksDB", "MemoryOnly"
+	StoreParam []byte `json:"store_param,omitempty"`
+	HasSource  bool   `json:"has_source,omitempty"`
 }
 
 func NewVectorFieldMapping(name string) *VectortFieldMapping {
 	return &VectortFieldMapping{
-		BaseFieldMapping: NewBaseFieldMapping(name, pspb.FieldType_VECTOR, 1, pspb.FieldOption_Index),
-		RetrievalType:    "IVFPQ",
-		StoreType:        "Mmap",
+		BaseFieldMapping: NewBaseFieldMapping(name, vearchpb.FieldType_VECTOR, 1, vearchpb.FieldOption_Index),
+		//		RetrievalType:    "IVFPQ",
+		StoreType: "MemoryOnly",
 	}
 }
 
-func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*pspb.Field, error) {
+func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*vearchpb.Field, error) {
 	if ctx.Err != nil {
 		return nil, ctx.Err
 	}
 
 	switch fm.FieldType() {
-	case pspb.FieldType_STRING:
-		field := &pspb.Field{
+	case vearchpb.FieldType_STRING:
+		field := &vearchpb.Field{
 			Name:   fieldName,
-			Type:   pspb.FieldType_STRING,
+			Type:   vearchpb.FieldType_STRING,
 			Value:  []byte(val),
 			Option: fm.Options(),
 		}
 		return field, nil
-	case pspb.FieldType_DATE:
+	case vearchpb.FieldType_DATE:
 		// UTC time
 		parsedDateTime, err := cast.ToTimeE(val)
 		if err != nil {
 			return nil, fmt.Errorf("parse date %s faield, err %v", val, err)
 		}
-		return &pspb.Field{
+		return &vearchpb.Field{
 			Name:   fieldName,
-			Type:   pspb.FieldType_DATE,
+			Type:   vearchpb.FieldType_DATE,
 			Value:  cbbytes.Int64ToByte(parsedDateTime.UnixNano()),
 			Option: fm.Options(),
 		}, nil
 
-	case pspb.FieldType_INT:
+	case vearchpb.FieldType_INT:
+		numericFM := fm.FieldMappingI.(*NumericFieldMapping)
+		if numericFM.Coerce {
+			i, err := cast.ToInt32E(val)
+			if err != nil {
+				if numericFM.IgnoreMalformed {
+					return nil, nil
+				} else {
+					return nil, fmt.Errorf("parse string %s to integer failed, err %v", val, err)
+				}
+			}
+			return &vearchpb.Field{
+				Name:   fieldName,
+				Type:   vearchpb.FieldType_INT,
+				Value:  cbbytes.Int32ToByte(i),
+				Option: fm.Options(),
+			}, nil
+		} else {
+			return nil, fmt.Errorf("string mismatch field:[%s] type:[%s] ", fieldName, fm.FieldType())
+		}
+	case vearchpb.FieldType_LONG:
 		numericFM := fm.FieldMappingI.(*NumericFieldMapping)
 		if numericFM.Coerce {
 			i, err := cast.ToInt64E(val)
@@ -342,19 +382,19 @@ func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*
 				if numericFM.IgnoreMalformed {
 					return nil, nil
 				} else {
-					return nil, fmt.Errorf("parse string %s to integer failed, err %v", val, err)
+					return nil, fmt.Errorf("parse string %s to long failed, err %v", val, err)
 				}
 			}
-			return &pspb.Field{
+			return &vearchpb.Field{
 				Name:   fieldName,
-				Type:   pspb.FieldType_INT,
+				Type:   vearchpb.FieldType_LONG,
 				Value:  cbbytes.Int64ToByte(i),
 				Option: fm.Options(),
 			}, nil
 		} else {
 			return nil, fmt.Errorf("string mismatch field:[%s] type:[%s] ", fieldName, fm.FieldType())
 		}
-	case pspb.FieldType_FLOAT:
+	case vearchpb.FieldType_FLOAT:
 		numericFM := fm.FieldMappingI.(*NumericFieldMapping)
 		if numericFM.Coerce {
 			f, err := cast.ToFloat64E(val)
@@ -362,19 +402,19 @@ func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*
 				if numericFM.IgnoreMalformed {
 					return nil, nil
 				} else {
-					return nil, fmt.Errorf("parse string %s to integer failed, err %v", val, err)
+					return nil, fmt.Errorf("parse string %s to float failed, err %v", val, err)
 				}
 			}
-			return &pspb.Field{
+			return &vearchpb.Field{
 				Name:   fieldName,
-				Type:   pspb.FieldType_FLOAT,
+				Type:   vearchpb.FieldType_FLOAT,
 				Value:  cbbytes.Float64ToByte(f),
 				Option: fm.Options(),
 			}, nil
 		} else {
 			return nil, fmt.Errorf("string mismatch field type %s", fm.FieldType())
 		}
-	case pspb.FieldType_GEOPOINT:
+	case vearchpb.FieldType_GEOPOINT:
 		lat, lon, err := parseStringToGeoPoint(val)
 		if err != nil {
 			return nil, err
@@ -385,9 +425,9 @@ func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*
 			return nil, err
 		}
 
-		return &pspb.Field{
+		return &vearchpb.Field{
 			Name:   fieldName,
-			Type:   pspb.FieldType_GEOPOINT,
+			Type:   vearchpb.FieldType_GEOPOINT,
 			Value:  code,
 			Option: fm.Options(),
 		}, nil
@@ -395,35 +435,47 @@ func processString(ctx *walkContext, fm *FieldMapping, fieldName, val string) (*
 	return nil, nil
 }
 
-func processNumber(ctx *walkContext, fm *FieldMapping, fieldName string, val float64) (*pspb.Field, error) {
+func processNumber(ctx *walkContext, fm *FieldMapping, fieldName string, val float64) (*vearchpb.Field, error) {
 	if ctx.Err != nil {
 		return nil, ctx.Err
 	}
 
 	switch fm.FieldType() {
-	case pspb.FieldType_INT:
+	case vearchpb.FieldType_INT:
+		i := int32(val)
+		e := float32(val) - float32(i)
+		if e > 0 || e < 0 {
+			return nil, fmt.Errorf("string mismatch field:[%s] type:[%s] ", fieldName, fm.FieldType())
+		}
+		return &vearchpb.Field{
+			Name:   fieldName,
+			Type:   vearchpb.FieldType_INT,
+			Value:  cbbytes.Int32ToByte(i),
+			Option: fm.Options(),
+		}, nil
+	case vearchpb.FieldType_LONG:
 		i := int64(val)
 		e := val - float64(i)
 		if e > 0 || e < 0 {
 			return nil, fmt.Errorf("string mismatch field:[%s] type:[%s] ", fieldName, fm.FieldType())
 		}
-		return &pspb.Field{
+		return &vearchpb.Field{
 			Name:   fieldName,
-			Type:   pspb.FieldType_INT,
+			Type:   vearchpb.FieldType_LONG,
 			Value:  cbbytes.Int64ToByte(i),
 			Option: fm.Options(),
 		}, nil
-	case pspb.FieldType_FLOAT:
-		return &pspb.Field{
+	case vearchpb.FieldType_FLOAT:
+		return &vearchpb.Field{
 			Name:   fieldName,
-			Type:   pspb.FieldType_FLOAT,
+			Type:   vearchpb.FieldType_FLOAT,
 			Value:  cbbytes.Float64ToByte(val),
 			Option: fm.Options(),
 		}, nil
-	case pspb.FieldType_DATE:
-		return &pspb.Field{
+	case vearchpb.FieldType_DATE:
+		return &vearchpb.Field{
 			Name:   fieldName,
-			Type:   pspb.FieldType_DATE,
+			Type:   vearchpb.FieldType_DATE,
 			Value:  cbbytes.Int64ToByte(int64(val) * 1e6),
 			Option: fm.Options(),
 		}, nil
@@ -432,20 +484,20 @@ func processNumber(ctx *walkContext, fm *FieldMapping, fieldName string, val flo
 	}
 }
 
-func processGeoPoint(ctx *walkContext, fm *FieldMapping, fieldName string, lon, lat float64) (*pspb.Field, error) {
+func processGeoPoint(ctx *walkContext, fm *FieldMapping, fieldName string, lon, lat float64) (*vearchpb.Field, error) {
 	if ctx.Err != nil {
 		return nil, ctx.Err
 	}
 
 	switch fm.FieldType() {
-	case pspb.FieldType_GEOPOINT:
+	case vearchpb.FieldType_GEOPOINT:
 		code, err := cbbytes.FloatArrayByte([]float32{float32(lon), float32(lat)})
 		if err != nil {
 			return nil, err
 		}
-		return &pspb.Field{
+		return &vearchpb.Field{
 			Name:   fieldName,
-			Type:   pspb.FieldType_GEOPOINT,
+			Type:   vearchpb.FieldType_GEOPOINT,
 			Value:  code,
 			Option: fm.Options(),
 		}, nil
@@ -454,15 +506,15 @@ func processGeoPoint(ctx *walkContext, fm *FieldMapping, fieldName string, lon, 
 	}
 }
 
-func processBool(ctx *walkContext, fm *FieldMapping, fieldName string, val bool) (*pspb.Field, error) {
+func processBool(ctx *walkContext, fm *FieldMapping, fieldName string, val bool) (*vearchpb.Field, error) {
 	if ctx.Err != nil {
 		return nil, ctx.Err
 	}
 	switch fm.FieldType() {
-	case pspb.FieldType_BOOL:
-		return &pspb.Field{
+	case vearchpb.FieldType_BOOL:
+		return &vearchpb.Field{
 			Name:   fieldName,
-			Type:   pspb.FieldType_BOOL,
+			Type:   vearchpb.FieldType_BOOL,
 			Value:  cbbytes.BoolToByte(val),
 			Option: fm.Options(),
 		}, nil
@@ -471,13 +523,40 @@ func processBool(ctx *walkContext, fm *FieldMapping, fieldName string, val bool)
 	}
 }
 
-func processVector(ctx *walkContext, fm *FieldMapping, fieldName string, val []float32, source string) (*pspb.Field, error) {
+func processVectorBinary(ctx *walkContext, fm *FieldMapping, fieldName string, val []uint8, source string) (*vearchpb.Field, error) {
 	if ctx.Err != nil {
 		return nil, ctx.Err
 	}
 
 	switch fm.FieldType() {
-	case pspb.FieldType_VECTOR:
+	case vearchpb.FieldType_VECTOR:
+		if fm.FieldMappingI.(*VectortFieldMapping).Dimension > 0 && (fm.FieldMappingI.(*VectortFieldMapping).Dimension)/8 != len(val) {
+			return nil, fmt.Errorf("processVectorBinary field:[%s] vector_length err ,schema is:[%d] but input :[%d]", fieldName, fm.FieldMappingI.(*VectortFieldMapping).Dimension, len(val))
+		}
+
+		bs, err := cbbytes.VectorBinaryToByte(val, source)
+		if err != nil {
+			return nil, err
+		}
+
+		return &vearchpb.Field{
+			Name:   fieldName,
+			Type:   vearchpb.FieldType_VECTOR,
+			Value:  bs,
+			Option: fm.Options(),
+		}, nil
+	default:
+		return nil, fmt.Errorf("processVectorBinary field:[%s] value %v mismatch field type %s", fieldName, val, fm.FieldType())
+	}
+}
+
+func processVector(ctx *walkContext, fm *FieldMapping, fieldName string, val []float32, source string) (*vearchpb.Field, error) {
+	if ctx.Err != nil {
+		return nil, ctx.Err
+	}
+
+	switch fm.FieldType() {
+	case vearchpb.FieldType_VECTOR:
 		if fm.FieldMappingI.(*VectortFieldMapping).Dimension > 0 && fm.FieldMappingI.(*VectortFieldMapping).Dimension != len(val) {
 			return nil, fmt.Errorf("field:[%s] vector_length err ,schema is:[%d] but input :[%d]", fieldName, fm.FieldMappingI.(*VectortFieldMapping).Dimension, len(val))
 		}
@@ -499,9 +578,9 @@ func processVector(ctx *walkContext, fm *FieldMapping, fieldName string, val []f
 			return nil, err
 		}
 
-		return &pspb.Field{
+		return &vearchpb.Field{
 			Name:   fieldName,
-			Type:   pspb.FieldType_VECTOR,
+			Type:   vearchpb.FieldType_VECTOR,
 			Value:  bs,
 			Option: fm.Options(),
 		}, nil

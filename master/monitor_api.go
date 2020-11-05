@@ -16,14 +16,13 @@ package master
 
 import "C"
 import (
-	"context"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/vearch/vearch/config"
-	"github.com/vearch/vearch/proto"
-	"github.com/vearch/vearch/util"
+	"github.com/vearch/vearch/monitor"
 	"github.com/vearch/vearch/util/ginutil"
 	"github.com/vearch/vearch/util/server/vearchhttp"
-	"net/http"
 )
 
 type monitorApi struct {
@@ -42,13 +41,13 @@ func ExportToMonitorHandler(router *gin.Engine, monitorService *monitorService) 
 	router.Handle(http.MethodGet, "/_cluster/health", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.health, dh.TimeOutEndHandler)
 	router.Handle(http.MethodGet, "/_cluster/stats", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.stats, dh.TimeOutEndHandler)
 
-	monitorService.Register()
+	monitor.Register(monitorService.Client, monitorService.etcdServer, config.Conf().Masters.Self().MonitorPort)
+	//monitorService.Register()
 }
 
 //got every partition servers system info
 func (this *monitorApi) stats(c *gin.Context) {
-	ctx, _ := c.Get(vearchhttp.Ctx)
-	list, err := this.monitorService.statsService(ctx.(context.Context))
+	list, err := this.monitorService.statsService(c)
 	if err != nil {
 		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
 		return
@@ -58,13 +57,10 @@ func (this *monitorApi) stats(c *gin.Context) {
 
 //cluster health in partition level
 func (this *monitorApi) health(c *gin.Context) {
-
-	ctx, _ := c.Get(vearchhttp.Ctx)
-
 	dbName := c.Query("db")
 	spaceName := c.Query("space")
 
-	result, err := this.monitorService.partitionInfo(ctx.(context.Context), dbName, spaceName)
+	result, err := this.monitorService.partitionInfo(c, dbName, spaceName)
 	if err != nil {
 		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
 		return
@@ -74,34 +70,9 @@ func (this *monitorApi) health(c *gin.Context) {
 }
 
 func (this *monitorApi) auth(c *gin.Context) {
-	ctx, _ := c.Get(vearchhttp.Ctx)
-	if err := this._auth(ctx.(context.Context), c); err != nil {
+	if err := Auth(c); err != nil {
 		defer this.dh.TimeOutEndHandler(c)
 		c.Abort()
 		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
 	}
-}
-
-func (this *monitorApi) _auth(ctx context.Context, c *gin.Context) error {
-
-	if config.Conf().Global.SkipAuth {
-		return nil
-	}
-
-	headerData := c.GetHeader(headerAuthKey)
-
-	if headerData == "" {
-		return pkg.CodeErr(pkg.ERRCODE_AUTHENTICATION_FAILED)
-	}
-
-	username, password, err := util.AuthDecrypt(headerData)
-	if err != nil {
-		return err
-	}
-
-	if username != "root" || password != config.Conf().Global.Signkey {
-		return pkg.CodeErr(pkg.ERRCODE_AUTHENTICATION_FAILED)
-	}
-
-	return nil
 }

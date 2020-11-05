@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/valyala/fastjson"
-	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/proto/vearchpb"
 	"github.com/vearch/vearch/util"
 	"github.com/vearch/vearch/util/cbbytes"
 	"github.com/vearch/vearch/util/log"
@@ -48,9 +48,9 @@ func ParseSchema(schema []byte) (*DocumentMapping, error) {
 	return dms, nil
 }
 
-func (im *IndexMapping) MapDocument(source []byte) ([]*pspb.Field, map[string]pspb.FieldType, error) {
+func (im *IndexMapping) MapDocument(source []byte, retrievalType string) ([]*vearchpb.Field, map[string]vearchpb.FieldType, error) {
 	walkContext := im.newWalkContext()
-	im.walkDocument(walkContext, source)
+	im.walkDocument(walkContext, source, retrievalType)
 	if walkContext.Err != nil {
 		return nil, nil, walkContext.Err
 	}
@@ -62,11 +62,11 @@ func (im *IndexMapping) MapDocument(source []byte) ([]*pspb.Field, map[string]ps
 	return walkContext.Fields, walkContext.DynamicFields, nil
 }
 
-func (im *IndexMapping) walkDocument(context *walkContext, data []byte) {
+func (im *IndexMapping) walkDocument(context *walkContext, data []byte, retrievalType string) {
 	var fast fastjson.Parser
 	v, err := fast.ParseBytes(data)
 	if err != nil {
-		log.Error("parse document err:[%s] ,date:[%s]", err.Error(), string(data))
+		log.Error("parse document err:[%s] ,data:[%s]", err.Error(), string(data))
 		context.Err = err
 		return
 	}
@@ -75,10 +75,10 @@ func (im *IndexMapping) walkDocument(context *walkContext, data []byte) {
 		return
 	}
 	var path []string
-	im.DocumentMapping.parseJson(context, path, v)
+	im.DocumentMapping.parseJson(context, path, v, retrievalType)
 }
 
-func (dm *DocumentMapping) parseJson(context *walkContext, path []string, v *fastjson.Value) {
+func (dm *DocumentMapping) parseJson(context *walkContext, path []string, v *fastjson.Value, retrievalType string) {
 	switch v.Type() {
 	case fastjson.TypeObject:
 		obj, err := v.Object()
@@ -90,7 +90,7 @@ func (dm *DocumentMapping) parseJson(context *walkContext, path []string, v *fas
 			fieldName := string(key)
 			subDocM := dm.subDocumentMapping(fieldName)
 			if subDocM != nil {
-				subDocM.processProperty(context, fieldName, path, val)
+				subDocM.processProperty(context, fieldName, path, val, retrievalType)
 			} else {
 				context.Err = fmt.Errorf("unrecognizable field:[%s] value %s %v", fieldName, v.String(), dm)
 			}
@@ -102,28 +102,28 @@ func (dm *DocumentMapping) parseJson(context *walkContext, path []string, v *fas
 			return
 		}
 		if dm.Field != nil {
-			if dm.Field.FieldType() == pspb.FieldType_GEOPOINT {
-				dm.processProperty(context, dm.Field.FieldName(), path, v)
+			if dm.Field.FieldType() == vearchpb.FieldType_GEOPOINT {
+				dm.processProperty(context, dm.Field.FieldName(), path, v, retrievalType)
 			} else {
 				for _, item := range items {
-					dm.processProperty(context, dm.Field.FieldName(), path, item)
+					dm.processProperty(context, dm.Field.FieldName(), path, item, retrievalType)
 				}
 			}
 		} else {
 			for _, item := range items {
-				dm.parseJson(context, path, item)
+				dm.parseJson(context, path, item, retrievalType)
 			}
 		}
 	default:
 		if dm.Field != nil {
-			dm.processProperty(context, dm.Field.FieldName(), path, v)
+			dm.processProperty(context, dm.Field.FieldName(), path, v, retrievalType)
 		} else {
-			dm.processProperty(context, path[len(path)-1], path[:len(path)-1], v)
+			dm.processProperty(context, path[len(path)-1], path[:len(path)-1], v, retrievalType)
 		}
 	}
 }
 
-func (dm *DocumentMapping) processProperty(context *walkContext, fieldName string, path []string, v *fastjson.Value) {
+func (dm *DocumentMapping) processProperty(context *walkContext, fieldName string, path []string, v *fastjson.Value, retrievalType string) {
 
 	if context.Err != nil {
 		return
@@ -202,7 +202,7 @@ func (dm *DocumentMapping) processProperty(context *walkContext, fieldName strin
 	case fastjson.TypeObject:
 		if dm.Field != nil {
 			fm := dm.Field
-			if fm.FieldType() == pspb.FieldType_GEOPOINT {
+			if fm.FieldType() == vearchpb.FieldType_GEOPOINT {
 				// Geo-point expressed as an object, with lat and lon keys.
 				latV := v.Get("lat")
 				lonV := v.Get("lon")
@@ -223,34 +223,52 @@ func (dm *DocumentMapping) processProperty(context *walkContext, fieldName strin
 					context.Err = fmt.Errorf("field value %s mismatch geo point", v.String())
 				}
 				return
-			} else if fm.FieldType() == pspb.FieldType_VECTOR {
+			} else if fm.FieldType() == vearchpb.FieldType_VECTOR {
 
 				source := v.GetStringBytes("source")
 				feature := v.GetArray("feature")
-
-				vector := make([]float32, len(feature))
-				for i := 0; i < len(feature); i++ {
-					if f64, err := feature[i].Float64(); err != nil {
-						context.Err = fmt.Errorf("vector can not to float 64 %v", feature[i])
-						return
-					} else if math.IsNaN(f64) || math.IsInf(f64, 0) {
-						context.Err = fmt.Errorf("vector value is index:[%d], err:[ %v]", i, feature[i])
-						return
-					} else {
-						vector[i] = float32(f64)
+				if strings.Compare("BINARYIVF", retrievalType) == 0 {
+					vector := make([]uint8, len(feature))
+					for i := 0; i < len(feature); i++ {
+						if int8, err := feature[i].Int(); err != nil {
+							context.Err = fmt.Errorf("vector can not to uint8 %v", feature[i])
+							return
+						} else {
+							vector[i] = uint8(int8)
+						}
 					}
-				}
+					field, err := processVectorBinary(context, fm, pathString, vector, string(source))
+					if err != nil {
+						context.Err = fmt.Errorf("process vectory binary err:[%s] m value:[%v]", err.Error(), vector)
+						return
+					}
+					context.AddField(field)
+					return
+				} else {
+					vector := make([]float32, len(feature))
+					for i := 0; i < len(feature); i++ {
+						if f64, err := feature[i].Float64(); err != nil {
+							context.Err = fmt.Errorf("vector can not to float 64 %v", feature[i])
+							return
+						} else if math.IsNaN(f64) || math.IsInf(f64, 0) {
+							context.Err = fmt.Errorf("vector value is index:[%d], err:[ %v]", i, feature[i])
+							return
+						} else {
+							vector[i] = float32(f64)
+						}
+					}
 
-				field, err := processVector(context, fm, pathString, vector, string(source))
-				if err != nil {
-					context.Err = fmt.Errorf("process vectory err:[%s] m value:[%v]", err.Error(), vector)
+					field, err := processVector(context, fm, pathString, vector, string(source))
+					if err != nil {
+						context.Err = fmt.Errorf("process vectory err:[%s] m value:[%v]", err.Error(), vector)
+						return
+					}
+					context.AddField(field)
 					return
 				}
-				context.AddField(field)
-				return
 			}
 		}
-		dm.parseJson(context, append(path, fieldName), v)
+		dm.parseJson(context, append(path, fieldName), v, retrievalType)
 	case fastjson.TypeArray:
 		vs, err := v.Array()
 		if err != nil {
@@ -259,7 +277,7 @@ func (dm *DocumentMapping) processProperty(context *walkContext, fieldName strin
 		}
 		if dm.Field != nil {
 			fm := dm.Field
-			if fm.FieldType() == pspb.FieldType_GEOPOINT {
+			if fm.FieldType() == vearchpb.FieldType_GEOPOINT {
 				if len(vs) != 2 {
 					context.Err = fmt.Errorf("field value %s mismatch geo point, %v", v.String(), vs)
 					return
@@ -286,7 +304,7 @@ func (dm *DocumentMapping) processProperty(context *walkContext, fieldName strin
 				return
 			}
 
-			if fm.FieldType() == pspb.FieldType_STRING && fm.FieldMappingI.(*StringFieldMapping).Array {
+			if fm.FieldType() == vearchpb.FieldType_STRING && fm.FieldMappingI.(*StringFieldMapping).Array {
 				buffer := bytes.Buffer{}
 				for i, vv := range vs {
 					if stringBytes, err := vv.StringBytes(); err != nil {
@@ -309,14 +327,14 @@ func (dm *DocumentMapping) processProperty(context *walkContext, fieldName strin
 				return
 			}
 
-			if fm.FieldType() == pspb.FieldType_INT && fm.FieldMappingI.(*NumericFieldMapping).Array {
+			if fm.FieldType() == vearchpb.FieldType_INT && fm.FieldMappingI.(*NumericFieldMapping).Array {
 				buffer := bytes.Buffer{}
 				for _, vv := range vs {
-					buffer.Write(cbbytes.Int64ToByte(vv.GetInt64()))
+					buffer.Write(cbbytes.Int32ToByte(int32(vv.GetInt64())))
 				}
-				field := &pspb.Field{
+				field := &vearchpb.Field{
 					Name:   fieldName,
-					Type:   pspb.FieldType_INT,
+					Type:   vearchpb.FieldType_INT,
 					Value:  buffer.Bytes(),
 					Option: fm.Options(),
 				}
@@ -325,15 +343,31 @@ func (dm *DocumentMapping) processProperty(context *walkContext, fieldName strin
 				return
 			}
 
-			if fm.FieldType() == pspb.FieldType_FLOAT && fm.FieldMappingI.(*NumericFieldMapping).Array {
+			if fm.FieldType() == vearchpb.FieldType_LONG && fm.FieldMappingI.(*NumericFieldMapping).Array {
+				buffer := bytes.Buffer{}
+				for _, vv := range vs {
+					buffer.Write(cbbytes.Int64ToByte(vv.GetInt64()))
+				}
+				field := &vearchpb.Field{
+					Name:   fieldName,
+					Type:   vearchpb.FieldType_LONG,
+					Value:  buffer.Bytes(),
+					Option: fm.Options(),
+				}
+				context.AddField(field)
+
+				return
+			}
+
+			if fm.FieldType() == vearchpb.FieldType_FLOAT && fm.FieldMappingI.(*NumericFieldMapping).Array {
 				buffer := bytes.Buffer{}
 				for _, vv := range vs {
 					buffer.Write(cbbytes.Float64ToByte(vv.GetFloat64()))
 				}
 
-				field := &pspb.Field{
+				field := &vearchpb.Field{
 					Name:   fieldName,
-					Type:   pspb.FieldType_FLOAT,
+					Type:   vearchpb.FieldType_FLOAT,
 					Value:  buffer.Bytes(),
 					Option: fm.Options(),
 				}
@@ -347,7 +381,7 @@ func (dm *DocumentMapping) processProperty(context *walkContext, fieldName strin
 		}
 
 		for _, vv := range vs {
-			dm.processProperty(context, fieldName, path, vv)
+			dm.processProperty(context, fieldName, path, vv, retrievalType)
 		}
 	}
 }

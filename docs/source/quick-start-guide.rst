@@ -18,7 +18,7 @@ Compile
 
 -  compile gamma
 
-   1. ``cd $vearch/engine/gamma/src``
+   1. ``cd $vearch/engine/src``
    2. ``mkdir build && cd build``
    3. ``export Faiss_HOME=faiss installed path``
    4. ``cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$vearch/ps/engine/gammacb/lib ..``

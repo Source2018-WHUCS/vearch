@@ -17,7 +17,7 @@ package mapping
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/proto/vearchpb"
 	"github.com/vearch/vearch/util/assert"
 	"testing"
 	"time"
@@ -72,7 +72,7 @@ func TestParseSchema(t *testing.T) {
     }
 }`)
 
-	fields, newSchema, err := im.MapDocument(source)
+	fields, newSchema, err := im.MapDocument(source, "")
 
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestParseErr(t *testing.T) {
 	im := NewIndexMapping()
 	im.DocumentMapping = mapping
 
-	fields, types, err := im.MapDocument([]byte(`{"body2":"test no body","name":"new_name","title":"test title","val":100}`))
+	fields, types, err := im.MapDocument([]byte(`{"body2":"test no body","name":"new_name","title":"test title","val":100}`), "")
 
 	if err != nil {
 		t.Fatal(err)
@@ -206,15 +206,15 @@ func TestParseSchemaErr(t *testing.T) {
 
 	bytes, e := json.Marshal(doc)
 
-	fields, types, e := im.MapDocument(bytes)
+	fields, types, e := im.MapDocument(bytes, "")
 	if e != nil {
 		t.Fatal(e)
 	}
 
 	assert.True(t, len(types) == 0)
 
-	var name *pspb.Field
-	var youyouName *pspb.Field
+	var name *vearchpb.Field
+	var youyouName *vearchpb.Field
 
 	for _, f := range fields {
 		if f.Name == "name" {

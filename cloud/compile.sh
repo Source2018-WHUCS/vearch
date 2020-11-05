@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
 
-docker run -v $(dirname "$PWD"):/vearch vearch_env:0.3 /vearch/cloud/compile/compile.sh
+# will download gamma in /engine with correct version
+git submodule init
+git submodule update
+
+docker run -v $(dirname "$PWD"):/vearch vearch/vearch_env:3.2.0 /vearch/cloud/compile/compile.sh

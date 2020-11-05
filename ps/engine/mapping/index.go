@@ -16,9 +16,9 @@
 package mapping
 
 import (
-	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/proto/entity"
-	"github.com/vearch/vearch/proto/pspb"
+	"github.com/vearch/vearch/proto/vearchpb"
+	"github.com/vearch/vearch/util/log"
 	"sort"
 	"strings"
 )
@@ -35,6 +35,7 @@ type IndexMapping struct {
 	//it is not config in index
 	DefaultDateTimeParserName string                      `json:"-"`
 	fieldCacher               map[string]*DocumentMapping `json:"-"`
+	DimensionMap              map[string]int              `json:"-"`
 }
 
 // NewIndexMapping creates a new IndexMapping that will use all the default indexing rules
@@ -85,12 +86,12 @@ func _initFieldCache(temp map[string]*DocumentMapping, mappings map[string]*Docu
 
 type walkContext struct {
 	im            *IndexMapping
-	Fields        []*pspb.Field
-	DynamicFields map[string]pspb.FieldType
+	Fields        []*vearchpb.Field
+	DynamicFields map[string]vearchpb.FieldType
 	Err           error
 }
 
-func (ctx *walkContext) AddField(f *pspb.Field) {
+func (ctx *walkContext) AddField(f *vearchpb.Field) {
 	ctx.Fields = append(ctx.Fields, f)
 }
 
@@ -100,10 +101,10 @@ func (im *IndexMapping) newWalkContext() *walkContext {
 	}
 }
 
-func (im *IndexMapping) GetFieldsType() map[string]pspb.FieldType {
-	result := make(map[string]pspb.FieldType)
+func (im *IndexMapping) GetFieldsType() map[string]vearchpb.FieldType {
+	result := make(map[string]vearchpb.FieldType)
 	for f, fm := range im.fieldCacher {
-		result[f] = pspb.FieldType(fm.Field.FieldType())
+		result[f] = vearchpb.FieldType(fm.Field.FieldType())
 	}
 	return result
 }
