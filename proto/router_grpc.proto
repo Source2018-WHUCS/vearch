@@ -167,6 +167,7 @@ message VectorQuery {
     double boost = 5;
     int32 has_boost = 6;
     string format = 7;
+    string retrieval_type = 8;
 }
 
 message RetrievalParameters {

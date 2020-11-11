@@ -180,6 +180,7 @@ func (r *routerRequest) SetDocs(docs []*vearchpb.Document) *routerRequest {
 		return r
 	}
 	log.Debug("RouterReques trace %v", r)
+	r.docs = docs
 	for _, doc := range r.docs {
 		if doc == nil {
 			r.Err = vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, errors.New("The doc is nil."))
@@ -196,7 +197,6 @@ func (r *routerRequest) SetDocs(docs []*vearchpb.Document) *routerRequest {
 			}
 		}
 	}
-	r.docs = docs
 	return r
 }
 
