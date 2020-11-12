@@ -51,16 +51,17 @@ const (
 )
 
 type VectorQuery struct {
-	Field        string          `json:"field"`
-	FeatureData  json.RawMessage `json:"feature"`
-	Feature      []float32       `json:"-"`
-	FeatureUint8 []uint8         `json:"-"`
-	Symbol       string          `json:"symbol"`
-	Value        *float64        `json:"value"`
-	Boost        *float64        `json:"boost"`
-	Format       *string         `json:"format,omitempty"`
-	MinScore     *float64        `json:"min_score,omitempty"`
-	MaxScore     *float64        `json:"max_score,omitempty"`
+	Field         string          `json:"field"`
+	FeatureData   json.RawMessage `json:"feature"`
+	Feature       []float32       `json:"-"`
+	FeatureUint8  []uint8         `json:"-"`
+	Symbol        string          `json:"symbol"`
+	Value         *float64        `json:"value"`
+	Boost         *float64        `json:"boost"`
+	Format        *string         `json:"format,omitempty"`
+	MinScore      *float64        `json:"min_score,omitempty"`
+	MaxScore      *float64        `json:"max_score,omitempty"`
+	RetrievalType string          `json:"retrieval_type"`
 }
 
 var defaultBoost = util.PFloat64(1)
@@ -260,6 +261,9 @@ func parseVectors(reqNum int, vqs []*vearchpb.VectorQuery, tmpArr []json.RawMess
 			return reqNum, vqs, err
 		}
 
+		if vqTemp.RetrievalType != "" {
+			retrievalType = vqTemp.RetrievalType
+		}
 		docField := proMap[vqTemp.Field]
 
 		if docField == nil || docField.FieldType != entity.FieldType_VECTOR {
@@ -638,12 +642,13 @@ func (query *VectorQuery) ToC(retrievalType string) (*vearchpb.VectorQuery, erro
 	}
 
 	vectorQuery := &vearchpb.VectorQuery{
-		Name:     query.Field,
-		Value:    codeByte,
-		MinScore: *query.MinScore,
-		MaxScore: *query.MaxScore,
-		Boost:    *query.Boost,
-		HasBoost: 0,
+		Name:          query.Field,
+		Value:         codeByte,
+		MinScore:      *query.MinScore,
+		MaxScore:      *query.MaxScore,
+		Boost:         *query.Boost,
+		HasBoost:      0,
+		RetrievalType: retrievalType,
 	}
 	return vectorQuery, nil
 }
