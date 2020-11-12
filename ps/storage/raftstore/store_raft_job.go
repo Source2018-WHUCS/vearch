@@ -16,9 +16,11 @@ package raftstore
 
 import (
 	"fmt"
-	"github.com/vearch/vearch/config"
 	"runtime/debug"
 	"time"
+
+	"github.com/vearch/vearch/ps/engine"
+	"github.com/vearch/vearch/config"
 
 	"github.com/spf13/cast"
 	"github.com/vearch/vearch/util/log"
@@ -31,8 +33,8 @@ const (
 	DefaultFlushCountThreshold = 200000
 )
 
-var fti uint32 // flush time interval
-var fct uint32 // flush count threshold
+var fti int32 // flush time interval
+var fct int32 // flush count threshold
 
 // truncate is raft log truncate.
 func (s *Store) startTruncateJob(initLastFlushIndex int64) {
@@ -101,14 +103,21 @@ func (s *Store) startFlushJob() {
 			}
 		}()
 
-		fti = config.Conf().PS.FlushTimeInterval
+		fti = int32(config.Conf().PS.FlushTimeInterval)
 		if fti <= 0 {
 			fti = DefaultFlushTimeInterval
 		}
-		fct = config.Conf().PS.FlushCountThreshold
+		fct = int32(config.Conf().PS.FlushCountThreshold)
 		if fct <= 0 {
 			fct = DefaultFlushCountThreshold
 		}
+
+		// init last min indexed num and doc num
+		var engineStatus engine.EngineStatus
+		s.Engine.EngineStatus(&engineStatus)
+		lastIndexNum := engineStatus.MinIndexedNum
+		lastDocNum := engineStatus.DocNum
+
 		log.Info("start flush job, flush time interval=%d, count threshold=%d", fti, fct)
 		flushFunc := func() {
 			if s.Sn == 0 {
@@ -116,24 +125,27 @@ func (s *Store) startFlushJob() {
 			}
 			// counts condition
 			if s.Engine == nil {
-				log.Error("store is empty so stop flush job, dbID:[%d] space:[%d,%s] partitionID:[%d]", s.Space.DBId, s.Space.Id, s.Space.Name, s.Partition.Id)
+				log.Error("store is empty so stop flush job, dbID:[%d] space:[%d,%s] partitionID:[%d]",
+					s.Space.DBId, s.Space.Id, s.Space.Name, s.Partition.Id)
 				return
 			}
 
+			var status engine.EngineStatus
+			s.Engine.EngineStatus(&status)
 			t := time.Now()
 			tempSn := s.Sn
-			if t.Sub(s.LastFlushTime).Seconds() < float64(fti) || tempSn-s.LastFlushSn < int64(fct) {
-				return
+			if t.Sub(s.LastFlushTime).Seconds() > float64(fti) && (tempSn-s.LastFlushSn > int64(fct) || status.MinIndexedNum-lastIndexNum > fct || status.DocNum-lastDocNum > fct) {
+				log.Info("begin to flush, current time: %s, sn: %d, min indexed num=%d, doc num=%d",
+					t.Format(time.RFC3339), tempSn, status.MinIndexedNum, status.DocNum)
+				if err := s.Engine.Writer().Flush(s.Ctx, tempSn); err != nil {
+					log.Error(err.Error())
+					return
+				}
+				s.LastFlushSn = tempSn
+				s.LastFlushTime = t
+				lastIndexNum = status.MinIndexedNum
+				lastDocNum = status.DocNum
 			}
-
-			log.Info("begin to flush, current time: %s, last time: %s, current sn: %d, last sn:%d,", t.Format(time.RFC3339), s.LastFlushTime.Format(time.RFC3339), tempSn, s.LastFlushSn)
-
-			if err := s.Engine.Writer().Flush(s.Ctx, tempSn); err != nil {
-				log.Error(err.Error())
-				return
-			}
-			s.LastFlushSn = tempSn
-			s.LastFlushTime = t
 		}
 
 		ticker := time.NewTicker(FlushTicket)
