@@ -80,8 +80,8 @@
     pprof_port = 6060
     # if set true , this ps only use in db meta config
     private = false
-    # 120 seconds
-    flush_time_interval = 120
+    # seconds
+    flush_time_interval = 600
     flush_count_threshold = 200000
 
 

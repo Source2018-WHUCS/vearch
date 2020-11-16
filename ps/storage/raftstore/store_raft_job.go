@@ -29,7 +29,7 @@ import (
 const (
 	TruncateTicket             = 5 * time.Minute
 	FlushTicket                = 1 * time.Second
-	DefaultFlushTimeInterval   = 120 // 2 minutes
+	DefaultFlushTimeInterval   = 600 // 10 minutes
 	DefaultFlushCountThreshold = 200000
 )
 
@@ -116,9 +116,9 @@ func (s *Store) startFlushJob() {
 		var engineStatus engine.EngineStatus
 		s.Engine.EngineStatus(&engineStatus)
 		lastIndexNum := engineStatus.MinIndexedNum
-		lastDocNum := engineStatus.DocNum
+		lastMaxDocid := engineStatus.MaxDocid
 
-		log.Info("start flush job, flush time interval=%d, count threshold=%d", fti, fct)
+		log.Info("start flush job, flush time interval=%d, count threshold=%d, min index num=%d, max docid=%d", fti, fct, lastIndexNum, lastMaxDocid)
 		flushFunc := func() {
 			if s.Sn == 0 {
 				return
@@ -134,9 +134,9 @@ func (s *Store) startFlushJob() {
 			s.Engine.EngineStatus(&status)
 			t := time.Now()
 			tempSn := s.Sn
-			if t.Sub(s.LastFlushTime).Seconds() > float64(fti) && (tempSn-s.LastFlushSn > int64(fct) || status.MinIndexedNum-lastIndexNum > fct || status.DocNum-lastDocNum > fct) {
-				log.Info("begin to flush, current time: %s, sn: %d, min indexed num=%d, doc num=%d",
-					t.Format(time.RFC3339), tempSn, status.MinIndexedNum, status.DocNum)
+			if t.Sub(s.LastFlushTime).Seconds() > float64(fti) && (tempSn-s.LastFlushSn > int64(fct) || status.MinIndexedNum-lastIndexNum > fct || status.MaxDocid-lastMaxDocid > fct) {
+				log.Info("begin to flush, current time: %s, sn: %d, min indexed num=%d, max docid=%d",
+					t.Format(time.RFC3339), tempSn, status.MinIndexedNum, status.MaxDocid)
 				if err := s.Engine.Writer().Flush(s.Ctx, tempSn); err != nil {
 					log.Error(err.Error())
 					return
@@ -144,7 +144,7 @@ func (s *Store) startFlushJob() {
 				s.LastFlushSn = tempSn
 				s.LastFlushTime = t
 				lastIndexNum = status.MinIndexedNum
-				lastDocNum = status.DocNum
+				lastMaxDocid = status.MaxDocid
 			}
 		}
 

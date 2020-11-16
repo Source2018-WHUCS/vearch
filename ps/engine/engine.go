@@ -54,7 +54,8 @@ type Writer interface {
 type EngineStatus struct {
         IndexStatus int32
         DocNum int32
-	MinIndexedNum int32
+        MaxDocid int32
+        MinIndexedNum int32
 }
 
 // Engine is the interface that wraps the core operations of a document store.

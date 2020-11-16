@@ -211,6 +211,7 @@ func (ge *gammaEngine) EngineStatus(status *engine.EngineStatus) error {
 	gamma.GetEngineStatus(ge.gamma, &ges)
 	status.IndexStatus = ges.IndexStatus
 	status.DocNum = ges.DocNum
+	status.MaxDocid = ges.MaxDocid
 	status.MinIndexedNum = ges.MinIndexedNum
 	return nil
 }
