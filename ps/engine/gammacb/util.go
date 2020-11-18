@@ -120,6 +120,15 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*gamma.T
 				fieldInfo.IsIndex = false
 			}
 			table.Fields = append(table.Fields, fieldInfo)
+		case vearchpb.FieldType_DOUBLE:
+			index := (value.Field.Options() & vearchpb.FieldOption_Index) / vearchpb.FieldOption_Index
+			fieldInfo := gamma.FieldInfo{Name: key, DataType: gamma.DOUBLE}
+			if index == 1 {
+				fieldInfo.IsIndex = true
+			} else {
+				fieldInfo.IsIndex = false
+			}
+			table.Fields = append(table.Fields, fieldInfo)
 		case vearchpb.FieldType_DATE, vearchpb.FieldType_LONG:
 			index := (value.Field.Options() & vearchpb.FieldOption_Index) / vearchpb.FieldOption_Index
 			fieldInfo := gamma.FieldInfo{Name: key, DataType: gamma.LONG}

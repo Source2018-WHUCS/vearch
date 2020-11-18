@@ -412,8 +412,10 @@ func UnmarshalPropertyJSON(propertity []byte) (map[string]*SpaceProperties, erro
 			sp.FieldType = FieldType_INT
 		case "long":
 			sp.FieldType = FieldType_LONG
-		case "double", "float":
+		case "float":
 			sp.FieldType = FieldType_FLOAT
+		case "double":
+			sp.FieldType = FieldType_DOUBLE
 		case "boolean", "bool":
 			sp.FieldType = FieldType_BOOL
 		case "geo_point":

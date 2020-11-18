@@ -237,6 +237,8 @@ func docFieldSerialize(doc *vearchpb.Document, space *entity.Space, returnFields
 				source[name] = time.Unix(u/1e6, u%1e6)
 			case entity.FieldType_FLOAT:
 				source[name] = cbbytes.ByteToFloat32(fv.Value)
+			case entity.FieldType_DOUBLE:
+				source[name] = cbbytes.ByteToFloat64New(fv.Value)
 			case entity.FieldType_VECTOR:
 				if strings.Compare(space.Engine.RetrievalType, "BINARYIVF") == 0 {
 					featureByteC := fv.Value
@@ -271,10 +273,13 @@ func docFieldSerialize(doc *vearchpb.Document, space *entity.Space, returnFields
 			}
 		}
 	}
-	marshal, err := json.Marshal(source)
+	var marshal []byte
+	var err error
+	if len(source) > 0 {
+		marshal, err = json.Marshal(source)
+	}
 	if err != nil {
 		return nil, err
-
 	}
 	return marshal, nil
 

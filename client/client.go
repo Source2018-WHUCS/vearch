@@ -998,6 +998,15 @@ func GetSource(doc *vearchpb.ResultItem, space *entity.Space, idIsLong bool, sor
 						SortName: name,
 					})
 				}
+			case entity.FieldType_DOUBLE:
+				floatVal := cbbytes.ByteToFloat64(fv.Value)
+				source[name] = floatVal
+				if sortFieldMap != nil && sortFieldMap[name] != "" {
+					sortValues = append(sortValues, &sortorder.FloatSortValue{
+						Val:      floatVal,
+						SortName: name,
+					})
+				}
 			case entity.FieldType_VECTOR:
 				if strings.Compare(space.Engine.RetrievalType, "BINARYIVF") == 0 {
 					featureByteC := fv.Value
@@ -1038,7 +1047,11 @@ func GetSource(doc *vearchpb.ResultItem, space *entity.Space, idIsLong bool, sor
 		})
 	}
 
-	marshal, err := json.Marshal(source)
+	var marshal []byte
+	var err error
+	if len(source) > 0 {
+		marshal, err = json.Marshal(source)
+	}
 	if err != nil {
 		return nil, sortValues, pKey, err
 	}

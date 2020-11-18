@@ -473,6 +473,30 @@ func parseRange(data []byte, proMap map[string]*entity.SpaceProperties) (*vearch
 			}
 
 			min, max = minNum, maxNum
+		case entity.FieldType_DOUBLE:
+			var minNum, maxNum float64
+
+			if start != nil {
+				if f, e := start.(json.Number).Float64(); e != nil {
+					return nil, e
+				} else {
+					minNum = f
+				}
+			} else {
+				minNum = -math.MaxFloat64
+			}
+
+			if end != nil {
+				if f, e := end.(json.Number).Float64(); e != nil {
+					return nil, e
+				} else {
+					maxNum = f
+				}
+			} else {
+				maxNum = math.MaxFloat64
+			}
+
+			min, max = minNum, maxNum
 
 		case entity.FieldType_DATE:
 

@@ -173,11 +173,6 @@ func processPropertyNumber(v *fastjson.Value, pathString string, pro *entity.Spa
 		log.Error("processPropertyNumber Float64 error: %v", err)
 		return nil, err
 	}
-	/*propertyValInt64, err := v.Int64()
-	if err != nil {
-		log.Error("processPropertyNumber Int64 error: %v", err)
-		return nil, err
-	}*/
 	if pro != nil {
 		field, err := processNumber(pro, pathString, propertyValFloat)
 		if err != nil {
@@ -379,6 +374,8 @@ func processPropertyArray(v *fastjson.Value, pathString string, pro *entity.Spac
 		field, err = processPropertyArrayVectorLong(vs, fieldName, pro)
 	} else if pro.FieldType == entity.FieldType_FLOAT && pro.Array {
 		field, err = processPropertyArrayVectorFloat(vs, fieldName, pro)
+	} else if pro.FieldType == entity.FieldType_DOUBLE && pro.Array {
+		field, err = processPropertyArrayVectorDouble(vs, fieldName, pro)
 	} else {
 		field, err = nil, fmt.Errorf("field:[%s]  this type:[%d] can use by array", fieldName, pro.FieldType)
 	}
@@ -420,6 +417,24 @@ func processPropertyArrayVectorFloat(vs []*fastjson.Value, fieldName string, pro
 	field := &vearchpb.Field{
 		Name:   fieldName,
 		Type:   vearchpb.FieldType_FLOAT,
+		Value:  buffer.Bytes(),
+		Option: opt,
+	}
+	return field, nil
+}
+
+func processPropertyArrayVectorDouble(vs []*fastjson.Value, fieldName string, pro *entity.SpaceProperties) (*vearchpb.Field, error) {
+	buffer := bytes.Buffer{}
+	for _, vv := range vs {
+		buffer.Write(cbbytes.Float64ToByte(vv.GetFloat64()))
+	}
+	opt := vearchpb.FieldOption_Null
+	if pro.Option == 1 {
+		opt = vearchpb.FieldOption_Index
+	}
+	field := &vearchpb.Field{
+		Name:   fieldName,
+		Type:   vearchpb.FieldType_DOUBLE,
 		Value:  buffer.Bytes(),
 		Option: opt,
 	}
@@ -538,9 +553,16 @@ func processString(pro *entity.SpaceProperties, fieldName, val string) (*vearchp
 	case entity.FieldType_FLOAT:
 		f, err := cast.ToFloat32E(val)
 		if err != nil {
-			field, err = nil, fmt.Errorf("parse string %s to float failed, err %v", val, err)
+			field, err = nil, fmt.Errorf("parse string %s to float32 failed, err %v", val, err)
 		} else {
 			field, err = processField(fieldName, vearchpb.FieldType_FLOAT, cbbytes.Float32ToByte(f), opt)
+		}
+	case entity.FieldType_DOUBLE:
+		f, err := cast.ToFloat64E(val)
+		if err != nil {
+			field, err = nil, fmt.Errorf("parse string %s to float64 failed, err %v", val, err)
+		} else {
+			field, err = processField(fieldName, vearchpb.FieldType_DOUBLE, cbbytes.Float64ToByte(f), opt)
 		}
 	case entity.FieldType_GEOPOINT:
 		field, err = processStringFieldGeoPoint(fieldName, val, opt)
@@ -574,6 +596,8 @@ func processNumber(pro *entity.SpaceProperties, fieldName string, val float64) (
 		field, err = processField(fieldName, vearchpb.FieldType_LONG, cbbytes.Int64ToByte(i), opt)
 	case entity.FieldType_FLOAT:
 		field, err = processField(fieldName, vearchpb.FieldType_FLOAT, cbbytes.Float32ToByte(float32(val)), opt)
+	case entity.FieldType_DOUBLE:
+		field, err = processField(fieldName, vearchpb.FieldType_DOUBLE, cbbytes.Float64ToByteNew(val), opt)
 	case entity.FieldType_DATE:
 		field, err = processField(fieldName, vearchpb.FieldType_DATE, cbbytes.Int64ToByte(int64(val)*1e6), opt)
 	default:
