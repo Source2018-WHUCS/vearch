@@ -21,7 +21,7 @@ if [ ! -n "${FAISS_HOME}" ]; then
     tar xf faiss.tar.gz
     pushd faiss*
     cmake -B build -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF -DCMAKE_INSTALL_PREFIX=${FAISS_HOME} .
-    make -C build && make -C install
+    make -C build && make -C build install
     popd
     rm -rf faiss*
   fi
