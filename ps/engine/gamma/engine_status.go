@@ -35,7 +35,7 @@ func (status *EngineStatus) Serialize(buffer *[]byte) int {
 	gamma_api.EngineStatusAddFieldRangeMem(builder, status.FieldRangeMem)
 	gamma_api.EngineStatusAddBitmapMem(builder, status.BitmapMem)
 	gamma_api.EngineStatusAddDocNum(builder, status.DocNum)
-	gamma_api.EngineStatusAddDocNum(builder, status.MaxDocid)
+	gamma_api.EngineStatusAddMaxDocid(builder, status.MaxDocid)
 	gamma_api.EngineStatusAddMinIndexedNum(builder, status.MinIndexedNum)
 	builder.Finish(builder.EndObject())
 	bufferLen := len(builder.FinishedBytes())
