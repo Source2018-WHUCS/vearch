@@ -130,9 +130,7 @@ func docResponse(client *client.Client, head *vearchpb.RequestHead, items []*vea
 		return nil, err
 	}
 	var builder = cbjson.ContentBuilderFactory()
-	if len(items) > 1 {
-		builder.BeginArray()
-	}
+	builder.BeginArray()
 	for idx, item := range items {
 		if idx != 0 {
 			builder.More()
@@ -143,9 +141,7 @@ func docResponse(client *client.Client, head *vearchpb.RequestHead, items []*vea
 			builder.ValueRaw(string(result))
 		}
 	}
-	if len(items) > 1 {
-		builder.EndArray()
-	}
+	builder.EndArray()
 	return builder.Output()
 }
 

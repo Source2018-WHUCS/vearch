@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/patrickmn/go-cache"
 	"math"
 	"math/big"
 	"math/rand"
@@ -29,6 +28,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/patrickmn/go-cache"
 
 	"github.com/vearch/vearch/util"
 
@@ -169,7 +170,6 @@ func (r *routerRequest) SetSpace() *routerRequest {
 	if r.Err != nil {
 		return r
 	}
-	log.Debug("RouterReques trace %v", r)
 	r.space, r.Err = r.client.Space(r.ctx, r.head.DbName, r.head.SpaceName)
 	return r
 }
@@ -179,7 +179,6 @@ func (r *routerRequest) SetDocs(docs []*vearchpb.Document) *routerRequest {
 	if r.Err != nil {
 		return r
 	}
-	log.Debug("RouterReques trace %v", r)
 	r.docs = docs
 	for _, doc := range r.docs {
 		if doc == nil {
@@ -205,7 +204,6 @@ func (r *routerRequest) SetDocsField() *routerRequest {
 	if r.Err != nil {
 		return r
 	}
-	log.Debug("RouterReques trace %v", r)
 	IDIsLong := idIsLong(r.space)
 	for _, doc := range r.docs {
 		key, err := generateUUID(doc.PKey, IDIsLong)
@@ -233,7 +231,6 @@ func (r *routerRequest) SetDocsByKey(keys []string) *routerRequest {
 	if r.Err != nil {
 		return r
 	}
-	log.Debug("RouterReques trace %v", r)
 	r.docs, r.Err = setDocs(keys)
 	return r
 }
@@ -243,7 +240,6 @@ func (r *routerRequest) PartitionDocs() *routerRequest {
 	if r.Err != nil {
 		return r
 	}
-	log.Debug("RouterReques trace %v", r)
 	dataMap := make(map[entity.PartitionID]*vearchpb.PartitionData)
 	for _, doc := range r.docs {
 		partitionID := r.space.PartitionId(murmur3.Sum32WithSeed(cbbytes.StringToByte(doc.PKey), 0))
@@ -811,7 +807,6 @@ func (r *routerRequest) SearchByPartitions(searchReq *vearchpb.SearchRequest) *r
 	if r.Err != nil {
 		return r
 	}
-	log.Debug("RouterReques Search trace %v", r)
 	sendMap := make(map[entity.PartitionID]*vearchpb.PartitionData)
 	for _, partitionInfo := range r.space.Partitions {
 		partitionID := partitionInfo.Id
@@ -831,7 +826,6 @@ func (r *routerRequest) BulkSearchByPartitions(searchReq []*vearchpb.SearchReque
 	if r.Err != nil {
 		return r
 	}
-	log.Debug("RouterReques bulkSearch trace %v", r)
 	sendMap := make(map[entity.PartitionID]*vearchpb.PartitionData)
 	for _, partitionInfo := range r.space.Partitions {
 		partitionID := partitionInfo.Id
@@ -1231,7 +1225,6 @@ func (r *routerRequest) CommonByPartitions() *routerRequest {
 	if r.Err != nil {
 		return r
 	}
-	log.Debug("RouterReques common trace %v", r)
 	sendMap := make(map[entity.PartitionID]*vearchpb.PartitionData)
 	for _, partitionInfo := range r.space.Partitions {
 		partitionID := partitionInfo.Id
