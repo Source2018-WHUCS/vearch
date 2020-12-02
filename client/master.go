@@ -417,13 +417,18 @@ func (m *masterClient) Register(ctx context.Context, clusterName string, nodeID 
 	masterServer.reset()
 	var response []byte
 	for {
-		keyNumber, err := masterServer.getKey()
-		if err != nil {
-			return nil, err
-		}
 
 		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
-		query.SetAddress(m.cfg.Masters[keyNumber].ApiUrl())
+		if config.Conf().Global.MergeRouter {
+			query.SetAddress(m.cfg.Router.ApiUrl())
+		} else {
+			keyNumber, err := masterServer.getKey()
+			if err != nil {
+				return nil, err
+			}
+			query.SetAddress(m.cfg.Masters[keyNumber].ApiUrl())
+		}
+
 		query.SetMethod(http.MethodPost)
 		query.SetQuery(form.Encode())
 		query.SetUrlPath("/register")
@@ -432,11 +437,14 @@ func (m *masterClient) Register(ctx context.Context, clusterName string, nodeID 
 		response, err = query.Do()
 		log.Debug("master api Register response: %v", string(response))
 		if err == nil {
+			log.Debug("master api Register success ")
 			break
 		}
 		log.Debug("master api Register err: %v", err)
 
 		masterServer.next()
+
+		time.Sleep(2 * time.Second)
 	}
 
 	data, err := parseRegisterData(response)
@@ -459,13 +467,17 @@ func (m *masterClient) RegisterRouter(ctx context.Context, clusterName string, t
 	masterServer.reset()
 	var response []byte
 	for {
-		keyNumber, err := masterServer.getKey()
-		if err != nil {
-			return "", err
-		}
 
 		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
-		query.SetAddress(m.cfg.Masters[keyNumber].ApiUrl())
+		if config.Conf().Global.MergeRouter {
+			query.SetAddress(m.cfg.Router.ApiUrl())
+		} else {
+			keyNumber, err := masterServer.getKey()
+			if err != nil {
+				return "", err
+			}
+			query.SetAddress(m.cfg.Masters[keyNumber].ApiUrl())
+		}
 		query.SetMethod(http.MethodPost)
 		query.SetQuery(form.Encode())
 		query.SetUrlPath("/register_router")
@@ -499,13 +511,17 @@ func (m *masterClient) RegisterPartition(ctx context.Context, partition *entity.
 	masterServer.reset()
 	var response []byte
 	for {
-		keyNumber, err := masterServer.getKey()
-		if err != nil {
-			return err
-		}
 
 		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
-		query.SetAddress(m.cfg.Masters[keyNumber].ApiUrl())
+		if config.Conf().Global.MergeRouter {
+			query.SetAddress(m.cfg.Router.ApiUrl())
+		} else {
+			keyNumber, err := masterServer.getKey()
+			if err != nil {
+				return err
+			}
+			query.SetAddress(m.cfg.Masters[keyNumber].ApiUrl())
+		}
 		query.SetMethod(http.MethodPost)
 		query.SetUrlPath("/register_partition")
 		query.SetReqBody(string(reqBody))
@@ -548,12 +564,17 @@ func (m *masterClient) HTTPPost(url string, reqBody string) (response []byte, e 
 		}
 	}()
 	for {
-		keyNumber, err := masterServer.getKey()
-		if err != nil {
-			panic(err)
-		}
+		var err error
 		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
-		query.SetAddress(m.cfg.Masters[keyNumber].ApiUrl())
+		if config.Conf().Global.MergeRouter {
+			query.SetAddress(m.cfg.Router.ApiUrl())
+		} else {
+			keyNumber, err := masterServer.getKey()
+			if err != nil {
+				panic(err)
+			}
+			query.SetAddress(m.cfg.Masters[keyNumber].ApiUrl())
+		}
 		query.SetMethod(http.MethodPost)
 		query.SetUrlPath(url)
 		query.SetReqBody(string(reqBody))

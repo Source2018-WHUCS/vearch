@@ -45,7 +45,9 @@ func NewServer(ctx context.Context) (*Server, error) {
 		CloseTimeout: time.Duration(config.Conf().Router.CloseTimeout),
 	}
 	netutil.SetMode(netutil.RouterModeGorilla) //no need
+
 	httpServer := netutil.NewServer(httpServerConfig)
+
 	document.ExportDocumentHandler(httpServer, cli)
 
 	var rpcServer *grpc.Server
@@ -74,6 +76,16 @@ func NewServer(ctx context.Context) (*Server, error) {
 		panic(err)
 	}
 
+	// start master job
+	if config.Conf().Global.MergeRouter {
+
+		if err := client.NewWatchServerCache(ctx, cli); err != nil {
+			log.Error("watcher server cache error,Err:%v", err)
+			panic(err)
+		}
+
+	}
+
 	return &Server{
 		httpServer: httpServer,
 		ctx:        routerCtx,
@@ -94,18 +106,29 @@ func (server *Server) Start() error {
 		routerIP = strings.Split(conn.LocalAddr().String(), ":")[0]
 		conn.Close()
 	*/
-	routerIP, err := server.cli.Master().RegisterRouter(server.ctx, config.Conf().Global.Name, 100*time.Millisecond)
-	if err != nil {
-		panic(fmt.Sprintf("conn master failed, err: [%s]", err.Error()))
+	var routerIP string
+	var err error
+	// get local IP addr
+	if  config.Conf().Global.MergeRouter {
+		routerIP ,err = netutil.GetLocalIP()
+	} else {
+		routerIP, err = server.cli.Master().RegisterRouter(server.ctx, config.Conf().Global.Name, 100*time.Millisecond)
+		if err != nil {
+			panic(fmt.Sprintf("conn master failed, err: [%s]", err.Error()))
+		}
 	}
 	log.Debugf("Get router ip: [%s]", routerIP)
 	mserver.SetIp(routerIP, false)
-	if config.Conf().Router.RpcPort > 0 {
+	if config.Conf().Router.RpcPort > 0 || config.Conf().Global.MergeRouter {
 		server.StartHeartbeatJob(fmt.Sprintf("%s:%d", routerIP, config.Conf().Router.RpcPort))
 	}
 
 	if port := config.Conf().Router.MonitorPort; port > 0 {
-		monitor.Register(nil, nil, config.Conf().Router.MonitorPort)
+		if config.Conf().Global.MergeRouter {
+			monitor.Register(server.cli, nil, config.Conf().Router.MonitorPort)
+		} else {
+			monitor.Register(nil, nil, config.Conf().Router.MonitorPort)
+		}
 	}
 
 	if err := server.httpServer.Run(); err != nil {
@@ -123,6 +146,8 @@ func (server *Server) Shutdown() {
 		server.httpServer.Shutdown()
 		server.httpServer = nil
 	}
+
+
 	log.Info("router shutdown... end")
 }
 

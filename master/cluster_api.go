@@ -48,11 +48,6 @@ const (
 	DB            = "db"
 	dbName        = "db_name"
 	spaceName     = "space_name"
-	userName      = "user_name"
-	userPassword  = "user_password"
-	userDbList    = "user_db_list"
-	allowdHost    = "allowed_host"
-	privilege     = "privilege"
 	headerAuthKey = "Authorization"
 	NodeID        = "node_id"
 )

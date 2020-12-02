@@ -52,6 +52,7 @@ type DocumentHandler struct {
 }
 
 func ExportDocumentHandler(httpServer *netutil.Server, client *client.Client) {
+
 	docService := newDocService(client)
 
 	documentHandler := &DocumentHandler{
@@ -59,10 +60,31 @@ func ExportDocumentHandler(httpServer *netutil.Server, client *client.Client) {
 		docService: *docService,
 		client:     client,
 	}
+	// open master api
+	if config.Conf().Global.MergeRouter {
+		// new master server
+		service, err := NewMasterService(client)
+
+		monitorService := newMonitorService(service, nil)
+
+		if err != nil {
+			panic(err)
+		}
+		// open master etcd api
+		if err := documentHandler.GorillaExport(service); err != nil {
+			panic(err)
+		}
+
+		// open master monitor apo
+		if err := documentHandler.GorillaExportMonitor(monitorService); err != nil {
+			panic(err)
+		}
+	}
+
+	// open router api
 	if err := documentHandler.ExportToServer(); err != nil {
 		panic(err)
 	}
-
 }
 
 func (handler *DocumentHandler) ExportToServer() error {
