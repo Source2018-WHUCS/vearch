@@ -17,7 +17,6 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"math/rand"
 	"net"
 	"net/url"
 	"os"
@@ -279,10 +278,9 @@ type RouterCfg struct {
 	RouterIPS       []string ``
 }
 
-func (routerCfg *RouterCfg) ApiUrl() string {
+func (routerCfg *RouterCfg) ApiUrl(keyNumber int) string {
 	var Addr string
-	if routerCfg.RouterIPS != nil && len(routerCfg.RouterIPS) > 0 {
-		keyNumber := rand.Intn(len(routerCfg.RouterIPS))
+	if routerCfg.RouterIPS != nil && len(routerCfg.RouterIPS) > 0 && keyNumber < len(routerCfg.RouterIPS) {
 		Addr = routerCfg.RouterIPS[keyNumber]
 	}
 	if routerCfg.Port == 80 {

@@ -415,12 +415,17 @@ func (m *masterClient) Register(ctx context.Context, clusterName string, nodeID 
 	form.Add("nodeID", cast.ToString(nodeID))
 
 	masterServer.reset()
+	num := 0
 	var response []byte
 	for {
 
 		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
 		if config.Conf().Global.MergeRouter {
-			query.SetAddress(m.cfg.Router.ApiUrl())
+			if num >= len(config.Conf().Router.RouterIPS) {
+				return nil , fmt.Errorf("master server all down , register ps error")
+			}
+			query.SetAddress(m.cfg.Router.ApiUrl(num))
+			num = num + 1
 		} else {
 			keyNumber, err := masterServer.getKey()
 			if err != nil {
@@ -466,11 +471,16 @@ func (m *masterClient) RegisterRouter(ctx context.Context, clusterName string, t
 
 	masterServer.reset()
 	var response []byte
+	num := 0
 	for {
 
 		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
 		if config.Conf().Global.MergeRouter {
-			query.SetAddress(m.cfg.Router.ApiUrl())
+			if num >= len(config.Conf().Router.RouterIPS) {
+				return "" , fmt.Errorf("master server all down , register ps error")
+			}
+			query.SetAddress(m.cfg.Router.ApiUrl(num))
+			num = num + 1
 		} else {
 			keyNumber, err := masterServer.getKey()
 			if err != nil {
@@ -510,11 +520,16 @@ func (m *masterClient) RegisterPartition(ctx context.Context, partition *entity.
 
 	masterServer.reset()
 	var response []byte
+	num := 0
 	for {
 
 		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
 		if config.Conf().Global.MergeRouter {
-			query.SetAddress(m.cfg.Router.ApiUrl())
+			if num >= len(config.Conf().Router.RouterIPS) {
+				return fmt.Errorf("master server all down , register ps error")
+			}
+			query.SetAddress(m.cfg.Router.ApiUrl(num))
+			num = num + 1
 		} else {
 			keyNumber, err := masterServer.getKey()
 			if err != nil {
@@ -565,9 +580,14 @@ func (m *masterClient) HTTPPost(url string, reqBody string) (response []byte, e 
 	}()
 	for {
 		var err error
+		num := 0
 		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
 		if config.Conf().Global.MergeRouter {
-			query.SetAddress(m.cfg.Router.ApiUrl())
+			if num >= len(config.Conf().Router.RouterIPS) {
+				return nil , fmt.Errorf("master server all down , register ps error")
+			}
+			query.SetAddress(m.cfg.Router.ApiUrl(num))
+			num = num + 1
 		} else {
 			keyNumber, err := masterServer.getKey()
 			if err != nil {

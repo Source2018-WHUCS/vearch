@@ -43,6 +43,8 @@ import (
 	_ "github.com/vearch/vearch/ps/engine/gammacb"
 )
 
+const maxTryTime = 5
+
 // Server partition server
 type Server struct {
 	mu              sync.RWMutex
@@ -216,7 +218,11 @@ func (s *Server) register() (server *entity.Server) {
 // get routerIPS from etcd
 func (s *Server) getRouterIPS(ctx context.Context) (routerIPS []string) {
 	var err error
+	num := 0
 	for {
+		if num >= maxTryTime {
+			panic(fmt.Errorf("query router ip exceed max retry time error"))
+		}
 		if routerIPS, err = s.client.Master().QueryRouter(ctx, config.Conf().Global.Name); err != nil {
 			log.Info("query router ip error error:[%v]", err)
 			panic(fmt.Errorf("query router ip error"))
@@ -231,6 +237,7 @@ func (s *Server) getRouterIPS(ctx context.Context) (routerIPS []string) {
 		} else {
 			log.Info("routerIPS is null")
 		}
+		num = num + 1
 		time.Sleep(1 * time.Second)
 	}
 	return routerIPS
