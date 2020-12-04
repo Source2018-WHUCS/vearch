@@ -430,7 +430,7 @@ func (mApi *MasterClusterAPI) serverList(ctx context.Context, w http.ResponseWri
 		serverInfos = append(serverInfos, serverInfo)
 	}
 
-	gorillautil.NewAutoMehtodName(ctx, w).SendJson(map[string]interface{}{"servers": serverInfos, "count": len(servers)})
+	gorillautil.NewAutoMehtodName(ctx, w).SendJsonHttpReplySuccess(map[string]interface{}{"servers": serverInfos, "count": len(servers)})
 
 	return ctx, true
 }
