@@ -390,7 +390,7 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 					searchResponse := &vearchpb.SearchResponse{Head: head}
 					pd.SearchResponse = searchResponse
 					responseDoc.PartitionData = pd
-					respChain <- responseDoc
+					safeSend(respChain, responseDoc)
 				}
 			}()
 			partition, e := r.client.Master().Cache().PartitionByCache(ctx, r.space.Name, partitionID)
@@ -400,7 +400,7 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 				searchResponse := &vearchpb.SearchResponse{Head: head}
 				pd.SearchResponse = searchResponse
 				responseDoc.PartitionData = pd
-				respChain <- responseDoc
+				safeSend(respChain, responseDoc)
 				return
 			}
 			clientType := pd.SearchRequest.Head.ClientType
@@ -414,7 +414,7 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 				searchResponse := &vearchpb.SearchResponse{Head: head}
 				pd.SearchResponse = searchResponse
 				responseDoc.PartitionData = pd
-				respChain <- responseDoc
+				safeSend(respChain, responseDoc)
 				return
 			}
 
@@ -447,7 +447,7 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 				searchResponse := &vearchpb.SearchResponse{Head: head}
 				pd.SearchResponse = searchResponse
 				responseDoc.PartitionData = pd
-				respChain <- responseDoc
+				safeSend(respChain, responseDoc)
 				return
 			}
 
@@ -485,11 +485,22 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 			}
 			responseDoc.PartitionData = replyPartition
 			responseDoc.SortValueMap = sortValueMap
-			respChain <- responseDoc
+			safeSend(respChain, responseDoc)
 		}(partitionID, pData, r.space, sortOrder)
 	}
-	wg.Wait()
-	close(respChain)
+	//wg.Wait()
+	//close(respChain)
+	if waitTimeout(&wg, time.Millisecond*time.Duration(config.PSRpcTimeOut)) {
+		close(respChain)
+		err := &vearchpb.Error{Code: vearchpb.ErrorEnum_RECOVER, Msg: "more than 800 Millisecond"}
+		params := make(map[string]string)
+		head := &vearchpb.ResponseHead{Err: err, Params: params}
+		response := vearchpb.SearchResponse{Head: head}
+		log.Error("rpc cost time error:%v", err)
+		return &response
+	} else {
+		close(respChain)
+	}
 
 	var firstResult []*vearchpb.SearchResult
 	var sortValueMap map[string][]sortorder.SortValue
@@ -525,6 +536,42 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 
 	searchResponse.Results = firstResult
 	return searchResponse
+}
+
+func safeSend(ch chan *response.SearchDocResult, value *response.SearchDocResult) (closed bool) {
+	defer func() {
+		if recover() != nil {
+			closed = true
+		}
+	}()
+
+	ch <- value  // panic if ch is closed
+	return false // <=> closed = false; return
+}
+
+func isClosed(ch <-chan *response.SearchDocResult) bool {
+	select {
+	case <-ch:
+		return true
+	default:
+	}
+
+	return false
+}
+
+func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	ch := make(chan bool)
+
+	go time.AfterFunc(timeout, func() {
+		ch <- true
+	})
+
+	go func() {
+		wg.Wait()
+		ch <- false
+	}()
+
+	return <-ch
 }
 
 func (r *routerRequest) BulkSearchSortExecute(sortOrders []sortorder.SortOrder) *vearchpb.SearchResponse {

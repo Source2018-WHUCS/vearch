@@ -125,6 +125,9 @@ func (handler *DocumentHandler) ExportToServer() error {
 	// forcemerge space: /$dbName/$spaceName/_forcemerge
 	handler.httpServer.HandlesMethods([]string{http.MethodPost}, fmt.Sprintf("/{%s}/{%s}/_forcemerge", URLParamDbName, URLParamSpaceName), []netutil.HandleContinued{handler.handleTimeout, handler.handleAuth, handler.handleForceMerge}, nil)
 
+	// update doc: /$dbName/$spaceName/_ps_rpc_timeout_set
+	handler.httpServer.HandlesMethods([]string{http.MethodPost, http.MethodPut}, fmt.Sprintf("/{%s}/{%s}/_ps_rpc_timeout_set", URLParamDbName, URLParamSpaceName), []netutil.HandleContinued{handler.handleTimeout, handler.handleAuth, handler.handlePsRpcTimeoutSet}, nil)
+
 	// get doc: /$dbName/$spaceName/$docId
 	handler.httpServer.HandlesMethods([]string{http.MethodGet}, fmt.Sprintf("/{%s}/{%s}/{%s}", URLParamDbName, URLParamSpaceName, URLParamID), []netutil.HandleContinued{handler.handleTimeout, handler.handleAuth, handler.handleGetDoc}, nil)
 
@@ -656,4 +659,26 @@ func (handler *DocumentHandler) handleDeleteByQuery(ctx context.Context, w http.
 
 	resp.SendJson(ctx, w, delByQueryResp)
 	return ctx, true
+}
+
+// handlePsRpcTimeoutSet rpctimeout set
+func (handler *DocumentHandler) handlePsRpcTimeoutSet(ctx context.Context, w http.ResponseWriter, r *http.Request, params netutil.UriParams) (context.Context, bool) {
+	startTime := time.Now()
+	defer monitor.Profiler("handlePsRpcTimeoutSet", startTime)
+	args := &vearchpb.GetRequest{}
+	args.Head = setRequestHead(params, r)
+	rpcTimeout, err := doPsRpcTimeoutSetParse(r)
+	if err != nil {
+		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error())
+		return ctx, false
+	}
+
+	config.PSRpcTimeOut = rpcTimeout
+	if resultBytes, err := docPsRpcTimeoutResponse(config.PSRpcTimeOut); err != nil {
+		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error())
+		return ctx, true
+	} else {
+		resp.SendJsonBytes(ctx, w, resultBytes)
+		return ctx, true
+	}
 }

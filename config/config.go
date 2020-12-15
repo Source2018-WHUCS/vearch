@@ -78,6 +78,8 @@ const (
 	LocalCastAddr   = "0.0.0.0"
 )
 
+var PSRpcTimeOut int64 = 500
+
 type Config struct {
 	Global     *GlobalCfg `toml:"global,omitempty" json:"global"`
 	EtcdConfig *EtcdCfg   `toml:"etcd,omitempty" json:"etcd"`
@@ -269,13 +271,14 @@ func (config *Config) GetEmbed() (*embed.Config, error) {
 }
 
 type RouterCfg struct {
-	Port            uint16   `toml:"port,omitempty" json:"port"`
-	PprofPort       uint16   `toml:"pprof_port,omitempty" json:"pprof_port"`
-	RpcPort         uint16   `toml:"rpc_port,omitempty" json:"rpc_port"`
-	MonitorPort     uint16   `toml:"monitor_port" json:"monitor_port"`
-	ConnLimit       int      `toml:"conn_limit" json:"conn_limit"`
-	CloseTimeout    int64    `toml:"close_timeout" json:"close_timeout"`
-	RouterIPS       []string ``
+	Port         uint16   `toml:"port,omitempty" json:"port"`
+	PprofPort    uint16   `toml:"pprof_port,omitempty" json:"pprof_port"`
+	RpcPort      uint16   `toml:"rpc_port,omitempty" json:"rpc_port"`
+	MonitorPort  uint16   `toml:"monitor_port" json:"monitor_port"`
+	ConnLimit    int      `toml:"conn_limit" json:"conn_limit"`
+	CloseTimeout int64    `toml:"close_timeout" json:"close_timeout"`
+	RouterIPS    []string ``
+	RpcTimeout   int64    `toml:"rpc_timeout" json:"rpc_timeout"`
 }
 
 func (routerCfg *RouterCfg) ApiUrl(keyNumber int) string {
