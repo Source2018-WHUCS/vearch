@@ -7,18 +7,35 @@ GAMMAOUT=$ROOT/build/gamma_build
 rm -rf ${GAMMAOUT}
 mkdir -p $GAMMAOUT
 
+ZFP_URL=https://github.com/LLNL/zfp/archive/0.5.5.tar.gz
 FAISS_URL=https://github.com/facebookresearch/faiss/archive/v1.6.4.tar.gz
-ROCKSDB_URL=https://github.com/facebook/rocksdb/archive/v6.4.6.tar.gz
+ROCKSDB_URL=https://github.com/facebook/rocksdb/archive/v6.2.2.tar.gz
 
 # version value
-BUILD_VERSION="3.2.2"
+BUILD_VERSION="3.2.6"
+
+if [ ! -n "${ZFP_HOME}" ]; then
+  export ZFP_HOME=/usr/local/include/
+  rm -rf zfp*
+  wget ${ZFP_URL} -O zfp.tar.gz
+  tar -xzvf zfp.tar.gz
+  pushd zfp* 
+  mkdir build && cd build
+  cmake ..
+  cmake --build . --config Release
+  make install
+  popd
+  rm -rf zfp*
+fi
+
+
 
 if [ ! -n "${FAISS_HOME}" ]; then
   export FAISS_HOME=$ROOT/build/lib/faiss
   if [ ! -d "${FAISS_HOME}" ]; then
     rm -rf faiss*
     curl -Lk ${FAISS_URL} -o faiss.tar.gz
-    tar xf faiss.tar.gz
+    tar -xzvf faiss.tar.gz
     pushd faiss*
     cmake -B build -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF -DCMAKE_INSTALL_PREFIX=${FAISS_HOME} .
     make -C build && make -C build install
@@ -36,10 +53,10 @@ else
     export ROCKSDB_HOME=/usr/local/include/rocksdb
     if [ ! -d "${ROCKSDB_HOME}" ]; then
       rm -rf rocksdb*
-      curl -Lk ${ROCKSDB_URL} -o rocksdb.tar.gz
-      tar xf rocksdb.tar.gz
+      wget  ${ROCKSDB_URL} -O rocksdb.tar.gz
+      tar -xzvf rocksdb.tar.gz
       pushd rocksdb*
-      CFLAGS="-O3 -fPIC" make static_lib -j
+      CFLAGS="-O3 -fPIC" make shared_lib -j
       make install
       popd
       rm -rf rocksdb*

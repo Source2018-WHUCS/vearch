@@ -1,80 +1,39 @@
-# Vearch Compile and Deploy
+# Vearch source compilation and deployment
 
-## Docker Deploy
+## Source code compilation
 
-#### Docker Hub Image Center 
- 1. vearch base compile environment image address: https://hub.docker.com/r/vearch/vearch/tags
- 2. vearch deploy image address: https://hub.docker.com/r/vearch/vearch/tags
-
-#### Use Vearch Image Deploy
- 1. take vearch:3.2.0 as an example
- 2. docker pull vearch/vearch:3.2.0
- 3. one docker deploy or distributed deployment
-    1. ```If deploy a docker start vearch,master,ps,router start together: cat vearch/config/config.toml.example > config.toml nohup docker run -p 8817:8817 -p 9001:9001 -v $PWD/config.toml:/vearch/config.toml  vearch/vearch:3.2.0 all &```
-  
-    2. ```If distributed deploy ,modify vearch/config/config.toml and start separately```
-    3. ```Modify vearch/config/config.toml ,refer the step 'Local Model'```
-    4. ```Start separately image, modify step i 'all' to 'master' and 'ps' and 'router' ,master image must first start```
-
-#### Use Base Image Compile And Deploy
- 1. take vearch_env:3.2.0 as an example
- 2. docker pull vearch/vearch_env:3.2.0
- 3. sh vearch/cloud/complile.sh
- 4. sh build.sh
- 5. reference "User vearch image deploy" step 3
-
-#### Use Script Create Base Image And Vearch Image
- 1. build compile base environment image 
-    1. go to $vearch/cloud dir
-    2. run ./compile_env.sh you will got a image named vearch_env
- 2. compile vearch
-    1. go to $vearch/cloud dir
-    2. run ./compile.sh you will compile Vearch in $vearch/build/bin , $vearch/build/lib
- 3. make vearch image
-    1. go to $vearch/cloud dir
-    2. run ./build.sh you will got a image named vearch good luck
- 4. how to use it 
-    1. you can use docker run -it -v config.toml:/vearch/config.toml vearch all to start vearch by local model the last param has four type[ps, router ,master, all] all means tree type to start
- 5. One-click build vearch image
-    1. go to $vearch/cloud dir
-    2. you can run ./run_docker.sh
-
-## No Image Compile And Deploy
-
-#### Dependent Environment 
+### Dependent Environment 
 
    1. CentOS, Ubuntu and Mac OS are all OK (recommend CentOS >= 7.2)，cmake required
    2. Go >= 1.11.2 required
    3. Gcc >= 5 required
-   4. [Faiss](https://github.com/facebookresearch/faiss) >= v1.6.0
-   5. [RocksDB](https://github.com/facebook/rocksdb) == 6.2.2 ***(optional)***. Please use `make shared_lib` which is in `RocksDB's INSTALL.md` to compile rocksdb. When you want to use rocksdb to store vectors or you want to make the data persistent, you need to install rocksdb. If rocksdb is not installed, then the data will be lost if you restart, you need to re-insert the data.
-   6. CUDA >= 9.0, if you want GPU support.
-#### Compile 
+      4. Cmake >= 3.17 required
+      5. OpenBLAS
+      6. [Faiss](https://github.com/facebookresearch/faiss) >= v1.6.4, You don't need to install it, the script installs automatically.
+      7. [RocksDB](https://github.com/facebook/rocksdb) == 6.2.2 ***(optional)***. Rocksdb does not require you to install it, the script installs automatically. But you need to manually install the dependencies of rocksdb. Please refer to the installation method: https://github.com/facebook/rocksdb/blob/master/INSTALL.md
+      8. [Zfp](https://github.com/LLNL/zfp) == v0.5.5, You don't need to install it, the script installs automatically.
+      9. CUDA >= 9.0, if you want GPU support. 
+### Compile 
    * Enter the `GOPATH` directory, `cd $GOPATH/src` `mkdir -p github.com/vearch` `cd github.com/vearch`
+
    * Download the source code: `git clone https://xxxxxx/vearch.git` ($vearch denotes the absolute path of vearch code)
+
+   * Download the source code of subprojects gamma: `git submodule init`  `git submodule update`
+
    * To add GPU Index support : change `BUILD_WITH_GPU` from `"off"` to `"on"` in `$vearch/engine/CMakeLists.txt` 
-   * Compile gamma
-       1. `cd $vearch/engine`
-       2. `mkdir build && cd build`
-       3. `export FAISS_HOME=the installed path of faiss`
-       4. `export ROCKSDB_HOME=the directory where you compiled(make shared_lib) rocksdb`
-       5. `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$vearch/ps/engine/gammacb/lib  ..`
-       6. `make && make install`
-   
+
    * Compile vearch
-      1. `cd $vearch`
-      2. `export FAISS_HOME=the installed path of faiss`
-      3. `export ROCKSDB_HOME=the directory where you compiled(make shared_lib) rocksdb`
-      4. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$vearch/ps/engine/gammacb/lib/lib:$FAISS_HOME/lib` or `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$vearch/ps/engine/gammacb/lib/lib:$FAISS_HOME/lib:$ROCKSDB_HOME` if ROCKSDB_HOME is set
-      5. `go build -o vearch`
-      when `vearch` file generated, it is ok.
-           
-       
-#### Deploy
-   Before run vearch, you shuld set `LD_LIBRARY_PATH`, Ensure that system can find faiss and gamma dynamic libraries (like $vearch/ps/engine/gammacb/lib/lib and $FAISS_HOME/lib directory files) .
-   ##### 1 Local Model
-   * generate config file conf.toml
+      1. `cd vearch/build`
       
+      2. `sh build.sh`
+      
+         when `vearch` file generated, it is ok.
+      
+## Deploy
+   Before run vearch, you shuld set `LD_LIBRARY_PATH`, Ensure that system can find gamma dynamic libraries (like $vearch/ps/engine/gammacb/lib/lib) .
+   ### 1 Local Model
+   * generate config file conf.toml
+     
 ```
 [global]
     # the name will validate join cluster by same name
@@ -128,10 +87,10 @@
    * start
 
 ````
-./vearch -conf conf.toml
+./vearch -conf conf.toml all
 ````
-   
-   ##### 2 Cluster Model
+
+   ### 2 Cluster Model
    > vearch has three module: `ps`(PartitionServer) , `master`, `router`, run `./vearch -f conf.toml ps/router/master` start ps/router/master module
 
    > Now we have five machine, two master, two ps and one router
@@ -199,4 +158,3 @@
 ````
 ./vearch -conf conf.toml router
 ````
-
