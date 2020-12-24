@@ -174,9 +174,9 @@ func (docService *docService) bulkSearch(ctx context.Context, args []*vearchpb.S
 		return &vearchpb.SearchResponse{Head: setErrHead(request.Err)}
 	}
 
-	sortOrders := make([]sortorder.SortOrder, 0, len(args))
+	sortOrders := make([]sortorder.SortOrder, 0)
 	for _, req := range args {
-		sortOrder := make([]sortorder.Sort, 0, len(req.SortFields))
+		sortOrder := make([]sortorder.Sort, 0)
 		for _, sortF := range req.SortFields {
 			sortOrder = append(sortOrder, &sortorder.SortField{Field: sortF.Field, Desc: sortF.Type})
 		}
