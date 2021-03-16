@@ -4,19 +4,18 @@
 
 ### Dependent Environment 
 
-   1. CentOS, Ubuntu and Mac OS are all OK (recommend CentOS >= 7.2)，cmake required
-   2. Go >= 1.11.2 required
-   3. Gcc >= 5 required
-      4. Cmake >= 3.17 required
-      5. OpenBLAS
-      6. [Faiss](https://github.com/facebookresearch/faiss) >= v1.6.4, You don't need to install it, the script installs automatically.
-      7. [RocksDB](https://github.com/facebook/rocksdb) == 6.2.2 ***(optional)***. Rocksdb does not require you to install it, the script installs automatically. But you need to manually install the dependencies of rocksdb. Please refer to the installation method: https://github.com/facebook/rocksdb/blob/master/INSTALL.md
-      8. [Zfp](https://github.com/LLNL/zfp) == v0.5.5, You don't need to install it, the script installs automatically.
-      9. CUDA >= 9.0, if you want GPU support. 
-### Compile 
+   1. CentOS, Ubuntu and Mac OS are all OK (recommend CentOS >= 7.2)
+   2. go >= 1.11.2 required
+   3. gcc >= 5 required
+   4. cmake >= 3.17 required
+   5. OpenBLAS
+   6. [RocksDB](https://github.com/facebook/rocksdb) == 6.2.2 ***(optional)***. Rocksdb does not require you to install it, the script installs automatically. But you need to manually install the dependencies of rocksdb. Please refer to the installation method: https://github.com/facebook/rocksdb/blob/master/INSTALL.md
+   7. [zfp](https://github.com/LLNL/zfp) == v0.5.5, You don't need to install it, the script installs automatically.
+   8. CUDA >= 9.0, if you want GPU support. 
+### Compile
    * Enter the `GOPATH` directory, `cd $GOPATH/src` `mkdir -p github.com/vearch` `cd github.com/vearch`
 
-   * Download the source code: `git clone https://xxxxxx/vearch.git` ($vearch denotes the absolute path of vearch code)
+   * Download the source code: `git clone https://github.com/vearch/vearch.git` ($vearch denotes the absolute path of vearch code)
 
    * Download the source code of subprojects gamma: `git submodule init`  `git submodule update`
 
