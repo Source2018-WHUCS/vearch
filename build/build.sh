@@ -14,7 +14,21 @@ ROCKSDB_URL=https://github.com/facebook/rocksdb/archive/v6.2.2.tar.gz
 # version value
 BUILD_VERSION="3.2.6"
 
-if [ ! -n "${ZFP_HOME}" ]; then
+use_zfp="y"
+use_rocksdb="y"
+while [ -z $use_zfp ] || ([ $use_zfp != "y" ] && [ $use_zfp != "n" ])
+do
+  echo "Do you use zfp?[y/n]."
+  read use_zfp
+done
+
+while [ -z $use_rocksdb ] || ([ $use_rocksdb != "y" ] && [ $use_rocksdb != "n" ])
+do
+  echo "Do you use rocksdb?[y/n]."
+  read  use_rocksdb
+done
+
+if [ $use_zfp == "y" ] && [ ! -n "${ZFP_HOME}" ]; then
   export ZFP_HOME=/usr/local/include/
   rm -rf zfp*
   wget ${ZFP_URL} -O zfp.tar.gz
@@ -45,11 +59,11 @@ if [ ! -n "${FAISS_HOME}" ]; then
 fi
 
 OS_NAME=$(uname)
-if [ ${OS_NAME} == "Darwin" ]; then
+if [ $use_rocksdb == "y" ] && [ ${OS_NAME} == "Darwin" ]; then
   export ROCKSDB_HOME=/usr/local/include/rocksdb
   brew install rocksdb
 else
-  if [ ! -n "${ROCKSDB_HOME}" ]; then
+  if [ $use_rocksdb == "y" ] && [ ! -n "${ROCKSDB_HOME}" ]; then
     export ROCKSDB_HOME=/usr/local/include/rocksdb
     if [ ! -d "${ROCKSDB_HOME}" ]; then
       rm -rf rocksdb*
