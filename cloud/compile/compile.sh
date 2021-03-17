@@ -2,8 +2,9 @@
 #add env
 export GOROOT=/env/app/go
 export PATH=$PATH:$GOROOT/bin
+export ZFP_HOME=/env/app/zfp_install
 export ROCKSDB_HOME=/env/app/rocksdb_install
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/env/app/rocksdb_install/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROCKSDB_HOME/lib:$ZFP_HOME/lib
 # to compile
 cd /vearch/build
 mkdir -p /env/app/go/src/github.com/vearch
