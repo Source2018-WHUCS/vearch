@@ -32,13 +32,13 @@ func (conf *Config) Serialize(buffer *[]byte) int {
 	logDir := builder.CreateString(conf.LogDir)
 
     var names []flatbuffers.UOffsetT
-    var cache_sizes []int32
+    var cacheSizes []int32
     names = make([]flatbuffers.UOffsetT, len(conf.CacheInfos))
-    cache_sizes = make([]int32, len(conf.CacheInfos))
+	cacheSizes = make([]int32, len(conf.CacheInfos))
     i := 0
-    for _, cache_info := range conf.CacheInfos {
-        names[i] = builder.CreateString(cache_info.Name)
-        cache_sizes[i] =  cache_info.CacheSize
+    for _, cacheInfo := range conf.CacheInfos {
+        names[i] = builder.CreateString(cacheInfo.Name)
+		cacheSizes[i] =  cacheInfo.CacheSize
         i++
     }
 
@@ -47,7 +47,7 @@ func (conf *Config) Serialize(buffer *[]byte) int {
     for i := 0; i < len(conf.CacheInfos); i++ {
         gamma_api.CacheInfoStart(builder)
         gamma_api.CacheInfoAddFieldName(builder, names[i])
-        gamma_api.CacheInfoAddCacheSize(builder, cache_sizes[i])
+        gamma_api.CacheInfoAddCacheSize(builder, cacheSizes[i])
         caches[i] = gamma_api.CacheInfoEnd(builder)
     }
 
@@ -76,6 +76,7 @@ func (conf *Config) DeSerialize(buffer []byte) {
     for i := 0; i < len(conf.CacheInfos); i++ {
         var cache gamma_api.CacheInfo
         conf.config.CacheInfos(&cache, i)
+		conf.CacheInfos[i] = &CacheInfo{}
         conf.CacheInfos[i].Name = string(cache.FieldName())
         conf.CacheInfos[i].CacheSize = cache.CacheSize()
     }

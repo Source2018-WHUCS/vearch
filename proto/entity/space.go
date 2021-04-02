@@ -99,6 +99,16 @@ type Space struct {
 	SpaceProperties map[string]*SpaceProperties `json:"space_properties"`
 }
 
+//cache/[dbId]/[spaceId]:[cacheCfg]
+type EngineCfg struct {
+	CacheModels []*CacheModel `json:"cache_models,omitempty"`
+}
+
+type CacheModel struct {
+	Name      string `json:"name,omitempty"` //user setting
+	CacheSize int32  `json:"cache_size,omitempty"`
+}
+
 type SpaceProperties struct {
 	FieldType  FieldType       `json:"field_type"`
 	Type       string          `json:"type"`
@@ -256,8 +266,8 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 					if *tempEngine.IndexSize < 8192 {
 						return fmt.Errorf(retrievalType+" model doc size:[%d] less than 8192 so can not to index", int64(*tempEngine.IndexSize))
 					}
-               }  else if strings.Compare("IVFPQ", retrievalType) == 0 ||
-                    strings.Compare("GPU", retrievalType) == 0 {
+				} else if strings.Compare("IVFPQ", retrievalType) == 0 ||
+					strings.Compare("GPU", retrievalType) == 0 {
 
 					if v.Nsubvector == 0 || v.Ncentroids == 0 {
 						return fmt.Errorf(retrievalType + " model param is 0")
@@ -315,7 +325,7 @@ func (engine *Engine) UnmarshalJSON(bs []byte) error {
 					return fmt.Errorf(tempEngine.RetrievalType+" model doc size:[%d] less than 8192 so can not to index", int64(*tempEngine.IndexSize))
 				}
 			} else if strings.Compare("IVFPQ", tempEngine.RetrievalType) == 0 ||
-                strings.Compare("GPU", tempEngine.RetrievalType) == 0 {
+				strings.Compare("GPU", tempEngine.RetrievalType) == 0 {
 				if v.Nsubvector == 0 || v.Ncentroids == 0 {
 					return fmt.Errorf(tempEngine.RetrievalType + " model param is 0")
 				} else {
