@@ -374,8 +374,23 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 	normalIsOrNot := false
 	normalField := make(map[string]string)
 	retrievalType := r.space.Engine.RetrievalType
-	if retrievalType != "" && strings.Compare(retrievalType, "BINARYIVF") != 0 {
-		normalIsOrNot = true
+	if retrievalType != "" {
+		if strings.Compare(retrievalType, "BINARYIVF") != 0 {
+			normalIsOrNot = true
+		}
+	} else {
+		retrievalTypes := r.space.Engine.RetrievalTypes
+		if retrievalTypes != nil {
+			isBinaryivf := false
+			for _, retrievalType := range retrievalTypes {
+				if strings.Compare(retrievalType, "BINARYIVF") == 0 {
+					isBinaryivf = true
+				}
+			}
+			if !isBinaryivf {
+				normalIsOrNot = true
+			}
+		}
 	}
 	if normalIsOrNot {
 		spacePro := r.space.SpaceProperties
