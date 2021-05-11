@@ -11,8 +11,6 @@ import (
 	flatbuffers "github.com/google/flatbuffers/go"
 	"github.com/vearch/vearch/engine/idl/fbs-gen/go/gamma_api"
 	"github.com/vearch/vearch/proto/vearchpb"
-	"github.com/vearch/vearch/util/cbbytes"
-	"github.com/vearch/vearch/util/log"
 )
 
 type DistanceMetricType uint8
@@ -218,11 +216,6 @@ func SearchRequestSerialize(request *vearchpb.SearchRequest) []byte {
 		}
 		lowerValue := builder.EndVector(len(request.RangeFilters[i].LowerValue))
 
-		lowerV := cbbytes.BytesToInt32(request.RangeFilters[i].LowerValue)
-		upperV := cbbytes.BytesToInt32(request.RangeFilters[i].UpperValue)
-
-		log.Info("lowerValue:", lowerV)
-		log.Info("upperValue:", upperV)
 		gamma_api.RangeFilterStartUpperValueVector(builder, len(request.RangeFilters[i].UpperValue))
 		for j := len(request.RangeFilters[i].UpperValue) - 1; j >= 0; j-- {
 			builder.PrependByte(request.RangeFilters[i].UpperValue[j])
