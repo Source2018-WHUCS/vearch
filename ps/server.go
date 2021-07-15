@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"github.com/vearch/vearch/util/errutil"
 	"math"
-	"strings"
 	"sync"
 	"time"
 
@@ -90,8 +89,6 @@ type changeLeaderEntry struct {
 	leader entity.NodeID
 	pid    entity.PartitionID
 }
-
-
 
 // Start start server
 func (s *Server) Start() error {
@@ -188,7 +185,7 @@ func (s *Server) startChangeLeaderC() {
 				log.Info("startChangeLeaderC() receive an change leader event, nodeId: %d, partitionId: %d", entry.leader, entry.pid)
 				s.registerMaster(entry.leader, entry.pid)
 			case pStatus := <-s.replicasStatusC:
-				log.Info("receive an change leader status, nodeId: %d, partitionId: %d",pStatus.NodeID, pStatus.PartitionID)
+				log.Info("receive an change leader status, nodeId: %d, partitionId: %d", pStatus.NodeID, pStatus.PartitionID)
 				s.changeReplicas(pStatus)
 			}
 		}
@@ -230,8 +227,7 @@ func (s *Server) getRouterIPS(ctx context.Context) (routerIPS []string) {
 			panic(fmt.Errorf("query router ip error"))
 		}
 		if routerIPS != nil && len(routerIPS) > 0 {
-			for  _, IP := range routerIPS {
-				IP = strings.Split(IP, ":")[0]
+			for _, IP := range routerIPS {
 				config.Conf().Router.RouterIPS = append(config.Conf().Router.RouterIPS, IP)
 			}
 			log.Info("get router info [%v]", routerIPS)

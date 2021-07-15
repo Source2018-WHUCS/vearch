@@ -2,7 +2,7 @@
   <img src="docs/img/vearch_logo.png">
 </div>
 
-[![Build Status](https://travis-ci.org/vearch/vearch.svg?branch=master)](https://travis-ci.org/vearch/vearch)  &nbsp;&nbsp;&nbsp; [![Gitter](https://badges.gitter.im/vector_search/community.svg)](https://gitter.im/vector_search/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Build Status](https://travis-ci.com/vearch/vearch.svg?branch=master)](https://travis-ci.com/vearch/vearch)  &nbsp;&nbsp;&nbsp; [![Gitter](https://badges.gitter.im/vector_search/community.svg)](https://gitter.im/vector_search/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 ## Overview
 
 Vearch is a scalable distributed system for efficient similarity search of deep learning vectors. 
@@ -96,6 +96,13 @@ Welcome to register the company name in this issue: https://github.com/vearch/ve
 ![华为技术](static/huawei.png)
 ![OPPO](static/oppo.png)
 ![汽车之家](static/autohome.png)
+![芯翌智能](static/xforwardai.png)
+![图灵机器人](static/turingapi.png)
+![金山云](static/ksyun.png)
+![汇智通信](static/teligen.png)
+![小红书](static/xiaohongshu.png)
+![VIVO](static/vivo.png)
 
 ## License
+
 Licensed under the Apache License, Version 2.0. For detail see [LICENSE and NOTICE](https://github.com/vearch/vearch/blob/master/LICENSE).

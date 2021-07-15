@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,7 +40,7 @@ import (
 )
 
 const (
-	DefaultPsTimeOut           = 5
+	DefaultPsTimeOut = 5
 )
 
 // masterClient is  used for router and partition server,not for master administrator. This client is mainly used to communicate with etcd directly,with out business logic
@@ -202,8 +203,9 @@ func (m *masterClient) QueryRouter(ctx context.Context, key string) ([]string, e
 	}
 	routerIPs := make([]string, 0, len(bytesRouterIP))
 	for _, bs := range bytesRouterIP {
-		routerIPs = append(routerIPs, string(bs))
-		log.Debugf("find key: [%s], routerIP: [%s]", key, string(bs))
+		ip := strings.Split(string(bs), ":")[0]
+		routerIPs = append(routerIPs, ip)
+		log.Debugf("find key: [%s], routerIP: [%s]", key, ip)
 	}
 	return routerIPs, nil
 }
@@ -250,20 +252,20 @@ func (m *masterClient) QueryServerByIPAddr(ctx context.Context, IPAddr string) *
 	var err error
 	defer errutil.CatchError(&err)
 	//get all failServer
-	failServers,err := m.QueryAllFailServer(ctx)
-	for _,fs := range failServers {
+	failServers, err := m.QueryAllFailServer(ctx)
+	for _, fs := range failServers {
 		if fs.Node.Ip == IPAddr {
-			log.Debug("get fail server info [%+v]",fs)
+			log.Debug("get fail server info [%+v]", fs)
 			return fs
 		}
 	}
 
 	//get all server
-	servers,err := m.QueryServers(ctx)
-	for _,server := range servers {
+	servers, err := m.QueryServers(ctx)
+	for _, server := range servers {
 		if server.Ip == IPAddr {
-			fs := &entity.FailServer{TimeStamp: time.Now().Unix(),Node: server,ID: server.ID}
-			log.Debug("get alive server info [%+v]",fs)
+			fs := &entity.FailServer{TimeStamp: time.Now().Unix(), Node: server, ID: server.ID}
+			log.Debug("get alive server info [%+v]", fs)
 			return fs
 		}
 	}
@@ -378,7 +380,7 @@ func (m *masterClient) KeepAlive(ctx context.Context, server *entity.Server) (<-
 	if timeout <= 0 {
 		timeout = DefaultPsTimeOut
 	}
-	return m.Store.KeepAlive(ctx, entity.ServerKey(server.ID), bytes, time.Second * time.Duration(timeout))
+	return m.Store.KeepAlive(ctx, entity.ServerKey(server.ID), bytes, time.Second*time.Duration(timeout))
 }
 
 // PutServerWithLeaseID PutServerWithLeaseID
@@ -391,7 +393,7 @@ func (m *masterClient) PutServerWithLeaseID(ctx context.Context, server *entity.
 	if timeout <= 0 {
 		timeout = DefaultPsTimeOut
 	}
-	return m.Store.PutWithLeaseId(ctx, entity.ServerKey(server.ID), bytes, time.Second * time.Duration(timeout), leaseID)
+	return m.Store.PutWithLeaseId(ctx, entity.ServerKey(server.ID), bytes, time.Second*time.Duration(timeout), leaseID)
 }
 
 // DBKeys get db url in etcd
@@ -422,7 +424,7 @@ func (m *masterClient) Register(ctx context.Context, clusterName string, nodeID 
 		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
 		if config.Conf().Global.MergeRouter {
 			if num >= len(config.Conf().Router.RouterIPS) {
-				return nil , fmt.Errorf("master server all down , register ps error")
+				return nil, fmt.Errorf("master server all down , register ps error")
 			}
 			query.SetAddress(m.cfg.Router.ApiUrl(num))
 			num = num + 1
@@ -477,7 +479,7 @@ func (m *masterClient) RegisterRouter(ctx context.Context, clusterName string, t
 		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
 		if config.Conf().Global.MergeRouter {
 			if num >= len(config.Conf().Router.RouterIPS) {
-				return "" , fmt.Errorf("master server all down , register ps error")
+				return "", fmt.Errorf("master server all down , register ps error")
 			}
 			query.SetAddress(m.cfg.Router.ApiUrl(num))
 			num = num + 1
@@ -569,20 +571,31 @@ func (m *masterClient) RegisterPartition(ctx context.Context, partition *entity.
 }
 
 //send HTTPPost request
-func (m *masterClient) HTTPPost(url string, reqBody string) (response []byte, e error) {
+func (m *masterClient) HTTPPost(ctx context.Context, url string, reqBody string) (response []byte, e error) {
 	//process panic
 	defer func() {
 		if info := recover(); info != nil {
 			e = fmt.Errorf("panic is %v", info)
 		}
 	}()
+	var err error
+	if config.Conf().Global.MergeRouter {
+		config.Conf().Router.RouterIPS, err = m.QueryRouter(ctx, config.Conf().Global.Name)
+		if err != nil {
+			return nil, fmt.Errorf("query router err: %v", err)
+		}
+	}
+	query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
+	query.SetMethod(http.MethodPost)
+	query.SetUrlPath(url)
+	query.SetReqBody(reqBody)
+	query.SetContentTypeJson()
+	query.SetTimeout(60)
+	num := 0
 	for {
-		var err error
-		num := 0
-		query := netutil.NewQuery().SetHeader(Authorization, util.AuthEncrypt(Root, m.cfg.Global.Signkey))
 		if config.Conf().Global.MergeRouter {
 			if num >= len(config.Conf().Router.RouterIPS) {
-				return nil , fmt.Errorf("master server all down , register ps error")
+				return nil, fmt.Errorf("master server all down , register ps error")
 			}
 			query.SetAddress(m.cfg.Router.ApiUrl(num))
 			num = num + 1
@@ -593,11 +606,7 @@ func (m *masterClient) HTTPPost(url string, reqBody string) (response []byte, e 
 			}
 			query.SetAddress(m.cfg.Masters[keyNumber].ApiUrl())
 		}
-		query.SetMethod(http.MethodPost)
-		query.SetUrlPath(url)
-		query.SetReqBody(string(reqBody))
-		query.SetContentTypeJson()
-		query.SetTimeout(60)
+
 		log.Debug("remote server url: %s, req body: %s", query.GetUrl(), string(reqBody))
 		response, err = query.Do()
 		log.Debug("remote server response: %v", string(response))
@@ -625,7 +634,7 @@ func (m *masterClient) RemoveNodeMeta(ctx context.Context, nodeID entity.NodeID)
 		return err
 	}
 	masterServer.reset()
-	response, err := m.HTTPPost("/meta/remove_server", string(reqBody))
+	response, err := m.HTTPPost(ctx, "/meta/remove_server", string(reqBody))
 	log.Debug("remove server response: %v", string(response))
 	if err != nil {
 		return err
@@ -684,7 +693,7 @@ func (client *masterClient) RecoverFailServer(ctx context.Context, rfs *entity.R
 	reqBody, err := cbjson.Marshal(rfs)
 	errutil.ThrowError(err)
 	masterServer.reset()
-	response, err := client.HTTPPost("/schedule/recover_server", string(reqBody))
+	response, err := client.HTTPPost(ctx, "/schedule/recover_server", string(reqBody))
 	errutil.ThrowError(err)
 	jsonMap, err := cbjson.ByteToJsonMap(response)
 	errutil.ThrowError(err)
