@@ -650,6 +650,10 @@ func (handler *DocumentHandler) handleDeleteByQuery(ctx context.Context, w http.
 		return ctx, false
 	}
 
+	if args.VecFields == nil && args.TermFilters == nil && args.RangeFilters == nil {
+		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", "vector is null or other query is null")
+		return ctx, false
+	}
 	serviceStart := time.Now()
 	delByQueryResp := handler.docService.deleteByQuery(ctx, args)
 	serviceEnd := time.Now()

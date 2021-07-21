@@ -1340,7 +1340,7 @@ func (r *routerRequest) LeaderFlushExecute(partition *entity.Partition, ctx cont
 }
 
 // DelByQueryeExecute Execute request
-func (r *routerRequest) DelByQueryeExecute() *vearchpb.DelByQueryeResponse {
+func (r *routerRequest) DelByQueryeExecute(deleteByScalar bool, idIsLong bool) *vearchpb.DelByQueryeResponse {
 	ctx := context.WithValue(r.ctx, share.ReqMetaDataKey, r.md)
 	var wg sync.WaitGroup
 	partitionLen := len(r.sendMap)
@@ -1372,10 +1372,38 @@ func (r *routerRequest) DelByQueryeExecute() *vearchpb.DelByQueryeResponse {
 	wg.Wait()
 	close(respChain)
 
-	var delNum int32
-	for resp := range respChain {
-		delNum = delNum + resp.DelByQueryResponse.DelNum
+	if deleteByScalar {
+		delByQueryResponse := &vearchpb.DelByQueryeResponse{}
+		if idIsLong {
+			for resp := range respChain {
+				respStr := string(resp.SearchResponse.FlatBytes)
+				jsonType := struct {
+					Array []int64
+				}{}
+				json.Unmarshal([]byte(respStr), &jsonType.Array)
+				if jsonType.Array != nil && len(jsonType.Array) > 0 {
+					delByQueryResponse.IdsLong = append(delByQueryResponse.IdsLong, jsonType.Array...)
+				}
+			}
+		} else {
+			for resp := range respChain {
+				respStr := string(resp.SearchResponse.FlatBytes)
+				jsonType := struct {
+					Array []string
+				}{}
+				json.Unmarshal([]byte(respStr), &jsonType.Array)
+				if jsonType.Array != nil && len(jsonType.Array) > 0 {
+					delByQueryResponse.IdsStr = append(delByQueryResponse.IdsStr, jsonType.Array...)
+				}
+			}
+		}
+		return delByQueryResponse
+	} else {
+		var delNum int32
+		for resp := range respChain {
+			delNum = delNum + resp.DelByQueryResponse.DelNum
+		}
+		delByQueryResponse := &vearchpb.DelByQueryeResponse{DelNum: delNum}
+		return delByQueryResponse
 	}
-	delByQueryResponse := &vearchpb.DelByQueryeResponse{DelNum: delNum}
-	return delByQueryResponse
 }
