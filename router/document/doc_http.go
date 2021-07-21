@@ -660,7 +660,12 @@ func (handler *DocumentHandler) handleDeleteByQuery(ctx context.Context, w http.
 	serviceCost := serviceEnd.Sub(serviceStart)
 
 	log.Debug("handleDeleteByQuery cost :%f", serviceCost)
+	shardsBytes, err := deleteByQueryResult(delByQueryResp)
+	if err != nil {
+		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error())
+		return ctx, true
+	}
 
-	resp.SendJson(ctx, w, delByQueryResp)
+	resp.SendJsonBytes(ctx, w, shardsBytes)
 	return ctx, true
 }

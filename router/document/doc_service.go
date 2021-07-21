@@ -265,12 +265,6 @@ func (docService *docService) deleteByQuery(ctx context.Context, args *vearchpb.
 	if delByQueryResponse == nil {
 		return &vearchpb.DelByQueryeResponse{Head: setErrHead(request.Err)}
 	}
-	if delByQueryResponse.Head == nil {
-		delByQueryResponse.Head = newOkHead()
-	}
-	if delByQueryResponse.Head.Err == nil {
-		delByQueryResponse.Head.Err = newOkHead().Err
-	}
 
 	return delByQueryResponse
 }

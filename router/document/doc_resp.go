@@ -664,3 +664,40 @@ func SearchNullToContent(searchStatus vearchpb.SearchStatus, took time.Duration)
 	return builder.Output()
 
 }
+
+func deleteByQueryResult(resp *vearchpb.DelByQueryeResponse) ([]byte, error) {
+	var builder = cbjson.ContentBuilderFactory()
+
+	builder.BeginObject()
+
+	builder.Field("code")
+	if resp.Head == nil || resp.Head.Err == nil {
+		builder.ValueNumeric(0)
+	} else {
+		builder.ValueNumeric(1)
+		if resp.Head != nil && resp.Head.Err != nil {
+			builder.More()
+			builder.Field("msg")
+			builder.ValueString(resp.Head.Err.Msg)
+		}
+	}
+
+	builder.More()
+
+	builder.Field("del_num")
+	builder.ValueNumeric(int64(resp.DelNum))
+
+	builder.More()
+	builder.Field("_id")
+	if resp.IdsStr != nil {
+		builder.ValueInterface(resp.IdsStr)
+	} else if resp.IdsLong != nil {
+		builder.ValueInterface(resp.IdsLong)
+	} else {
+		builder.ValueString("[]")
+	}
+
+	builder.EndObject()
+
+	return builder.Output()
+}

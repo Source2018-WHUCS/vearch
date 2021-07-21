@@ -460,22 +460,65 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 
 			if normalIsOrNot && len(normalField) > 0 {
 				vectorQueryArr := pd.SearchRequest.VecFields
+				proMap := space.SpaceProperties
 				for _, query := range vectorQueryArr {
-					float32s, _, err := cbbytes.ByteToVectorForFloat32(query.Value)
-					if err == nil {
-						if err := util.Normalization(float32s); err != nil {
-							panic(err.Error())
-						} else {
-							bs, err := cbbytes.VectorToByte(float32s, "")
-							if err != nil {
-								log.Error("processVector VectorToByte error: %v", err)
-								panic(err.Error())
-							} else {
-								query.Value = bs
+					docField := proMap[query.Name]
+					if docField != nil {
+						dimension := docField.Dimension
+						float32s, _, err := cbbytes.ByteToVectorForFloat32(query.Value)
+						if err == nil {
+							max := len(float32s)
+							dPage := max / dimension
+							if max >= dPage {
+								end := int(0)
+								normalVector := make([]float32, 0, max)
+								for i := 1; i <= dPage; i++ {
+									qu := i * dimension
+									if i != dPage {
+										norma := float32s[i-1+end : qu]
+										if err := util.Normalization(norma); err != nil {
+											panic(err.Error())
+										} else {
+											normalVector = append(normalVector, norma...)
+										}
+									} else {
+										norma := float32s[i-1+end:]
+										if err := util.Normalization(norma); err != nil {
+											panic(err.Error())
+										} else {
+											normalVector = append(normalVector, norma...)
+										}
+									}
+									end = qu - i
+								}
+								bs, err := cbbytes.VectorToByte(normalVector, "")
+								if err != nil {
+									log.Error("processVector VectorToByte error: %v", err)
+									panic(err.Error())
+								} else {
+									query.Value = bs
+								}
 							}
+						} else {
+							panic(err.Error())
 						}
 					} else {
-						panic(err.Error())
+						float32s, _, err := cbbytes.ByteToVectorForFloat32(query.Value)
+						if err == nil {
+							if err := util.Normalization(float32s); err != nil {
+								panic(err.Error())
+							} else {
+								bs, err := cbbytes.VectorToByte(float32s, "")
+								if err != nil {
+									log.Error("processVector VectorToByte error: %v", err)
+									panic(err.Error())
+								} else {
+									query.Value = bs
+								}
+							}
+						} else {
+							panic(err.Error())
+						}
 					}
 				}
 			}
@@ -1385,6 +1428,7 @@ func (r *routerRequest) DelByQueryeExecute(deleteByScalar bool, idIsLong bool) *
 					delByQueryResponse.IdsLong = append(delByQueryResponse.IdsLong, jsonType.Array...)
 				}
 			}
+			delByQueryResponse.DelNum = int32(len(delByQueryResponse.IdsLong))
 		} else {
 			for resp := range respChain {
 				respStr := string(resp.SearchResponse.FlatBytes)
@@ -1396,6 +1440,7 @@ func (r *routerRequest) DelByQueryeExecute(deleteByScalar bool, idIsLong bool) *
 					delByQueryResponse.IdsStr = append(delByQueryResponse.IdsStr, jsonType.Array...)
 				}
 			}
+			delByQueryResponse.DelNum = int32(len(delByQueryResponse.IdsStr))
 		}
 		return delByQueryResponse
 	} else {
