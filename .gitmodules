@@ -6,5 +6,5 @@
 	url = https://github.com/vearch/python-algorithm-plugin.git
 [submodule "engine"]
 	path = engine
-	url = https://coding.jd.com/wangxingda/gamma.git
-	branch = pic_copy
+	url = http://coding.jd.com/vearch/gamma.git
+	branch = master
