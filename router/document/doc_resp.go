@@ -21,6 +21,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cast"
@@ -366,14 +367,14 @@ func DocToContent(dh []*vearchpb.ResultItem, head *vearchpb.RequestHead, space *
 			builder.Field("_score")
 			builder.ValueFloat(float64(u.Score))
 
-			if u.Extra != "" && len(u.Extra) > 0 {
+			/*if u.Extra != "" && len(u.Extra) > 0 {
 				builder.More()
 				var extra map[string]interface{}
 				if err := json.Unmarshal([]byte(u.Extra), &extra); err == nil {
 					builder.Field("_extra")
 					builder.ValueInterface(extra)
 				}
-			}
+			}*/
 			if u.Source != nil {
 				var sourceJson json.RawMessage
 				if err := json.Unmarshal(u.Source, &sourceJson); err != nil {
@@ -405,17 +406,41 @@ func ToContents(srs []*vearchpb.SearchResult, head *vearchpb.RequestHead, took t
 	builder.Field("results")
 
 	builder.BeginArray()
-	for i, sr := range srs {
-		if bytes, err := ToContent(sr, head, took, space); err != nil {
-			return nil, err
-		} else {
-			builder.ValueRaw(string(bytes))
+	if srs != nil && len(srs) > 1 {
+		var wg sync.WaitGroup
+		respChain := make(chan []byte, len(srs))
+		for _, sr := range srs {
+			wg.Add(1)
+			go func(sr *vearchpb.SearchResult, head *vearchpb.RequestHead, took time.Duration, space *entity.Space) {
+				bytes, _ := ToContent(sr, head, took, space)
+				respChain <- bytes
+				wg.Done()
+			}(sr, head, took, space)
 		}
+		wg.Wait()
+		close(respChain)
+		i := 0
+		for resp := range respChain {
+			builder.ValueRaw(string(resp))
+			if i+1 < len(srs) {
+				builder.More()
+			}
+			i++
+		}
+	} else {
+		for i, sr := range srs {
+			if bytes, err := ToContent(sr, head, took, space); err != nil {
+				return nil, err
+			} else {
+				builder.ValueRaw(string(bytes))
+			}
 
-		if i+1 < len(srs) {
-			builder.More()
+			if i+1 < len(srs) {
+				builder.More()
+			}
 		}
 	}
+
 	builder.EndArray()
 
 	builder.EndObject()
@@ -700,4 +725,15 @@ func deleteByQueryResult(resp *vearchpb.DelByQueryeResponse) ([]byte, error) {
 	builder.EndObject()
 
 	return builder.Output()
+}
+
+func docPrintLogSwitchResponse(printLogSwitch bool) ([]byte, error) {
+	var builder = cbjson.ContentBuilderFactory()
+	builder.BeginObject()
+	builder.Field("print_log_switch")
+	builder.ValueBool(printLogSwitch)
+	builder.EndObject()
+
+	return builder.Output()
+
 }
