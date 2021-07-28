@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/vearch/vearch/util/cbbytes"
 
@@ -267,9 +268,19 @@ func update(ctx context.Context, store PartitionStore, items []*vearchpb.Item) {
 }
 
 func search(ctx context.Context, store PartitionStore, request *vearchpb.SearchRequest, response *vearchpb.SearchResponse) {
+	startTime := time.Now()
 	if err := store.Search(ctx, request, response); err != nil {
 		log.Error("search doc failed, err: [%s]", err.Error())
 		response.Head.Err = vearchpb.NewError(vearchpb.ErrorEnum_INTERNAL_ERROR, err).GetError()
+	}
+	handlerCostTime := (time.Now().Sub(startTime).Seconds()) * 1000
+	handlerCostTimeStr := strconv.FormatFloat(handlerCostTime, 'f', -1, 64)
+
+	if response.Head != nil && response.Head.Params != nil {
+		response.Head.Params["handlerCostTime"] = handlerCostTimeStr
+	} else {
+		costTimeMap := make(map[string]string)
+		costTimeMap["handlerCostTime"] = handlerCostTimeStr
 	}
 	defer func() {
 		if r := recover(); r != nil {
