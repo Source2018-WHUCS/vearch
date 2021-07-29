@@ -566,7 +566,7 @@ func GetVectorFieldValue(doc *vearchpb.Document, space *entity.Space) (floatFeat
 
 			} else {
 				float32s, s, err := cbbytes.ByteToVector(fv.Value)
-				log.Error("vector.Field.value len %d, source is [%s]", len(fv.Value), s)
+				//log.Error("vector.Field.value len %d, source is [%s]", len(fv.Value), s)
 				if err != nil {
 					return nil, nil, err
 				}

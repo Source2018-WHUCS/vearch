@@ -591,7 +591,7 @@ func (handler *DocumentHandler) handlerQueryDocByIdsFeature(ctx context.Context,
 	getDocStart := time.Now()
 	reply := handler.docService.getDocs(ctx, args)
 	getDocEnd := time.Now()
-	if reply.Items == nil || len(reply.Items) == 0 {
+	if reply == nil && reply.Items == nil || len(reply.Items) == 0 {
 		result, err := queryDocByIdsNoResult(getDocEnd.Sub(getDocStart))
 		if err != nil {
 			resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error())
