@@ -406,26 +406,37 @@ func ToContents(srs []*vearchpb.SearchResult, head *vearchpb.RequestHead, took t
 	builder.Field("results")
 
 	builder.BeginArray()
+
 	if srs != nil && len(srs) > 1 {
 		var wg sync.WaitGroup
-		respChain := make(chan []byte, len(srs))
-		for _, sr := range srs {
+		respChain := make(chan map[int][]byte, len(srs))
+		for i, sr := range srs {
 			wg.Add(1)
-			go func(sr *vearchpb.SearchResult, head *vearchpb.RequestHead, took time.Duration, space *entity.Space) {
-				bytes, _ := ToContent(sr, head, took, space)
-				respChain <- bytes
+			go func(sr *vearchpb.SearchResult, head *vearchpb.RequestHead, took time.Duration, space *entity.Space, index int) {
+				bytes, err := ToContent(sr, head, took, space)
+				if err == nil {
+					respMap := make(map[int][]byte)
+					respMap[index] = bytes
+					respChain <- respMap
+				}
 				wg.Done()
-			}(sr, head, took, space)
+			}(sr, head, took, space, i)
 		}
 		wg.Wait()
 		close(respChain)
-		i := 0
+
+		byteArr := make([][]byte, len(srs))
 		for resp := range respChain {
-			builder.ValueRaw(string(resp))
+			for index, value := range resp {
+				byteArr[index] = value
+			}
+		}
+
+		for i := 0; i < len(srs); i++ {
+			builder.ValueRaw(string(byteArr[i]))
 			if i+1 < len(srs) {
 				builder.More()
 			}
-			i++
 		}
 	} else {
 		for i, sr := range srs {

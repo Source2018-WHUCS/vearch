@@ -103,6 +103,7 @@ func parseJSON(path []string, v *fastjson.Value, space *entity.Space, proMap map
 	haveNoField := false
 	errorField := ""
 	haveVector := false
+	parseErr := fmt.Errorf("")
 	obj.Visit(func(key []byte, val *fastjson.Value) {
 		fieldName := string(key)
 		pro, ok := proMap[fieldName]
@@ -125,6 +126,7 @@ func parseJSON(path []string, v *fastjson.Value, space *entity.Space, proMap map
 				field, err := processProperty(docV, val, space.Engine.RetrievalType, pro)
 				if err != nil {
 					log.Error("processProperty unrecognizable field:[%s] value %v", fieldName, err)
+					parseErr = err
 					return
 				}
 				if field != nil && field.Type == vearchpb.FieldType_VECTOR && field.Value != nil {
@@ -138,6 +140,10 @@ func parseJSON(path []string, v *fastjson.Value, space *entity.Space, proMap map
 			log.Error("unrecognizable field:[%s] value %s", fieldName, v.String())
 		}
 	})
+
+	if parseErr.Error() != "" {
+		return nil, fmt.Errorf("param parse error msg:[%s]", parseErr.Error())
+	}
 
 	if haveNoField {
 		return nil, fmt.Errorf("param have error field [%s]", errorField)
@@ -670,6 +676,7 @@ func processVector(pro *entity.SpaceProperties, fieldName string, val []float32,
 	case entity.FieldType_VECTOR:
 		if pro.Dimension > 0 && pro.Dimension != len(val) {
 			field, err = nil, fmt.Errorf("field:[%s] vector_length err ,schema is:[%d] but input :[%d]", fieldName, pro.Dimension, len(val))
+			return field, err
 		}
 
 		bs, err := cbbytes.VectorToByte(val, source)
