@@ -56,6 +56,7 @@ const (
 	psTag     = "ps"
 	masterTag = "master"
 	routerTag = "router"
+	msRouterTag = "msRouter"
 	allTag    = "all"
 )
 
@@ -81,7 +82,7 @@ func main() {
 		args = []string{allTag}
 	}
 
-	tags := map[string]bool{allTag: false, psTag: false, routerTag: false, masterTag: false}
+	tags := map[string]bool{allTag: false, psTag: false, routerTag: false, masterTag: false , msRouterTag: false}
 
 	for _, a := range args {
 		if _, ok := tags[a]; !ok {
@@ -122,7 +123,7 @@ func main() {
 	paths[config.Conf().GetLogDir()] = true
 	var models []string
 	//start master
-	if tags[masterTag] || tags[allTag] {
+	if tags[masterTag] || tags[allTag] || tags[msRouterTag] {
 
 		if err := config.Conf().CurrentByMasterNameDomainIp(masterName); err != nil {
 			panic(err)
@@ -189,7 +190,7 @@ func main() {
 	}
 
 	//start router
-	if tags[routerTag] || tags[allTag] {
+	if tags[routerTag] || tags[allTag] || tags[msRouterTag] {
 		if err := config.Conf().Validate(config.Router); err != nil {
 			panic(err)
 		}
