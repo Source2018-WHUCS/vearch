@@ -1,9 +1,9 @@
 [submodule "python"]
 	path = python
-	url = https://github.com/vearch/vearch-python.git
+	url = https://github.com/vearch/vearch-python
 [submodule "plugin"]
 	path = plugin
-	url = https://github.com/vearch/python-algorithm-plugin.git
+	url = https://github.com/vearch/python-algorithm-plugin
 [submodule "engine"]
 	path = engine
 	url = http://coding.jd.com/vearch/gamma.git

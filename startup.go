@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cast"
+	"github.com/vearch/vearch/util/tracer"
 	"github.com/vearch/vearch/util/vearchlog"
 
 	"github.com/vearch/vearch/util/metrics/mserver"
@@ -56,7 +57,6 @@ const (
 	psTag     = "ps"
 	masterTag = "master"
 	routerTag = "router"
-	msRouterTag = "msRouter"
 	allTag    = "all"
 )
 
@@ -75,14 +75,16 @@ func main() {
 	log.Info("The Config File Is: %v", confPath)
 
 	config.InitConfig(confPath)
-
+	if config.Conf().TracerCfg != nil {
+		closer := tracer.InitJaeger(config.Conf().Global.Name, config.Conf().TracerCfg)
+		defer closer.Close()
+	}
 	args := flag.Args()
-
 	if len(args) == 0 {
 		args = []string{allTag}
 	}
 
-	tags := map[string]bool{allTag: false, psTag: false, routerTag: false, masterTag: false , msRouterTag: false}
+	tags := map[string]bool{allTag: false, psTag: false, routerTag: false, masterTag: false}
 
 	for _, a := range args {
 		if _, ok := tags[a]; !ok {
@@ -123,7 +125,7 @@ func main() {
 	paths[config.Conf().GetLogDir()] = true
 	var models []string
 	//start master
-	if tags[masterTag] || tags[allTag] || tags[msRouterTag] {
+	if tags[masterTag] || tags[allTag] {
 
 		if err := config.Conf().CurrentByMasterNameDomainIp(masterName); err != nil {
 			panic(err)
@@ -190,7 +192,7 @@ func main() {
 	}
 
 	//start router
-	if tags[routerTag] || tags[allTag] || tags[msRouterTag] {
+	if tags[routerTag] || tags[allTag] {
 		if err := config.Conf().Validate(config.Router); err != nil {
 			panic(err)
 		}
