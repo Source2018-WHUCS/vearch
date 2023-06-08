@@ -13,7 +13,7 @@ ROCKSDB_URL=https://github.com/facebook/rocksdb/archive/v6.2.2.tar.gz
 # version value
 BUILD_VERSION="latest"
 COMPILE_THREAD_TAG=-j2
-BUILD_GAMMA_TEST=OFF
+BUILD_GAMMA_TEST=ON
 
 use_zfp="y"
 use_rocksdb="y"
