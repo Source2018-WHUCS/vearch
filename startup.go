@@ -22,22 +22,19 @@ import (
 	"os"
 	"runtime"
 	"strings"
-
-	"github.com/spf13/cast"
-	"github.com/vearch/vearch/util/tracer"
-	"github.com/vearch/vearch/util/vearchlog"
-
-	"github.com/vearch/vearch/util/metrics/mserver"
-
 	"time"
 
+	"github.com/spf13/cast"
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/master"
 	"github.com/vearch/vearch/ps"
 	"github.com/vearch/vearch/router"
 	"github.com/vearch/vearch/util/log"
+	"github.com/vearch/vearch/util/metrics/mserver"
 	tigos "github.com/vearch/vearch/util/runtime/os"
 	"github.com/vearch/vearch/util/signals"
+	"github.com/vearch/vearch/util/tracer"
+	"github.com/vearch/vearch/util/vearchlog"
 )
 
 var (
@@ -54,10 +51,11 @@ func init() {
 }
 
 const (
-	psTag     = "ps"
-	masterTag = "master"
-	routerTag = "router"
-	allTag    = "all"
+	psTag               = "ps"
+	masterTag           = "master"
+	routerTag           = "router"
+	allTag              = "all"
+	DefaultResourceName = "default"
 )
 
 func main() {
@@ -75,6 +73,11 @@ func main() {
 	log.Info("The Config File Is: %v", confPath)
 
 	config.InitConfig(confPath)
+
+	if config.Conf().Global.ResourceName == "" {
+		config.Conf().Global.ResourceName = DefaultResourceName
+	}
+
 	if config.Conf().TracerCfg != nil {
 		closer := tracer.InitJaeger(config.Conf().Global.Name, config.Conf().TracerCfg)
 		defer closer.Close()

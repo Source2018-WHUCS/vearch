@@ -1,9 +1,0 @@
-# Binaries for programs and plugins
-*.swp
-__pycache__/
-
-
-#skip some test file
-model/
-src/log/
-

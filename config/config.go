@@ -158,13 +158,13 @@ type Base struct {
 type GlobalCfg struct {
 	Base
 	Name            string `toml:"name,omitempty" json:"name"`
+	ResourceName    string `toml:"resource_name,omitempty" json:"resource_name"`
 	Signkey         string `toml:"signkey,omitempty" json:"signkey"`
 	SkipAuth        bool   `toml:"skip_auth,omitempty" json:"skip_auth"`
 	SelfManageEtcd  bool   `toml:"self_manage_etcd,omitempty" json:"self_manage_etcd"`
 	AutoRecoverPs   bool   `toml:"auto_recover_ps,omitempty" json:"auto_recover_ps"`
 	SupportEtcdAuth bool   `toml:"support_etcd_auth,omitempty" json:"support_etcd_auth"`
 	RaftConsistent  bool   `toml:"raft_consistent,omitempty" json:"raft_consistent"`
-	MergeRouter     bool   `toml:"master_merge_into_router,omitempty" json:"master_merge_into_router"`
 }
 
 type EtcdCfg struct {
@@ -285,7 +285,7 @@ type RouterCfg struct {
 	CloseTimeout  int64    `toml:"close_timeout" json:"close_timeout"`
 	RouterIPS     []string `toml:"router_ips" json:"router_ips"`
 	ConcurrentNum int      `toml:"concurrent_num" json:"concurrent_num"`
-	RpcTimeOut    int      `toml:"rpc_timeout" json:"rpc_timeout"`  //ms
+	RpcTimeOut    int      `toml:"rpc_timeout" json:"rpc_timeout"` //ms
 }
 
 func (routerCfg *RouterCfg) ApiUrl(keyNumber int) string {

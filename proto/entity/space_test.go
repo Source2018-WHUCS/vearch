@@ -16,27 +16,11 @@ package entity_test
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/util/assert"
-	"testing"
 )
-
-func TestSpace(t *testing.T) {
-	str := `{"dynamic_schema": true}`
-	space := &entity.Space{}
-	if err := json.Unmarshal([]byte(str), &space); err != nil {
-		t.Errorf(err.Error())
-	}
-
-	assert.Equal(t, space.DynamicSchema, entity.DynamicType("true"), "unmarshal bool to string err")
-
-	str = `{"dynamic_schema": "false"}`
-	if err := json.Unmarshal([]byte(str), &space); err != nil {
-		t.Errorf(err.Error())
-	}
-	assert.Equal(t, space.DynamicSchema, entity.DynamicType("false"), "unmarshal string to bool err")
-
-}
 
 func TestSpaceString(t *testing.T) {
 	space := &entity.Space{}

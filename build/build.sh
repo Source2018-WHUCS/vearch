@@ -11,7 +11,7 @@ ZFP_URL=https://github.com/LLNL/zfp/archive/0.5.5.tar.gz
 ROCKSDB_URL=https://github.com/facebook/rocksdb/archive/v6.2.2.tar.gz
 
 # version value
-BUILD_VERSION="3.2.7"
+BUILD_VERSION="latest"
 
 use_zfp="y"
 use_rocksdb="y"
@@ -28,7 +28,7 @@ do
 done
 
 if [ $use_zfp == "y" ] && [ ! -n "${ZFP_HOME}" ]; then
-  export ZFP_HOME=/usr/local/include/
+  export ZFP_HOME=/usr/local/include/zfp
   if [ ! -d $ZFP_HOME ]; then
     rm -rf zfp*
     wget ${ZFP_URL} -O zfp.tar.gz
@@ -54,49 +54,27 @@ else
       wget  ${ROCKSDB_URL} -O rocksdb.tar.gz
       tar -xzf rocksdb.tar.gz
       pushd rocksdb-6.2.2
-      CFLAGS="-O3 -fPIC" make shared_lib -j
+      CFLAGS="-O3 -fPIC" make shared_lib -j2
       make install
       popd
     fi
   fi
 fi
 
-flags="-X 'main.BuildVersion=$BUILD_VERSION' -X 'main.CommitID=$(git rev-parse HEAD)' -X 'main.BuildTime=$(date +"%Y-%m-%d %H:%M.%S")'"
-
-echo "version info: $flags"
-
 echo "build gamma"
 pushd $GAMMAOUT
 cmake -DPERFORMANCE_TESTING=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$ROOT/ps/engine/gammacb/lib $ROOT/engine/
-make -j && make install
+make -j2 && make install
 popd
-flatbuffers=$ROOT/ps/engine/third_party/flatbuffers-1.11.0
-if [ -d ${flatbuffers} ]; then
-  rm -rf ${flatbuffers}
-fi
 
+cp $ROOT/engine/third_party/faiss/lib*/* $ROOT/ps/engine/gammacb/lib/lib/
+
+flags="-X 'main.BuildVersion=$BUILD_VERSION' -X 'main.CommitID=$(git rev-parse HEAD)' -X 'main.BuildTime=$(date +"%Y-%m-%d %H:%M.%S")'"
+echo "version info: $flags"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOT/ps/engine/gammacb/lib/lib/
 export LIBRARY_PATH=$LIBRARY_PATH:$ROOT/ps/engine/gammacb/lib/lib/
 
-function build_vearch(){
-  echo "build vearch"
-  if [ $1 == 'mod' ];then
-    echo "build vearch by mod"
-    export GO111MODULE="on"
-    go build -mod=mod -a -tags="vector" -ldflags "$flags" -o $BUILDOUT/vearch $ROOT/startup.go
-    echo "build deploy tool by mod"
-    go build -mod=mod -a -ldflags "$flags" -o $BUILDOUT/batch_deployment $ROOT/tools/deployment/batch_deployment.go
-  else 
-    echo "build vearch by vendor"
-    export GO111MODULE="off"
-    go build -a -tags="vector" -ldflags "$flags" -o $BUILDOUT/vearch $ROOT/startup.go
-    echo "build deploy tool by vendor"
-    go build -a -ldflags "$flags" -o $BUILDOUT/batch_deployment $ROOT/tools/deployment/batch_deployment.go
-  fi
-}
-
-if [ $# == 1 ];then
-  build_vearch 'mod'
-else
-  build_vearch 'vendor'
-fi
+echo "build vearch"
+go build -a -tags="vector" -ldflags "$flags" -o $BUILDOUT/vearch $ROOT/startup.go
+echo "build deploy tool"
+go build -a -ldflags "$flags" -o $BUILDOUT/batch_deployment $ROOT/tools/deployment/batch_deployment.go

@@ -26,6 +26,9 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/cast"
+	"github.com/tiglabs/raft/proto"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/monitor"
@@ -38,31 +41,29 @@ import (
 	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/util/netutil"
 	"github.com/vearch/vearch/util/server/vearchhttp"
-
-	"github.com/gin-gonic/gin"
-	"github.com/spf13/cast"
-	"github.com/tiglabs/raft/proto"
 )
 
 const (
-	DB            = "db"
-	dbName        = "db_name"
-	spaceName     = "space_name"
-	headerAuthKey = "Authorization"
-	NodeID        = "node_id"
+	DB                  = "db"
+	dbName              = "db_name"
+	spaceName           = "space_name"
+	headerAuthKey       = "Authorization"
+	NodeID              = "node_id"
+	DefaultResourceName = "default"
 )
 
 type clusterAPI struct {
 	router        *gin.Engine
 	masterService *masterService
 	dh            *vearchhttp.BaseHandler
+	server        *Server
 }
 
-func ExportToClusterHandler(router *gin.Engine, masterService *masterService) {
+func ExportToClusterHandler(router *gin.Engine, masterService *masterService, server *Server) {
 
 	dh := vearchhttp.NewBaseHandler(30)
 
-	c := &clusterAPI{router: router, masterService: masterService, dh: dh}
+	c := &clusterAPI{router: router, masterService: masterService, dh: dh, server: server}
 
 	router.Handle(http.MethodGet, "/", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.handleClusterInfo, dh.TimeOutEndHandler)
 
@@ -105,6 +106,7 @@ func ExportToClusterHandler(router *gin.Engine, masterService *masterService) {
 	router.Handle(http.MethodPost, "/schedule/change_replicas", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.ChangeReplicas, dh.TimeOutEndHandler)
 	router.Handle(http.MethodGet, "/schedule/fail_server/list", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.FailServerList, dh.TimeOutEndHandler)
 	router.Handle(http.MethodDelete, "/schedule/fail_server/:"+NodeID, dh.PaincHandler, dh.TimeOutHandler, c.auth, c.FailServerClear, dh.TimeOutEndHandler)
+	router.Handle(http.MethodGet, "/schedule/clean_task", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.CleanTask, dh.TimeOutEndHandler)
 
 	//remove server metadata
 	router.Handle(http.MethodPost, "/meta/remove_server", dh.PaincHandler, dh.TimeOutHandler, c.auth, c.RemoveServerMeta, dh.TimeOutEndHandler)
@@ -279,6 +281,11 @@ func (ca *clusterAPI) createSpace(c *gin.Context) {
 		return
 	}
 
+	// set default resource name
+	if space.ResourceName == "" {
+		space.ResourceName = DefaultResourceName
+	}
+
 	if space.PartitionNum <= 0 {
 		space.PartitionNum = 1
 	}
@@ -293,7 +300,7 @@ func (ca *clusterAPI) createSpace(c *gin.Context) {
 		space.Engine = entity.NewDefaultEngine()
 	}
 
-	//check engine name and DynamicSchema is ok
+	//check engine name is ok
 	if err := space.Validate(); err != nil {
 		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
 		return
@@ -539,6 +546,12 @@ func (cluster *clusterAPI) FailServerClear(c *gin.Context) {
 		return
 	}
 	ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(map[string]interface{}{"nodeID": nodeID})
+}
+
+//clear task
+func (cluster *clusterAPI) CleanTask(c *gin.Context) {
+	CleanTask(cluster.server)
+	ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess("clean task success!")
 }
 
 // remove etcd meta about the nodeID

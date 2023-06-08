@@ -19,24 +19,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/vearch/vearch/config"
-	"github.com/vearch/vearch/util/errutil"
-	"github.com/vearch/vearch/util/slice"
 	"math"
 	"sort"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/cast"
 	"github.com/tiglabs/raft/proto"
+	"github.com/vearch/vearch/client"
+	"github.com/vearch/vearch/config"
+	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/vearchpb"
 	"github.com/vearch/vearch/ps/engine/mapping"
-	"github.com/vearch/vearch/util/cbjson"
-
-	"github.com/spf13/cast"
-	"github.com/vearch/vearch/client"
-	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/util"
+	"github.com/vearch/vearch/util/cbjson"
+	"github.com/vearch/vearch/util/errutil"
 	"github.com/vearch/vearch/util/log"
+	"github.com/vearch/vearch/util/slice"
 	"go.etcd.io/etcd/clientv3/concurrency"
 )
 
@@ -334,7 +333,8 @@ func (ms *masterService) createSpaceService(ctx context.Context, dbName string, 
 	}
 
 	if int(space.ReplicaNum) > len(serverPartitions) {
-		return fmt.Errorf("not enough PS , need replica %d but only has %d", int(space.ReplicaNum), len(servers))
+		return fmt.Errorf("not enough PS , need replica %d but only has %d",
+			int(space.ReplicaNum), len(serverPartitions))
 	}
 
 	space.Enabled = util.PBool(false)
@@ -505,6 +505,10 @@ func (ms *masterService) filterAndSortServer(ctx context.Context, space *entity.
 
 	if psMap == nil { //means only use public
 		for i, s := range servers {
+			// only resourceName equal can use
+			if s.ResourceName != space.ResourceName {
+				continue
+			}
 			if !s.Private {
 				serverPartitions[i] = 0
 				serverIndex[s.ID] = i
@@ -512,6 +516,11 @@ func (ms *masterService) filterAndSortServer(ctx context.Context, space *entity.
 		}
 	} else { // only use define
 		for i, s := range servers {
+			// only resourceName equal can use
+			if s.ResourceName != space.ResourceName {
+				psMap[s.Ip] = false
+				continue
+			}
 			if psMap[s.Ip] {
 				serverPartitions[i] = 0
 				serverIndex[s.ID] = i
