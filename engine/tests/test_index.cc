@@ -61,8 +61,7 @@ char **GammaTest::my_argv = nullptr;
 
 TEST_F(GammaTest, SSG) {
   struct Options opt;
-  opt.profile_file = my_argv[1];
-  opt.feature_file = my_argv[2];
+  opt.set_file(my_argv, my_argc);
   opt.retrieval_type = "SSG";
   opt.store_type = "MemoryOnly";
   opt.add_doc_num = 20000;
@@ -75,8 +74,7 @@ TEST_F(GammaTest, SSG) {
 
 TEST_F(GammaTest, IVFPQFastScan) {
   struct Options opt;
-  opt.profile_file = my_argv[1];
-  opt.feature_file = my_argv[2];
+  opt.set_file(my_argv, my_argc);
   opt.retrieval_type = "IVFPQFastScan";
   opt.store_type = "Mmap";
   opt.retrieval_param = kIVFPQParam;
@@ -87,8 +85,7 @@ TEST_F(GammaTest, IVFPQFastScan) {
 
 TEST_F(GammaTest, IVFPQFastScan_MemoryOnly) {
   struct Options opt;
-  opt.profile_file = my_argv[1];
-  opt.feature_file = my_argv[2];
+  opt.set_file(my_argv, my_argc);
   opt.retrieval_type = "IVFPQFastScan";
   opt.store_type = "MemoryOnly";
   opt.retrieval_param = kIVFPQParam;
@@ -99,8 +96,7 @@ TEST_F(GammaTest, IVFPQFastScan_MemoryOnly) {
 
 TEST_F(GammaTest, IVFPQFastScan_ROCKSDB) {
   struct Options opt;
-  opt.profile_file = my_argv[1];
-  opt.feature_file = my_argv[2];
+  opt.set_file(my_argv, my_argc);
   opt.retrieval_type = "IVFPQFastScan";
   opt.store_type = "RocksDB";
   opt.retrieval_param = kIVFPQParam;
@@ -112,8 +108,7 @@ TEST_F(GammaTest, IVFPQFastScan_ROCKSDB) {
 #ifdef OPT_IVFPQ_RELAYOUT
 TEST_F(GammaTest, RELAYOUT) {
   struct Options opt;
-  opt.profile_file = my_argv[1];
-  opt.feature_file = my_argv[2];
+  opt.set_file(my_argv, my_argc);
   opt.retrieval_type = "IVFPQ_RELAYOUT";
   opt.retrieval_param = kIVFPQParam;
   opt.store_type = "Mmap";
@@ -124,8 +119,7 @@ TEST_F(GammaTest, RELAYOUT) {
 
 TEST_F(GammaTest, RELAYOUT_MEMORYONLY) {
   struct Options opt;
-  opt.profile_file = my_argv[1];
-  opt.feature_file = my_argv[2];
+  opt.set_file(my_argv, my_argc);
   opt.retrieval_type = "IVFPQ_RELAYOUT";
   opt.retrieval_param = kIVFPQParam;
   opt.store_type = "MemoryOnly";
@@ -136,8 +130,7 @@ TEST_F(GammaTest, RELAYOUT_MEMORYONLY) {
 
 TEST_F(GammaTest, RELAYOUT_ROCKSDB) {
   struct Options opt;
-  opt.profile_file = my_argv[1];
-  opt.feature_file = my_argv[2];
+  opt.set_file(my_argv, my_argc);
   opt.retrieval_type = "IVFPQ_RELAYOUT";
   opt.store_type = "RocksDB";
   opt.retrieval_param = kIVFPQParam;
@@ -148,8 +141,7 @@ TEST_F(GammaTest, RELAYOUT_ROCKSDB) {
 
 TEST_F(GammaTest, x86IVFFLAT) {
   struct Options opt;
-  opt.profile_file = my_argv[1];
-  opt.feature_file = my_argv[2];
+  opt.set_file(my_argv, my_argc);
   opt.retrieval_type = "x86IVFFLAT";
   opt.store_type = "RocksDB";
   opt.retrieval_param = kIVFPQOPQParam;
@@ -165,8 +157,9 @@ TEST_F(GammaTest, x86IVFFLAT) {
 int main(int argc, char **argv) {
   setvbuf(stdout, (char *)NULL, _IONBF, 0);
   ::testing::InitGoogleTest(&argc, argv);
-  if (argc != 3) {
+  if (argc != 3 && argc != 4) {
     std::cout << "Usage: [Program] [profile_file] [vectors_file]\n";
+    std::cout << "Usage: [Program] [profile_file] [vectors_file] [raw_data_type]\n";
     return 1;
   }
   ::testing::GTEST_FLAG(output) = "xml";

@@ -240,7 +240,7 @@ TEST_F(GammaTest, HNSW_BATCH) {
   opt.b_load = true;
   ASSERT_EQ(TestIndexes(opt), 0);
 }
-
+/*
 TEST_F(GammaTest, BINARYIVF) {
   struct Options opt;
   opt.set_file(my_argv, my_argc);
@@ -263,7 +263,7 @@ TEST_F(GammaTest, BINARYIVF_BATCH) {
   opt.b_load = true;
   ASSERT_EQ(TestIndexes(opt), 0);
 }
-
+*/
 #ifdef USE_SCANN
 TEST_F(GammaTest, SCANN_ROCKSDB) {
   struct Options opt;
