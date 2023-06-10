@@ -12,8 +12,6 @@ ROCKSDB_URL=https://github.com/facebook/rocksdb/archive/v6.2.2.tar.gz
 
 # version value
 BUILD_VERSION="latest"
-COMPILE_THREAD_TAG=-j2
-BUILD_GAMMA_TEST=ON
 
 use_zfp="y"
 use_rocksdb="y"
@@ -56,7 +54,7 @@ else
       wget  ${ROCKSDB_URL} -O rocksdb.tar.gz
       tar -xzf rocksdb.tar.gz
       pushd rocksdb-6.2.2
-      CFLAGS="-O3 -fPIC" make shared_lib $COMPILE_THREAD_TAG
+      CFLAGS="-O3 -fPIC" make shared_lib -j2
       make install
       popd
     fi
@@ -65,8 +63,8 @@ fi
 
 echo "build gamma"
 pushd $GAMMAOUT
-cmake -DPERFORMANCE_TESTING=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=$BUILD_GAMMA_TEST -DCMAKE_INSTALL_PREFIX=$ROOT/ps/engine/gammacb/lib $ROOT/engine/
-make $COMPILE_THREAD_TAG && make install
+cmake -DPERFORMANCE_TESTING=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$ROOT/ps/engine/gammacb/lib $ROOT/engine/
+make -j2 && make install
 popd
 
 cp $ROOT/engine/third_party/faiss/lib*/* $ROOT/ps/engine/gammacb/lib/lib/
