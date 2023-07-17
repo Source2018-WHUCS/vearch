@@ -550,8 +550,14 @@ func (r *routerRequest) searchFromPartition(ctx context.Context, partitionID ent
 		if err == nil {
 			break
 		}
-		r.client.PS().AddFaulty(nodeID)
-		nodeID = GetNodeIdsByClientType(clientType, partition, servers)
+
+		if strings.Contains(err.Error(), "connect: connection refused") {
+			r.client.PS().AddFaulty(nodeID)
+			nodeID = GetNodeIdsByClientType(clientType, partition, servers)
+		} else {
+			log.Error("rpc err [%v], nodeID %v", err, nodeID)
+			break
+		}
 	}
 
 	sortFieldMap := pd.SearchRequest.SortFieldMap
@@ -1258,14 +1264,14 @@ func MergeArrForField(dest []*vearchpb.SearchResult, src []*vearchpb.SearchResul
 		for index := range dest {
 			err := MergeForField(dest[index], src[index], firstSortValue, so, 0, size)
 			if err != nil {
-				return fmt.Errorf("merge err [%s]")
+				return fmt.Errorf("merge err [%v]", err)
 			}
 		}
 	} else {
 		for index := range src {
 			err := MergeForField(dest[index], src[0], firstSortValue, so, 0, size)
 			if err != nil {
-				return fmt.Errorf("merge err [%s]")
+				return fmt.Errorf("merge err [%v]", err)
 			}
 		}
 	}
@@ -1288,14 +1294,14 @@ func BulkMergeArrForField(dest []*vearchpb.SearchResult, src []*vearchpb.SearchR
 		for index := range dest {
 			err := MergeForField(dest[index], src[index], firstSortValue, soArr[index], 0, sizes[index])
 			if err != nil {
-				return fmt.Errorf("merge err [%s]")
+				return fmt.Errorf("merge err [%v]", err)
 			}
 		}
 	} else {
 		for index := range src {
 			err := MergeForField(dest[index], src[0], firstSortValue, soArr[0], 0, sizes[index])
 			if err != nil {
-				return fmt.Errorf("merge err [%s]")
+				return fmt.Errorf("merge err [%v]", err)
 			}
 		}
 	}
@@ -1407,14 +1413,14 @@ func AddMergeResultArr(dest []*vearchpb.SearchResult, src []*vearchpb.SearchResu
 		for index := range dest {
 			err := AddMerge(dest[index], src[index])
 			if err != nil {
-				return fmt.Errorf("merge err [%s]")
+				return fmt.Errorf("merge err [%v]", err)
 			}
 		}
 	} else {
 		for index := range src {
 			err := AddMerge(dest[index], src[0])
 			if err != nil {
-				return fmt.Errorf("merge err [%s]")
+				return fmt.Errorf("merge err [%v]", err)
 			}
 		}
 	}
