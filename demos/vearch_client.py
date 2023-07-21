@@ -434,7 +434,7 @@ if __name__ == '__main__':
         print("\tOption of more will show more usage for vearch")
         exit(0)
     if sys.argv[1] != "simple" and sys.argv[1] != "more":
-        print("Usage: python %s [simple|more]" % (sys.argv[0]))
+        print("Usage: python %s [simple|more] [master_url] [router_url]" % (sys.argv[0]))
         exit(-1)
     usage_type = sys.argv[1]
     master_url = sys.argv[2]
