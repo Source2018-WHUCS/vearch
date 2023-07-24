@@ -49,7 +49,7 @@ done
 while [ -z $use_rocksdb ] || ([ $use_rocksdb != "y" ] && [ $use_rocksdb != "n" ])
 do
   echo "Do you use rocksdb?[y/n]."
-  read  use_rocksdb
+  read use_rocksdb
 done
 
 if [ $use_zfp == "y" ] && [ ! -n "${ZFP_HOME}" ]; then
