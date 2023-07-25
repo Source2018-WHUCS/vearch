@@ -19,6 +19,7 @@ test/.pytest_cache/
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+engine/build/
 build/bin/
 build/lib/
 build/run.sh
