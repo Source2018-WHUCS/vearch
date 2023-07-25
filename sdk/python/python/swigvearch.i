@@ -1,8 +1,8 @@
 %module swigvearch
 
 #define VEARCH_VERSION_MAJOR 3
-#define VEARCH_VERSION_MINOR 2
-#define VEARCH_VERSION_PATCH 8
+#define VEARCH_VERSION_MINOR 3
+#define VEARCH_VERSION_PATCH 0
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -35,16 +35,6 @@ typedef int64_t size_t;
 #include "c_api/api_data/gamma_batch_result.h"
 #include "common/common_query_data.h"
 %}
-
-%include "c_api/api_data/gamma_raw_data.h"
-%include "common/common_query_data.h"
-%include "c_api/api_data/gamma_request.h"
-%include "c_api/api_data/gamma_response.h"
-%include "c_api/api_data/gamma_table.h"
-%include "c_api/api_data/gamma_doc.h"
-%include "c_api/api_data/gamma_docs.h"
-%include "c_api/api_data/gamma_batch_result.h"
-%include "c_api/api_data/gamma_cpp_api.h"
 
 %inline%{
     void *swigInitEngine(unsigned char *pConfig, int len){
@@ -283,10 +273,10 @@ typedef int64_t size_t;
         return CPPAddOrUpdateDocs(engine, docs, results);
     }
 
-    int swigDelDocByQuery(void* engine, unsigned char *pRequest, int len){
-        char* request_str = (char*)pRequest;
-        return DelDocByQuery(engine, request_str, len);
-    }
+    // int swigDelDocByQuery(void* engine, unsigned char *pRequest, int len){
+    //     char* request_str = (char*)pRequest;
+    //     return DelDocByQuery(engine, request_str, len);
+    // }
     
     unsigned char* swigGetVectorPtr(std::vector<unsigned char> &v){
         return v.data();

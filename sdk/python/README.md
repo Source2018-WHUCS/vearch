@@ -21,7 +21,7 @@ for the best performance.
 
 ### Prerequisite
 
-You can build it with docker image: pypywheels/manylinux2010-pypy_x86_64:latest
+You can build it with docker image: docker.io/dockcross/manylinux2014-x64:latest
 
 auditwheel tool should be installed firstly. You can install it by pip.
 
@@ -32,10 +32,8 @@ on how to build and install gamma. In particular, compiling wheel packages
 requires additional compilation options in compiling gamma.
 
 ```bash
-git clone https://github.com/vearch/vearch-python.git
-git submodule init
-git submodule update
-cd gamma
+git clone https://github.com/vearch/vearch.git
+cd vearch/engine
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release -DPERFORMANCE_TESTING=ON ..
 make

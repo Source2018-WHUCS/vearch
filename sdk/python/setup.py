@@ -68,8 +68,8 @@ _swigvearch = Extension(
     define_macros=[('FINTEGER', 'int')],
     language='c++',
     include_dirs=[
-        os.getenv('GAMMA_INCLUDE', abspath + '/gamma/'),
-        os.getenv('GAMMA_INCLUDE', abspath + '/gamma/') + '/third_party',
+        os.getenv('GAMMA_INCLUDE', abspath + '../../engine/'),
+        os.getenv('GAMMA_INCLUDE', abspath + '../../engine/') + '/third_party',
     ],
     extra_compile_args=[
         '-std=c++11', '-mavx2', '-mf16c', '-msse4', '-mpopcnt', '-m64',
@@ -78,18 +78,18 @@ _swigvearch = Extension(
     extra_link_args=(['-Xpreprocessor', '-fopenmp', '-lomp','-mlinker-version=450'] if 'darwin' == sys.platform else ['-fopenmp']),
     swig_opts=[
         '-c++', '-Doverride=', 
-        '-I' + os.getenv('GAMMA_INCLUDE', abspath + '/gamma/'),
-        '-I' + os.getenv('GAMMA_INCLUDE', abspath + '/gamma/') + '/third_party',
+        '-I' + os.getenv('GAMMA_INCLUDE', abspath + '../../engine/'),
+        '-I' + os.getenv('GAMMA_INCLUDE', abspath + '../../engine/') + '/third_party',
     ] + ([] if 'macos' in get_platform() else ['-DSWIGWORDSIZE64'])
 )
 
 setup(
     name='vearch',
-    version='3.2.8',
+    version='3.3.0',
     description='A library for efficient similarity search and storage of deep learning vectors.',
     long_description=long_description,
     url='https://github.com/vearch/vearch',
-    author='Jie Li,Chuanghua Gui,Xingda Wang,Chao Zhan,Zhenyun Ni,Qiang Liu,Pengfei Yin,Sen Gao,Yande Guo',
+    author='vearch author',
     author_email='vearch-maintainers@groups.io',
     license='Apache License, Version 2.0',
     keywords='real time index, vector nearest neighbors',

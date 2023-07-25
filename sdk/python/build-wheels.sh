@@ -1,13 +1,13 @@
 #!/bin/bash
 
-ROOT_PATH=`pwd`
-BASE_PATH=$ROOT_PATH"/gamma"
+ROOT_PATH=`pwd`/../..
+BASE_PATH=$ROOT_PATH"/engine"
 OS=`uname -s`
 cp -r $BASE_PATH/idl/fbs-gen/python/* ./python
 
 if [ ${OS} == "Darwin" ];then
     export GAMMA_LDFLAGS=$BASE_PATH/build/libgamma.dylib
-    PY_TAGS=(2.7 3.6 3.7 3.8 3.9)
+    PY_TAGS=(3.6 3.7 3.8 3.9)
     for TAG in ${PY_TAGS[*]} 
     do
         PY_NAME=python${TAG}
@@ -15,9 +15,6 @@ if [ ${OS} == "Darwin" ];then
         source activate
         conda activate ${PY_NAME}
         pip install -r dev-requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
-        if [ $TAG == "2.7" ];then
-            export MACOSX_DEPLOYMENT_TARGET=`sw_vers | grep ProductVersion | awk '{print $2}'`
-        fi
         python setup.py bdist_wheel
     done
 elif [ `expr substr ${OS} 1 5` == "Linux" ];then
@@ -34,5 +31,3 @@ elif [ `expr substr ${OS} 1 5` == "Linux" ];then
 elif [ `expr substr ${OS} 1 10` == "MINGW" ];then  
     echo "windows not support"
 fi
-
-

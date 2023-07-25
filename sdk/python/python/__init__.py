@@ -1331,17 +1331,17 @@ class Engine:
             print("get results cost %f ms" %((time.time() - start) * 1000))
         return results
     
-    def del_doc_by_query(self, query_info):    
-        ''' delete docs by query
-            query_info: what kind docs want to delete
-        '''
-        request = GammaRequest()
-        request.create_request(query_info, self.gamma_table)
-        buf = request.serialize()
-        np_buf = np.array(buf)
-        p_buf = swig_ptr(np_buf)
-        response_code = swigDelDocByQuery(self.c_engine, p_buf, np_buf.shape[0]) 
-        return response_code
+    # def del_doc_by_query(self, query_info):    
+    #     ''' delete docs by query
+    #         query_info: what kind docs want to delete
+    #     '''
+    #     request = GammaRequest()
+    #     request.create_request(query_info, self.gamma_table)
+    #     buf = request.serialize()
+    #     np_buf = np.array(buf)
+    #     p_buf = swig_ptr(np_buf)
+    #     response_code = swigDelDocByQuery(self.c_engine, p_buf, np_buf.shape[0]) 
+    #     return response_code
 
     def create_id(self):
         uid = str(uuid.uuid4())
