@@ -160,7 +160,7 @@ class GammaConfig:
         self.log_dir = engine.LogDir()
 
 class GammaFieldInfo:
-    def __init__(self, name, data_type, is_index):
+    def __init__(self, name: str, data_type: int, is_index: bool = False):
         self.name = name
         self.type = data_type
         self.is_index = is_index
@@ -172,7 +172,7 @@ class GammaFieldInfo:
 
 
 class GammaVectorInfo:
-    def __init__(self, name, type, is_index, dimension, model_id, store_type, store_param, has_source):
+    def __init__(self, name: str, type: int, is_index: bool, dimension: int, model_id: str, store_type: str, store_param: dict, has_source: bool):
         self.name = name
         self.type = type
         self.is_index = is_index
@@ -196,32 +196,22 @@ class ParseTable:
     def __init__(self, table):    
         self.table = table
 
-    def parse_field(self):
+    def parse_field(self, fields: list[GammaFieldInfo]):
         table = self.table
-        if table.get("properties") == None:
-            ex = Exception("The \"properties\" is undefined!!!")
-            raise ex
-        if len(table["properties"]) < 1:
-            ex = Exception("not have field_infos or vec_infos")
-            raise ex
         field_infos = {}
         is_long_type_id = False
-        for name in table["properties"].keys():            
-            dict_tmp = table["properties"][name]
-            #is fields
-            if dict_tmp.get('type') != None and field_type_map.get(dict_tmp['type'].lower()) != None\
-                    and  dict_tmp['type'].lower() != 'vector': 
+        for field in fields:
+            name = field.name
+            if field.type != dataType.VECTOR:
+                dict_tmp = table["properties"][name]
                 field_type = field_type_map[dict_tmp["type"].lower()]
-                is_index = False
-                if dict_tmp.get("index") and dict_tmp["index"] == True:
-                    is_index = True
                 if name == '_id':
                     if field_type == dataType.LONG:
                         is_long_type_id = True
                     if field_type != dataType.LONG and field_type != dataType.STRING:
                         ex = Exception('The "type" of "_id" fields must is "string" or "integer"')
                         raise ex
-                field_infos[name] = GammaFieldInfo(name, field_type, is_index)
+                field_infos[name] = field
         return field_infos, is_long_type_id
 
     def parse_other_info(self):
@@ -255,53 +245,9 @@ class ParseTable:
 
         return engine, is_binaryivf
     
-    def parse_vector(self, is_binaryivf):
-        table = self.table
-        if table.get("properties") == None:
-            ex = Exception("The \"properties\" is undefined!!!")
-            raise ex
-        if len(table["properties"]) < 1:
-            ex = Exception("not have field_infos or vec_infos")
-            raise ex
+    def parse_vector(self, vector_field: GammaVectorInfo):
         vec_infos = {}
-        for name in table["properties"].keys():            
-            dict_tmp = table["properties"][name] 
-            if dict_tmp.get('type') == None or field_type_map.get(dict_tmp['type'].lower()) == None:
-                ex = Exception('The "' + name + '" has no type or the type is not in the right format')
-                raise ex
-            #is vector field
-            if dict_tmp['type'].lower() == 'vector':               
-                field_type = dataType.VECTOR
-                if dict_tmp.get('dimension') == None or not isinstance(dict_tmp['dimension'], int)\
-                        or dict_tmp.get('dimension') < 0:
-                    ex = Exception("dimension is undefined or Invalid format.")
-                    raise ex
-                if is_binaryivf and dict_tmp.get('dimension')%8 > 0:
-                    ex = Exception("For banaryivf model, the dimension must be an integer multiple of 8.")
-                dimension = dict_tmp['dimension']
-
-                is_index = True
-                if dict_tmp.get("index") != None and dict_tmp["index"] == False:
-                    is_index = False
-                    
-                model_id = '1'
-                if dict_tmp.get('model_id') != None and isinstance(dict_tmp['model_id'],str):
-                    model_id = dict_tmp['model_id']
-
-                store_type = "Mmap"
-                if dict_tmp.get('store_type') != None and isinstance(dict_tmp['store_type'], str) and \
-                        (dict_tmp["store_type"].lower() == 'rocksdb' or dict_tmp["store_type"].lower() == 'memoryonly'): 
-                    store_type = dict_tmp['store_type']
-
-                store_param = ''
-                if dict_tmp.get("store_param") != None and isinstance(dict_tmp["store_param"], str):
-                    store_param["cache_size"] = dict_tmp["store_param"]["cache_size"] 
-                    
-                has_source = False
-                if 'has_source' in dict_tmp and dict_tmp['has_source'] == True:
-                    has_source = True
-                vec_infos[name] = GammaVectorInfo(name, field_type, is_index, dimension\
-                    , model_id, store_type, store_param, has_source)
+        vec_infos[vector_field.name] = vector_field
         return vec_infos
 
 class GammaTable:
@@ -314,11 +260,11 @@ class GammaTable:
         self.is_binaryivf = False
         self.is_long_type_id = False
 
-    def init(self, table):
+    def init(self, table, fields: list[GammaFieldInfo], vector_field: GammaVectorInfo):
         parseTable = ParseTable(table)
         self.engine, self.is_binaryivf = parseTable.parse_other_info()
-        self.field_infos, self.is_long_type_id = parseTable.parse_field()
-        self.vec_infos = parseTable.parse_vector(self.is_binaryivf)
+        self.field_infos, self.is_long_type_id = parseTable.parse_field(fields)
+        self.vec_infos = parseTable.parse_vector(vector_field)
         for key in self.vec_infos:
             self.norms[key] = {}
         if '_id' not in self.field_infos:
@@ -331,7 +277,7 @@ class GammaTable:
         if field_name not in self.vec_infos:
             ex = Exception('The {} field is not a field that was set when the table was built.'.format(field_name))
             raise ex
-        if self.is_binaryivf_type():
+        if self.is_binaryivf:
             if int(self.vec_infos[field_name].dimension/8) != input_dimension:
                 ex = Exception("dimension of add data is not correct. Since the model is BINARYIVF, a vector is {}*uint8."\
                     .format(int(self.vec_infos[field_name].dimension/8)))
@@ -341,9 +287,6 @@ class GammaTable:
                 ex = Exception("dimension of add data is not correct.")
                 raise ex
         return True
-
-    def is_binaryivf_type(self):
-        return self.is_binaryivf
 
     def ser_vector_infos(self, builder, vec_infos):
         lst_VecInfos = []
@@ -462,9 +405,6 @@ class GammaTable:
         for field_name in self.field_infos:
             print('---------doc field information----------')
             self.field_infos[field_name].print_self()
-
-
-        
 
 class GammaField:
     def __init__(self, name, value, source, data_type):
@@ -1141,13 +1081,13 @@ class Engine:
         ptr_buf = swig_ptr(buf)
         self.c_engine = swigInitEngine(ptr_buf, buf.shape[0])
 
-    def create_table(self, table_info, name: str):
+    def create_table(self, table_info, name: str, fields: list[GammaFieldInfo], vector_field: GammaVectorInfo):
         ''' create table for engine
             table_info: table detail info
             return: 0 successed, 1 failed
         '''
         self.gamma_table = GammaTable()
-        self.gamma_table.init(table_info)
+        self.gamma_table.init(table_info, fields=fields, vector_field=vector_field)
         self.gamma_table.name = name
         table_buf = self.gamma_table.serialize()
         self.table_buf = table_buf

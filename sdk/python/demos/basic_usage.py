@@ -1,10 +1,12 @@
 import numpy as np
-import vearch
+# import vearch
 import sys
 import time
 import json
 import os
-
+import sys
+sys.path.append('/export/yinpengfei7/src/github.com/coding_vearch/sdk/python/python')
+import python as vearch
 #The following error occurred on the MAC platform:
 #Initializing libiomp.dylib, but found libiomp.dylib already initialized OMP.
 #The following code can be opened to solve the following problem.
@@ -16,7 +18,7 @@ def test_create_engine():
     return engine
 
 def test_create_table(engine: vearch.Engine):
-    print("######     test create table    ######")
+    print("######    test create table     ######")
     table = {
         "engine" : {
             "index_size": 10000,
@@ -39,58 +41,26 @@ def test_create_table(engine: vearch.Engine):
             #        "nsubvector": 64
             #    }
             #}
-        },
-        "properties" : {
-            #"_id":{                        #You usually don't need to specify. Vearch is automatically specified.
-            #    "type": "integer",         
-            #    "is_index": True
-            #},
-            "feature":{
-                "type": "vector",
-                "index": True,
-                "dimension": 64,
-                "store_type": "MemoryOnly", 
-                "store_param": {
-                    "cache_size": 10000
-                }
-            },
-            "key": {
-                "type": "integer"
-            },
-            "url": {
-                "type": "string"
-            },
-            "field1": {
-                "type": "string",
-                "index": True
-            },
-            "field2": {
-                "type": "integer",
-                "index": True
-            },
-            "field3": {
-                "type": "integer",
-                "index": True
-            },
-            "feature1": {
-                "type": "vector",
-                "index": True,
-                "dimension": 64,
-                "store_type": "memoryonly",
-                "store_param": {
-                    "cache_size": 10000
-                }
-            }
         }
     }
-    response_code = engine.create_table(table, name="test_table")
+
+    fields = []
+    fields.append(vearch.GammaFieldInfo("_id", vearch.dataType.LONG, True)) #You usually don't need to specify. Vearch is automatically specified.
+    fields.append(vearch.GammaFieldInfo("key", vearch.dataType.LONG))
+    fields.append(vearch.GammaFieldInfo("url", vearch.dataType.STRING))
+    fields.append(vearch.GammaFieldInfo("field1", vearch.dataType.STRING, True))
+    fields.append(vearch.GammaFieldInfo("field2", vearch.dataType.INT, True))
+    fields.append(vearch.GammaFieldInfo("field3", vearch.dataType.INT, True))
+
+    vector_field = vearch.GammaVectorInfo(name="feature", type=vearch.dataType.VECTOR, is_index=True, dimension=64, model_id="", store_type="MemoryOnly", store_param={"cache_size": 10000}, has_source=False)
+    response_code = engine.create_table(table, name="test_table", fields=fields, vector_field=vector_field)
     if response_code == 0:
         print("create table success")
     else:
         print("create table failed")
 
 
-def test_add(engine, add_num=100000):
+def test_add(engine: vearch.Engine, add_num=100000):
     print("######        test add          ######")    
     doc_items = []
     features = np.random.rand(add_num, 64).astype('float32')
@@ -105,7 +75,6 @@ def test_add(engine, add_num=100000):
 
         #The feature type supports numpy only.
         profiles["feature"] = features[i,:]
-        profiles["feature1"] = features[i,:]
 
         doc_items.append(profiles)
     
@@ -124,7 +93,6 @@ def test_add(engine, add_num=100000):
         print("   ")
         print(engine.get_doc_by_id(docs_id[i]))
     return (doc_items, docs_id)
-
 
 
 def test_search(engine):
@@ -165,7 +133,6 @@ def test_violent_search(engine):
     }
     result = engine.search(query)
     print(result)
-
 
 
 def test_search_return_fields(engine):
