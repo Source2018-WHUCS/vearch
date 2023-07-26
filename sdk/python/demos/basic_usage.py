@@ -10,17 +10,14 @@ import os
 #The following code can be opened to solve the following problem.
 #os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-
-
 def test_create_engine():
     print("######    test create engine    ######")
-    engine = vearch.Engine("files", 'logs')
+    engine = vearch.Engine()
     return engine
 
-def test_create_table(engine):
+def test_create_table(engine: vearch.Engine):
     print("######     test create table    ######")
     table = {
-        "name" : "test_table",
         "engine" : {
             "index_size": 10000,
             "retrieval_type": "IVFPQ",       
@@ -86,8 +83,8 @@ def test_create_table(engine):
             }
         }
     }
-    response_code = engine.create_table(table)
-    if response_code == 0:                    #response_code: 0, success; 1 failed.
+    response_code = engine.create_table(table, name="test_table")
+    if response_code == 0:
         print("create table success")
     else:
         print("create table failed")

@@ -191,8 +191,6 @@ class GammaVectorInfo:
         print('store_type:', self.store_type)
         print('store_param:', self.store_param)
         print('has_source:', self.has_source)
-    
-    
 
 class ParseTable:
     def __init__(self, table):    
@@ -228,11 +226,7 @@ class ParseTable:
 
     def parse_other_info(self):
         table = self.table
-        #name parse
-        if table.get("name") == None or table["name"] == "" or type(table["name"]) != str:
-            ex = Exception("The \'name\' is error,check \'name\'.")
-            raise ex
-        name = table["name"]
+
         #engine parse
         if table.get("engine") == None:
             ex = Exception('The "engine" is undefined!!!')
@@ -259,7 +253,7 @@ class ParseTable:
         engine["retrieval_types"] = []
         engine["retrieval_params"] = []
 
-        return name, engine, is_binaryivf
+        return engine, is_binaryivf
     
     def parse_vector(self, is_binaryivf):
         table = self.table
@@ -322,7 +316,7 @@ class GammaTable:
 
     def init(self, table):
         parseTable = ParseTable(table)
-        self.name, self.engine, self.is_binaryivf = parseTable.parse_other_info()
+        self.engine, self.is_binaryivf = parseTable.parse_other_info()
         self.field_infos, self.is_long_type_id = parseTable.parse_field()
         self.vec_infos = parseTable.parse_vector(self.is_binaryivf)
         for key in self.vec_infos:
@@ -1127,7 +1121,7 @@ class Engine:
         build indexes for stored vectors,
         and find the nearest neighbor of vectors. 
     '''
-    def __init__(self, path, log_dir):
+    def __init__(self, path: str = "files", log_dir: str = "logs"):
         ''' init vearch engine
             path: engine config path to save dump file or 
             something else engine will create.
@@ -1141,19 +1135,20 @@ class Engine:
         self.verbose = False
 
     def init(self):
-        config =  GammaConfig(self.path, self.log_dir)
+        config = GammaConfig(self.path, self.log_dir)
         buf = config.serialize()
         buf = np.array(buf)
         ptr_buf = swig_ptr(buf)
         self.c_engine = swigInitEngine(ptr_buf, buf.shape[0])
 
-    def create_table(self, table_info):
+    def create_table(self, table_info, name: str):
         ''' create table for engine
             table_info: table detail info
             return: 0 successed, 1 failed
         '''
         self.gamma_table = GammaTable()
         self.gamma_table.init(table_info)
+        self.gamma_table.name = name
         table_buf = self.gamma_table.serialize()
         self.table_buf = table_buf
         #self.gamma_table.deserialize(table_buf)
