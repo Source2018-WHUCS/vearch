@@ -1,59 +1,55 @@
 import numpy as np
-# import vearch
+import vearch
+from vearch import GammaFieldInfo, GammaVectorInfo
 import sys
 import time
 import json
 import os
-import sys
-sys.path.append('/export/yinpengfei7/src/github.com/coding_vearch/sdk/python/python')
-import python as vearch
 #The following error occurred on the MAC platform:
 #Initializing libiomp.dylib, but found libiomp.dylib already initialized OMP.
 #The following code can be opened to solve the following problem.
 #os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-def test_create_engine():
+def test_create_engine() -> vearch.Engine:
     print("######    test create engine    ######")
     engine = vearch.Engine()
     return engine
 
 def test_create_table(engine: vearch.Engine):
     print("######    test create table     ######")
-    table = {
-        "engine" : {
-            "index_size": 10000,
-            "retrieval_type": "IVFPQ",       
-            "retrieval_param": {               
-                "ncentroids": 256,          
-                "nsubvector": 16
-            }
-            # this is for very large dataset and not suitable for random data
-            #"retrieval_param": {
-            #    "metric_type": "InnerProduct",
-            #    "ncentroids": 1024,
-            #    "nsubvector": 64,
-            #    "hnsw" : {
-            #        "nlinks": 32,
-            #        "efConstruction": 200,
-            #        "efSearch": 64
-            #    },
-            #    "opq": {
-            #        "nsubvector": 64
-            #    }
-            #}
+    engine_info = {
+        "index_size": 10000,
+        "retrieval_type": "IVFPQ",       
+        "retrieval_param": {               
+            "ncentroids": 256,          
+            "nsubvector": 16
         }
+        # this is for very large dataset and not suitable for random data
+        #"retrieval_param": {
+        #    "metric_type": "InnerProduct",
+        #    "ncentroids": 1024,
+        #    "nsubvector": 64,
+        #    "hnsw" : {
+        #        "nlinks": 32,
+        #        "efConstruction": 200,
+        #        "efSearch": 64
+        #    },
+        #    "opq": {
+        #        "nsubvector": 64
+        #    }
+        #}
     }
 
     fields = []
-    fields.append(vearch.GammaFieldInfo("_id", vearch.dataType.LONG, True)) #You usually don't need to specify. Vearch is automatically specified.
-    fields.append(vearch.GammaFieldInfo("key", vearch.dataType.LONG))
-    fields.append(vearch.GammaFieldInfo("url", vearch.dataType.STRING))
-    fields.append(vearch.GammaFieldInfo("field1", vearch.dataType.STRING, True))
-    fields.append(vearch.GammaFieldInfo("field2", vearch.dataType.INT, True))
-    fields.append(vearch.GammaFieldInfo("field3", vearch.dataType.INT, True))
+    fields.append(GammaFieldInfo("_id", vearch.dataType.STRING, True)) #You usually don't need to specify. Vearch is automatically specified.
+    fields.append(GammaFieldInfo("key", vearch.dataType.LONG))
+    fields.append(GammaFieldInfo("url", vearch.dataType.STRING))
+    fields.append(GammaFieldInfo("field1", vearch.dataType.STRING, True))
+    fields.append(GammaFieldInfo("field2", vearch.dataType.INT, True))
+    fields.append(GammaFieldInfo("field3", vearch.dataType.INT, True))
 
-    vector_field = vearch.GammaVectorInfo(name="feature", type=vearch.dataType.VECTOR, is_index=True, dimension=64, model_id="", store_type="MemoryOnly", store_param={"cache_size": 10000}, has_source=False)
-    response_code = engine.create_table(table, name="test_table", fields=fields, vector_field=vector_field)
+    vector_field = GammaVectorInfo(name="feature", type=vearch.dataType.VECTOR, is_index=True, dimension=64, model_id="", store_type="MemoryOnly", store_param={"cache_size": 10000}, has_source=False)
+    response_code = engine.create_table(engine_info, name="test_table", fields=fields, vector_field=vector_field)
     if response_code == 0:
         print("create table success")
     else:

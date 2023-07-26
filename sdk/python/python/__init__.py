@@ -193,52 +193,41 @@ class GammaVectorInfo:
         print('has_source:', self.has_source)
 
 class ParseTable:
-    def __init__(self, table):    
-        self.table = table
+    def __init__(self, engine_info: dict):    
+        self.engine_info = engine_info
 
     def parse_field(self, fields: list[GammaFieldInfo]):
-        table = self.table
         field_infos = {}
         is_long_type_id = False
         for field in fields:
             name = field.name
             if field.type != dataType.VECTOR:
-                dict_tmp = table["properties"][name]
-                field_type = field_type_map[dict_tmp["type"].lower()]
                 if name == '_id':
-                    if field_type == dataType.LONG:
+                    if field.type == dataType.LONG:
                         is_long_type_id = True
-                    if field_type != dataType.LONG and field_type != dataType.STRING:
+                    if field.type != dataType.LONG and field.type != dataType.STRING:
                         ex = Exception('The "type" of "_id" fields must is "string" or "integer"')
                         raise ex
                 field_infos[name] = field
         return field_infos, is_long_type_id
 
     def parse_other_info(self):
-        table = self.table
+        engine = self.engine_info
+        if engine.get("index_size") == None:
+            engine["index_size"] = 100000
 
-        #engine parse
-        if table.get("engine") == None:
-            ex = Exception('The "engine" is undefined!!!')
-            raise ex
-        engine = {}
-        engine["index_size"] = 100000
-        if table["engine"].get("index_size") != None and table["engine"]["index_size"] > 0:
-            engine["index_size"] = table["engine"]["index_size"]            
-        
-        engine["retrieval_type"] = 'IVFPQ'
-        if table["engine"].get('retrieval_type') != None:
-            engine["retrieval_type"] = table['engine']['retrieval_type']
+        if engine.get("retrieval_type") == None:
+            engine["retrieval_type"] = 'IVFPQ'
+
         is_binaryivf = False
         if engine["retrieval_type"] == 'BINARYIVF':
             is_binaryivf = True
             ex = Exception("Now don't support binary ivf, will support in later version")
             raise ex
         #retrieval_param of engine parse
-        engine['retrieval_param'] = ''
-        if "retrieval_param" in table['engine']:
-            engine['retrieval_param'] = table['engine']['retrieval_param']
         
+        if engine.get("retrieval_param") == None:
+            engine["retrieval_param"] = ''
         engine["compress_mode"] = 0
         engine["retrieval_types"] = []
         engine["retrieval_params"] = []
@@ -260,8 +249,8 @@ class GammaTable:
         self.is_binaryivf = False
         self.is_long_type_id = False
 
-    def init(self, table, fields: list[GammaFieldInfo], vector_field: GammaVectorInfo):
-        parseTable = ParseTable(table)
+    def init(self, engine_info: dict, fields: list[GammaFieldInfo], vector_field: GammaVectorInfo):
+        parseTable = ParseTable(engine_info)
         self.engine, self.is_binaryivf = parseTable.parse_other_info()
         self.field_infos, self.is_long_type_id = parseTable.parse_field(fields)
         self.vec_infos = parseTable.parse_vector(vector_field)
@@ -287,6 +276,9 @@ class GammaTable:
                 ex = Exception("dimension of add data is not correct.")
                 raise ex
         return True
+
+    def is_binaryivf_type(self):
+        return self.is_binaryivf
 
     def ser_vector_infos(self, builder, vec_infos):
         lst_VecInfos = []
@@ -459,19 +451,17 @@ class GammaDoc:
         return vector
             
     def check_scalar_field_type(self, variate, field_name, data_type):
-        if isinstance(variate, int) and\
-                (data_type == dataType.INT or data_type == dataType.LONG):
+        if isinstance(variate, int) and (data_type == dataType.INT or data_type == dataType.LONG):
             return True
         elif isinstance(variate, str) and data_type == dataType.STRING:
             return True
-        elif isinstance(variate, float) and\
-                (data_type == dataType.DOUBLE or data_type == dataType.FLOAT):
+        elif isinstance(variate, float) and (data_type == dataType.DOUBLE or data_type == dataType.FLOAT):
             return True
-        ex = Exception('The "{}" field type have error, field type is string, float, int.'.format(field_name))
+        ex = Exception('The "{}" field type have error, field type is string, float, int. type {}'.format(field_name, type(variate)))
         raise ex
         return False
 
-    def parse_doc(self, table, doc_info, doc_id):                       
+    def parse_doc(self, table: GammaTable, doc_info, doc_id):                       
         for key in doc_info.keys():
             if key in table.vec_infos:                                    #is vector fields
                 vector = self.get_vecfield_vector(table, key, doc_info[key])
@@ -1311,3 +1301,4 @@ class Engine:
                 result["result_items"].append(result_item_info)    
             results.append(result)
         return results
+
