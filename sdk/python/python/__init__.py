@@ -201,14 +201,13 @@ class ParseTable:
         is_long_type_id = False
         for field in fields:
             name = field.name
-            if field.type != dataType.VECTOR:
-                if name == '_id':
-                    if field.type == dataType.LONG:
-                        is_long_type_id = True
-                    if field.type != dataType.LONG and field.type != dataType.STRING:
-                        ex = Exception('The "type" of "_id" fields must is "string" or "integer"')
-                        raise ex
-                field_infos[name] = field
+            if name == '_id':
+                if field.type == dataType.LONG:
+                    is_long_type_id = True
+                if field.type != dataType.LONG and field.type != dataType.STRING:
+                    ex = Exception('The "type" of "_id" fields must is "string" or "integer"')
+                    raise ex
+            field_infos[name] = field
         return field_infos, is_long_type_id
 
     def parse_other_info(self):
@@ -1002,7 +1001,7 @@ class GammaResponse:
             else:
                 value = np_value[4:].copy()
         return value
-        
+
     def norm_to_origin(self, table, doc_id, _source, is_binary_ivf):
         for key in _source:
             if key in table.vec_infos:
@@ -1127,7 +1126,7 @@ class Engine:
         if self.verbose:
             print("finish add cost %.4f s" % (time.time() - start))
         return doc_ids 
-    
+
     def update_doc(self, doc_info, doc_id):
         ''' update doc's info. The docs_info must contain "_id" information.
             doc_info: doc's new info.
@@ -1142,8 +1141,8 @@ class Engine:
         doc = swig_ptr(np_buf)
         response_code = swigAddOrUpdateDoc(self.c_engine, doc, np_buf.shape[0])
         return response_code
-    
-        
+
+
     def del_doc(self, doc_id):
         ''' delete doc
             doc_id: delete doc' id

@@ -27,7 +27,7 @@ auditwheel tool should be installed firstly. You can install it by pip.
 
 The package can be built when gamma is already built and installed.
 See the official [gamma installation
-instruction](https://github.com/vearch/gamma/blob/master/README.md) for more
+instruction](https://github.com/vearch/vearch/blob/master/engine/README.md) for more
 on how to build and install gamma. In particular, compiling wheel packages
 requires additional compilation options in compiling gamma.
 
