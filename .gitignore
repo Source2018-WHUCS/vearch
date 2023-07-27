@@ -24,7 +24,6 @@ build/bin/
 build/lib/
 build/run.sh
 cloud/env/app/
-ps/engine/gammacb/lib/
 
 #skip some test file
 plugin/model/yolov3.weights
