@@ -26,7 +26,7 @@ import (
 
 // Reader is the read interface to an engine's data.
 type Reader interface {
-	GetDoc(ctx context.Context, doc *vearchpb.Document) error
+	GetDoc(ctx context.Context, doc *vearchpb.Document, getByDocId bool) error
 
 	ReadSN(ctx context.Context) (int64, error)
 
