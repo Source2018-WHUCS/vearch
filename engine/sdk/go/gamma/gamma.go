@@ -1,5 +1,5 @@
 /**
- * Copyright 2019 The Gamma Authors.
+ * Copyright 2019 The Vearch Authors.
  *
  * This source code is licensed under the Apache License, Version 2.0 license
  * found in the LICENSE file in the root directory of this source tree.
@@ -8,7 +8,7 @@
 package gamma
 
 /*
-#cgo CFLAGS : -I../../../engine/c_api
+#cgo CFLAGS : -I../../../c_api
 #cgo LDFLAGS: -L../../../engine/build -lgamma
 
 #include "gamma_api.h"
