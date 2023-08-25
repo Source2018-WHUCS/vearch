@@ -1,7 +1,19 @@
 #!/bin/bash
 set -e -x
 
-VERSION=3.3.1
+VERSION="lastest"
+ROOT=$(dirname "$PWD")/../..
+
+function get_version() {
+  VEARCH_VERSION_MAJOR=`cat ${ROOT}/VERSION | grep VEARCH_VERSION_MAJOR | awk -F' ' '{print $2}'`
+  VEARCH_VERSION_MINOR=`cat ${ROOT}/VERSION | grep VEARCH_VERSION_MINOR | awk -F' ' '{print $2}'`
+  VEARCH_VERSION_PATCH=`cat ${ROOT}/VERSION | grep VEARCH_VERSION_PATCH | awk -F' ' '{print $2}'`
+
+  VERSION="${VEARCH_VERSION_MAJOR}.${VEARCH_VERSION_MINOR}.${VEARCH_VERSION_PATCH}"
+  echo "BUILD_VERSION="${VERSION}
+}
+
+get_version
 
 OS=`uname -s`
 if [ ${OS} == "Darwin" ];then
