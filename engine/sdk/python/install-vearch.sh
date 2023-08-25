@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -x
 
-VERSION=3.3.0
+VERSION=3.3.1
 
 OS=`uname -s`
 if [ ${OS} == "Darwin" ];then
@@ -17,7 +17,7 @@ if [ ${OS} == "Darwin" ];then
         pip install ${WHEEL}
     done            
 elif [ `expr substr ${OS} 1 5` == "Linux" ];then
-    for PYBIN in /opt/python/cp38-cp38/bin; do
+    for PYBIN in /opt/python/*/bin; do
         python_tag=$(echo ${PYBIN} | cut -d '/' -f4)
         "${PYBIN}/pip" uninstall vearch --yes
         "${PYBIN}/pip" install "wheelhouse/vearch-${VERSION}-${python_tag}-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"

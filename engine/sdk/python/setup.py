@@ -85,7 +85,7 @@ _swigvearch = Extension(
 
 setup(
     name='vearch',
-    version='3.3.0',
+    version='3.3.1',
     description='A library for efficient similarity search and storage of deep learning vectors.',
     long_description=long_description,
     url='https://github.com/vearch/vearch',
