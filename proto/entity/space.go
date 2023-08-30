@@ -105,7 +105,7 @@ type CacheModel struct {
 type SpaceProperties struct {
 	FieldType  FieldType       `json:"field_type"`
 	Type       string          `json:"type"`
-	Index      bool            `json:"index,default:false"`
+	Index      *bool           `json:"index,omitempty"`
 	Format     *string         `json:"format,omitempty"`
 	Dimension  int             `json:"dimension,omitempty"`
 	ModelId    string          `json:"model_id,omitempty"`
@@ -434,14 +434,22 @@ func UnmarshalPropertyJSON(propertity []byte) (map[string]*SpaceProperties, erro
 		}
 
 		if isVector {
-			if sp.Index {
-				sp.Option = FieldOption_Index
+			if sp.Index != nil {
+				if *sp.Index {
+					sp.Option = FieldOption_Index
+				} else {
+					sp.Option = FieldOption_Null
+				}
 			} else {
-				sp.Option = FieldOption_Null
+				sp.Option = FieldOption_Index
 			}
 		} else {
-			if sp.Index {
-				sp.Option = FieldOption_Index
+			if sp.Index != nil {
+				if *sp.Index {
+					sp.Option = FieldOption_Index
+				} else {
+					sp.Option = FieldOption_Null
+				}
 			} else {
 				sp.Option = FieldOption_Null
 			}
