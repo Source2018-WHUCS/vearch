@@ -13,4 +13,4 @@ function get_version() {
 
 get_version
 cd env
-docker build -t vearch/vearch_env:$VERSION .
+docker build -t vearch/vearch_env:latest .
