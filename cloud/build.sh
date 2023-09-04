@@ -14,6 +14,6 @@ function get_version() {
 get_version
 cp -r ../build/bin compile/
 cp -r ../build/lib compile/
-docker build -t vearch/vearch:$VERSION .
+docker build -t vearch/vearch:$VERSION . && docker tag vearch/vearch:$VERSION vearch/vearch:latest
 rm -rf compile/bin
 rm -rf compile/lib
