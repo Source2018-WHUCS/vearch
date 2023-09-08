@@ -210,10 +210,10 @@ void GetEngineStatus(void *engine, char **status_str, int *len) {
   engine_status.Serialize(status_str, len);
 }
 
-void GetMemoryInfo(void *engine, char **status_str, int *len) {
+void GetMemoryInfo(void *engine, char **memory_info_str, int *len) {
   tig_gamma::MemoryInfo memory_info;
   static_cast<tig_gamma::GammaEngine *>(engine)->GetMemoryInfo(memory_info);
-  memory_info.Serialize(status_str, len);
+  memory_info.Serialize(memory_info_str, len);
 }
 
 int Dump(void *engine) {

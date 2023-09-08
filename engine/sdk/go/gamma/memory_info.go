@@ -13,7 +13,6 @@ import (
 )
 
 type MemoryInfo struct {
-	IndexStatus   int32
 	TableMem      int64
 	IndexMem      int64
 	VectorMem     int64
