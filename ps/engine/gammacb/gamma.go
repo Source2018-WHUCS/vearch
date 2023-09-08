@@ -114,8 +114,8 @@ func New(cfg register.EngineConfig) (engine.Engine, error) {
 					return
 				default:
 				}
-				var status gamma.EngineStatus
-				gamma.GetEngineStatus(ge.gamma, &status)
+				var status gamma.MemoryInfo
+				gamma.GetEngineMemoryInfo(ge.gamma, &status)
 				log.Debug("gamma use memory total:[%d], bitmap %d, range %d, table %d, vector %d, vector index %d",
 					status.BitmapMem+status.FieldRangeMem+status.TableMem+status.VectorMem+status.IndexMem,
 					status.BitmapMem,

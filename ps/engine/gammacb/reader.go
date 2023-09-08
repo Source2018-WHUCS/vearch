@@ -130,8 +130,8 @@ func (ri *readerImpl) Capacity(ctx context.Context) (int64, error) {
 
 	//ioutil2.DirSize(ri.engine.path) TODO remove it
 
-	var status gamma.EngineStatus
-	gamma.GetEngineStatus(gammaEngine, &status)
+	var status gamma.MemoryInfo
+	gamma.GetEngineMemoryInfo(gammaEngine, &status)
 	vectorMem := status.VectorMem
 	tableMem := status.TableMem
 	fieldRangeMem := status.FieldRangeMem
