@@ -1380,6 +1380,19 @@ class Engine:
         status.deserialize(buf)
         status_dict = status.get_status_dict()
         return status_dict
+    
+    def get_mempory_info(self):
+        """get engine memory information
+        return: a dict containing memory information
+        """
+        status_buf = swigGetMemoryInfo(self.c_engine)
+        np_status_buf = np.asarray(status_buf, dtype=np.uint8)
+        buf = np_status_buf.tobytes()
+        status = GammaMemoryInfo()
+        status.deserialize(buf)
+        status_dict = status.get_status_dict()
+        return status_dict
+    
 
     def get_doc_by_id(self, doc_id):
         """get doc's detail info by its' id

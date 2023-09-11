@@ -31,6 +31,7 @@ import (
 	"github.com/vearch/vearch/proto/vearchpb"
 	"github.com/vearch/vearch/ps/engine"
 	"github.com/vearch/vearch/util/cbbytes"
+	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/util/vearchlog"
 )
 
@@ -137,6 +138,9 @@ func (ri *readerImpl) Capacity(ctx context.Context) (int64, error) {
 	fieldRangeMem := status.FieldRangeMem
 	bitmapMem := status.BitmapMem
 	memoryBytes := vectorMem + tableMem + fieldRangeMem + bitmapMem
+
+	log.Debug("gamma use memory total:[%d], bitmap %d, range %d, table %d, vector %d",
+		memoryBytes, bitmapMem, fieldRangeMem, tableMem, vectorMem)
 	return int64(memoryBytes), nil
 }
 
