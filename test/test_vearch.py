@@ -101,7 +101,6 @@ class VearchCase():
             "partition_num": 1,
             "replica_num": 1,
             "engine": {
-                "name": "gamma",
                 "index_size": self.index_size,
                 "id_type": self.id_type,
                 "retrieval_type": self.retrieval_type,
@@ -469,7 +468,7 @@ class VearchCase():
         assert response.status_code == 200
 
     def test_db_space_create_delete(self):
-        for i in range(100):
+        for i in range(10):
             self.test_stats()
             self.test_health()
             self.test_server()
@@ -505,6 +504,7 @@ class VearchCase():
         self.test_insertBulkNoId()
         self.test_deleteSpace()
         self.test_deleteDB()
+        self.test_db_space_create_delete()
 
 
 @pytest.mark.parametrize(["index_size", "id_type", "retrieval_type", "store_type"], [
