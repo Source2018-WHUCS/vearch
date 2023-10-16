@@ -36,23 +36,23 @@ import (
 )
 
 const (
-	URLParamDbName		= "db_name"
-	URLParamSpaceName	= "space_name"
+	URLParamDbName      = "db_name"
+	URLParamSpaceName   = "space_name"
 	URLParamPartitionID = "partition_id"
-	URLParamID			= "_id"
-	URLParams			= "url_params"
-	ReqsBody			= "req_body"
-	SpaceEntity			= "space_entity"
-	IDType				= "id_type"
-	IDIsLong			= "IDIsLong"
-	QueryIsOnlyID		= "QueryIsOnlyID"
-	URLQueryTimeout		= "timeout"
+	URLParamID          = "_id"
+	URLParams           = "url_params"
+	ReqsBody            = "req_body"
+	SpaceEntity         = "space_entity"
+	IDType              = "id_type"
+	IDIsLong            = "IDIsLong"
+	QueryIsOnlyID       = "QueryIsOnlyID"
+	URLQueryTimeout     = "timeout"
 )
 
 type DocumentHandler struct {
 	httpServer *netutil.Server
 	docService docService
-	client	   *client.Client
+	client     *client.Client
 }
 
 func ExportDocumentHandler(httpServer *netutil.Server, client *client.Client) {
@@ -61,7 +61,7 @@ func ExportDocumentHandler(httpServer *netutil.Server, client *client.Client) {
 	documentHandler := &DocumentHandler{
 		httpServer: httpServer,
 		docService: *docService,
-		client:		client,
+		client:     client,
 	}
 
 	documentHandler.proxyMaster()
@@ -183,20 +183,20 @@ func (handler *DocumentHandler) handleTimeout(ctx context.Context, w http.Respon
 }
 
 func (handler *DocumentHandler) handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request, params netutil.UriParams) (context.Context, bool) {
-	auth := true
 	if config.Conf().Global.SkipAuth {
-		return ctx, auth
+		return ctx, false
 	}
 	headerData := r.Header.Get("Authorization")
 	username, password, err := util.AuthDecrypt(headerData)
 	if err != nil {
 		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error())
+		return ctx, false
 	}
 	if username != "root" || password != config.Conf().Global.Signkey {
-		auth = false
 		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", "Authorization failed, wrong user or password")
+		return ctx, false
 	}
-	return ctx, auth
+	return ctx, true
 }
 
 func (handler *DocumentHandler) handleRouterInfo(ctx context.Context, w http.ResponseWriter, r *http.Request, params netutil.UriParams) (context.Context, bool) {
