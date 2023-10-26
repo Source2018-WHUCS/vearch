@@ -594,7 +594,7 @@ func (r *routerRequest) searchFromPartition(ctx context.Context, partitionID ent
 			nodeID = GetNodeIdsByClientType(clientType, partition, servers)
 		} else {
 			log.Error("rpc err [%v], nodeID %v", err, nodeID)
-			r.client.PS().AddFaulty(nodeID, time.Second*10)
+			r.client.PS().AddFaulty(nodeID, time.Second*5)
 			break
 		}
 	}
