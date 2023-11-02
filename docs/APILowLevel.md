@@ -508,7 +508,11 @@ curl -v --user "root:secret" -H "content-type: application/json" -XPOST -d'
 
 ## document 
 
-Document operations will be redefined as the following 4 interfaces: /document/upsert、/document/query、/document/search、/document/delete.
+Document operations will be redefined as the following 4 interfaces: 
+  /document/upsert
+  /document/query
+  /document/search
+  /document/delete
 The relevant implementation is still under development.
 
 ----
