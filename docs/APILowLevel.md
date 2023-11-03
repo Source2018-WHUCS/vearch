@@ -544,7 +544,22 @@ The relevant implementation is still under development.
 
 ````$xslt
 curl -H "content-type: application/json" -XPOST -d'
-{"string":"14AW1mK_j19FyJvn5NR4Ep","int":14,"float":3.7416573867739413,"vector":{"feature":["features..."],"source":"14AW1mK_j19FyJvn5NR4Ep"},"string_tags":["14","10","15"]}
+{
+  "string": "14AW1mK_j19FyJvn5NR4Ep",
+  "int": 14,
+  "float": 3.7416573867739413,
+  "vector": {
+    "feature": [
+      "features..."
+    ],
+    "source": "14AW1mK_j19FyJvn5NR4Ep"
+  },
+  "string_tags": [
+    "14",
+    "10",
+    "15"
+  ]
+}
 ' {{ROUTER}}/test_vector_db/vector_space/1
 
 ````
@@ -554,7 +569,22 @@ curl -H "content-type: application/json" -XPOST -d'
 ### insert document without id
 ````$xslt
 curl -H "content-type: application/json" -XPOST -d'
-{"string":"14AW1mK_j19FyJvn5NR4Ep","int":14,"float":3.7416573867739413,"vector":{"feature":["features..."],"source":"14AW1mK_j19FyJvn5NR4Ep"},"string_tags":["14","10","15"]}
+{
+  "string": "14AW1mK_j19FyJvn5NR4Ep",
+  "int": 14,
+  "float": 3.7416573867739413,
+  "vector": {
+    "feature": [
+      "features..."
+    ],
+    "source": "14AW1mK_j19FyJvn5NR4Ep"
+  },
+  "string_tags": [
+    "14",
+    "10",
+    "15"
+  ]
+}
 ' {{ROUTER}}/test_vector_db/vector_space/
 ````
 
@@ -574,8 +604,13 @@ curl -XGET {{ROUTER}}/test_vector_db/vector_space/$partition_id/id
 curl -H "content-type: application/json" -XPOST -d'
 {
   "query": {
-	"ids": ["3", "1"],
-	"fields": ["int"]
+    "ids": [
+      "3",
+      "1"
+    ],
+    "fields": [
+      "int"
+    ]
   }
 }
 ' {{ROUTER}}/test_vector_db/vector_space/_query_byids
@@ -928,31 +963,22 @@ curl -XDELETE {{ROUTER}}/test_vector_db/vector_space/1
 ````$xslt
 curl -H "content-type: application/json" -XPOST -d'
 {
-	"_id":"1",
-	"doc":{
-	    "int": 32
-	}
+  "_id": "1",
+  "doc": {
+    "int": 32
+  }
 }
 ' {{ROUTER}}/test_vector_db/vector_space/2/_update
 ````
 
 ### document bulk insert
 ````$xslt
-curl -XPOST -d'
-{ "index" : {"_id" : "1" } }
+curl -H "content-type: application/json" -XPOST -d'
+{"index":{"_id":"1"}}
 {"string":"14AW1mK_j19FyJvn5NR4Ep","int":14,"float":3.7416573867739413,"vector":{"feature":["features..."],"source":"14AW1mK_j19FyJvn5NR4Ep"},"string_tags":["14","10","15"]}
-{ "index" : {"_id" : "2" } }
+{"index":{"_id":"2"}}
 {"string":"15AW1mK_j19FyJvn5NR4Eq","int":15,"float":3.872983346207417,"vector":{"feature":["features..."],"source":"15AW1mK_j19FyJvn5NR4Eq"},"string_tags":["15","4","16"]}
 ' {{ROUTER}}/test_vector_db/vector_space/_bulk
-````
-or
-````$xslt
-curl -H "content-type: application/json" -XPOST -d $'
-{ "index" : {"_id" : "1" } }
-{"string":"14AW1mK_j19FyJvn5NR4Ep","integer":14,"float":3.7416573867739413,"vector":{"feature":["features..."],"source":"14AW1mK_j19FyJvn5NR4Ep"},"string_tags":["14","10","15"]}
-{ "index" : {"_id" : "2" } }
-{"string":"14AW1mK_j19FyJvn5NR4Ep","integer":14,"float":3.7416573867739413,"vector":{"feature":["features..."],"source":"14AW1mK_j19FyJvn5NR4Ep"},"string_tags":["14","10","15"]}
-' http://172.20.189.96:80/ts_db/ts_space/_bulk
 ````
 
 ### document multiple vectors bulk search
