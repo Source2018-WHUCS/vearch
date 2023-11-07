@@ -111,7 +111,7 @@ func docDeleteResponses(client *client.Client, args *vearchpb.DeleteRequest, rep
 		}
 		return nil, vearchpb.NewError(vearchpb.ErrorEnum_INTERNAL_ERROR, nil)
 	}
-	return docResponse(client, args.Head, reply.Items, false)
+	return docResponse(client, args.Head, reply.Items)
 }
 
 func docUpdateResponses(client *client.Client, args *vearchpb.UpdateRequest, reply *vearchpb.UpdateResponse) ([]byte, error) {
@@ -130,10 +130,10 @@ func docUpdateResponses(client *client.Client, args *vearchpb.UpdateRequest, rep
 	if err != nil {
 		return nil, err
 	}
-	return docResultSerialize(space, args.Head, &vearchpb.Item{Doc: &vearchpb.Document{PKey: args.Doc.PKey}}, false)
+	return docResultSerialize(space, args.Head, &vearchpb.Item{Doc: &vearchpb.Document{PKey: args.Doc.PKey}})
 }
 
-func docBulkResponses(client *client.Client, args *vearchpb.BulkRequest, reply *vearchpb.BulkResponse, simple bool) ([]byte, error) {
+func docBulkResponses(client *client.Client, args *vearchpb.BulkRequest, reply *vearchpb.BulkResponse) ([]byte, error) {
 	if args == nil || reply == nil || reply.Items == nil || len(reply.Items) < 1 {
 		if reply.GetHead() != nil && reply.GetHead().Err != nil && reply.GetHead().Err.Code != vearchpb.ErrorEnum_SUCCESS {
 			err := reply.GetHead().Err
@@ -141,10 +141,10 @@ func docBulkResponses(client *client.Client, args *vearchpb.BulkRequest, reply *
 		}
 		return nil, vearchpb.NewError(vearchpb.ErrorEnum_INTERNAL_ERROR, nil)
 	}
-	return docResponse(client, args.Head, reply.Items, simple)
+	return docResponse(client, args.Head, reply.Items)
 }
 
-func docResponse(client *client.Client, head *vearchpb.RequestHead, items []*vearchpb.Item, simple bool) ([]byte, error) {
+func docResponse(client *client.Client, head *vearchpb.RequestHead, items []*vearchpb.Item) ([]byte, error) {
 	space, err := client.Space(context.Background(), head.DbName, head.SpaceName)
 	if err != nil {
 		return nil, err
@@ -155,13 +155,115 @@ func docResponse(client *client.Client, head *vearchpb.RequestHead, items []*vea
 		if idx != 0 {
 			builder.More()
 		}
-		if result, err := docResultSerialize(space, head, item, simple); err != nil {
+		if result, err := docResultSerialize(space, head, item); err != nil {
 			return nil, err
 		} else {
 			builder.ValueRaw(string(result))
 		}
 	}
 	builder.EndArray()
+	return builder.Output()
+}
+
+func documentUpsertResponse(client *client.Client, args *vearchpb.BulkRequest, reply *vearchpb.BulkResponse) ([]byte, error) {
+	if args == nil || reply == nil || reply.Items == nil || len(reply.Items) < 1 {
+		if reply.GetHead() != nil && reply.GetHead().Err != nil && reply.GetHead().Err.Code != vearchpb.ErrorEnum_SUCCESS {
+			err := reply.GetHead().Err
+			return nil, vearchpb.NewError(err.Code, errors.New(err.Msg))
+		}
+		return nil, vearchpb.NewError(vearchpb.ErrorEnum_INTERNAL_ERROR, nil)
+	}
+
+	space, err := client.Space(context.Background(), args.Head.DbName, args.Head.SpaceName)
+	if err != nil {
+		return nil, err
+	}
+
+	var builder = cbjson.ContentBuilderFactory()
+
+	builder.BeginObject()
+	builder.Field("code")
+	if reply.Head == nil || reply.Head.Err == nil {
+		builder.ValueNumeric(0)
+	} else {
+		if reply.Head != nil && reply.Head.Err != nil {
+			builder.ValueNumeric(int64(reply.Head.Err.Code))
+			builder.More()
+			builder.Field("msg")
+			builder.ValueString(reply.Head.Err.Msg)
+		} else {
+			builder.ValueNumeric(1)
+		}
+	}
+
+	var total int64
+	for _, item := range reply.Items {
+		if item.Err == nil {
+			total += 1
+		} else {
+			if item.Err.Msg == "success" && item.Err.Code == vearchpb.ErrorEnum_SUCCESS {
+				total += 1
+			}
+		}
+	}
+	builder.More()
+	builder.Field("total")
+	builder.ValueNumeric(total)
+
+	builder.More()
+	builder.BeginArrayWithField("document_ids")
+	for idx, item := range reply.Items {
+		if idx != 0 {
+			builder.More()
+		}
+		if result, err := documentResultSerialize(space, item); err != nil {
+			return nil, err
+		} else {
+			builder.ValueRaw(string(result))
+		}
+	}
+	builder.EndArray()
+
+	builder.EndObject()
+
+	return builder.Output()
+}
+
+func documentResultSerialize(space *entity.Space, item *vearchpb.Item) ([]byte, error) {
+	var builder = cbjson.ContentBuilderFactory()
+	builder.BeginObject()
+	if item == nil {
+		builder.Field("error")
+		builder.ValueString("duplicate id")
+		builder.EndObject()
+		return builder.Output()
+	}
+	doc := item.Doc
+	builder.Field("_id")
+	if idIsLong(space) {
+		idInt64, err := strconv.ParseInt(doc.PKey, 10, 64)
+		if err == nil {
+			builder.ValueNumeric(idInt64)
+		} else {
+			builder.ValueString(doc.PKey)
+		}
+	} else {
+		builder.ValueString(doc.PKey)
+	}
+	if item.Err != nil {
+		builder.More()
+		builder.Field("status")
+		builder.ValueNumeric(cast.ToInt64(vearchpb.ErrCode(item.Err.Code)))
+
+		builder.More()
+		builder.Field("error")
+		builder.ValueString(item.Err.Msg)
+	} else {
+		builder.More()
+		builder.Field("status")
+		builder.ValueNumeric(cast.ToInt64(vearchpb.ErrCode(vearchpb.ErrorEnum_SUCCESS)))
+	}
+	builder.EndObject()
 	return builder.Output()
 }
 
@@ -189,12 +291,11 @@ func documentDeleteResponse(items []*vearchpb.Item, head *vearchpb.ResponseHead,
 	}
 
 	builder.More()
-
 	builder.Field("total")
 	builder.ValueNumeric(int64(len(resultIds)))
 
 	builder.More()
-	builder.Field("_id")
+	builder.Field("document_ids")
 	if len(resultIds) != 0 {
 		builder.ValueInterface(resultIds)
 	} else {
@@ -206,19 +307,16 @@ func documentDeleteResponse(items []*vearchpb.Item, head *vearchpb.ResponseHead,
 	return builder.Output()
 }
 
-func docResultSerialize(space *entity.Space, head *vearchpb.RequestHead, item *vearchpb.Item, simple bool) ([]byte, error) {
+func docResultSerialize(space *entity.Space, head *vearchpb.RequestHead, item *vearchpb.Item) ([]byte, error) {
 	var builder = cbjson.ContentBuilderFactory()
 	builder.BeginObject()
-	if !simple {
-		builder.Field("_index")
-		builder.ValueString(head.DbName)
 
-		builder.More()
-		builder.Field("_type")
-		builder.ValueString(head.SpaceName)
+	builder.Field("_index")
+	builder.ValueString(head.DbName)
 
-		builder.More()
-	}
+	builder.More()
+	builder.Field("_type")
+	builder.ValueString(head.SpaceName)
 
 	if item == nil {
 		builder.Field("error")
@@ -227,6 +325,7 @@ func docResultSerialize(space *entity.Space, head *vearchpb.RequestHead, item *v
 		return builder.Output()
 	}
 	doc := item.Doc
+	builder.More()
 	builder.Field("_id")
 	if idIsLong(space) {
 		idInt64, err := strconv.ParseInt(doc.PKey, 10, 64)
@@ -923,7 +1022,7 @@ func deleteByQueryResult(resp *vearchpb.DelByQueryeResponse) ([]byte, error) {
 	builder.ValueNumeric(int64(resp.DelNum))
 
 	builder.More()
-	builder.Field("_id")
+	builder.Field("document_ids")
 	if resp.IdsStr != nil {
 		builder.ValueInterface(resp.IdsStr)
 	} else if resp.IdsLong != nil {
