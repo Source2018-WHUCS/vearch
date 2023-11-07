@@ -267,6 +267,228 @@ func documentResultSerialize(space *entity.Space, item *vearchpb.Item) ([]byte, 
 	return builder.Output()
 }
 
+func documentGetResponse(client *client.Client, args *vearchpb.GetRequest, reply *vearchpb.GetResponse, returnFieldsMap map[string]string) ([]byte, error) {
+	if args == nil || reply == nil || reply.Items == nil || len(reply.Items) < 1 {
+		if reply.GetHead() != nil && reply.GetHead().Err != nil && reply.GetHead().Err.Code != vearchpb.ErrorEnum_SUCCESS {
+			err := reply.GetHead().Err
+			return nil, vearchpb.NewError(err.Code, errors.New(err.Msg))
+		}
+		return nil, vearchpb.NewError(vearchpb.ErrorEnum_INTERNAL_ERROR, nil)
+	}
+
+	space, err := client.Space(context.Background(), args.Head.DbName, args.Head.SpaceName)
+	if err != nil {
+		return nil, err
+	}
+	var builder = cbjson.ContentBuilderFactory()
+	builder.BeginObject()
+
+	builder.Field("code")
+	if reply.Head == nil || reply.Head.Err == nil {
+		builder.ValueNumeric(int64(vearchpb.ErrorEnum_SUCCESS))
+		builder.More()
+		builder.Field("msg")
+		builder.ValueString("success")
+	} else {
+		if reply.Head != nil && reply.Head.Err != nil {
+			builder.ValueNumeric(int64(reply.Head.Err.Code))
+			builder.More()
+			builder.Field("msg")
+			builder.ValueString(reply.Head.Err.Msg)
+		} else {
+			builder.ValueNumeric(int64(vearchpb.ErrorEnum_INTERNAL_ERROR))
+		}
+	}
+
+	var total int64
+	for _, item := range reply.Items {
+		if item.Doc.Fields != nil {
+			total += 1
+		} else {
+			if item.Err.Msg == "success" && item.Err.Code == vearchpb.ErrorEnum_SUCCESS {
+				total += 1
+			}
+		}
+	}
+	builder.More()
+	builder.Field("total")
+	builder.ValueNumeric(total)
+
+	builder.More()
+	builder.BeginArrayWithField("documents")
+	for i, item := range reply.Items {
+		if i != 0 {
+			builder.More()
+		}
+		builder.BeginObject()
+
+		doc := item.Doc
+		builder.Field("_id")
+		if idIsLong(space) {
+			idInt64, err := strconv.ParseInt(doc.PKey, 10, 64)
+			if err == nil {
+				builder.ValueNumeric(idInt64)
+			} else {
+				builder.ValueString(doc.PKey)
+			}
+		} else {
+			builder.ValueString(doc.PKey)
+		}
+
+		builder.More()
+		builder.Field("_score")
+		builder.ValueNumeric(0)
+
+		if item.Err != nil {
+			builder.More()
+			builder.Field("status")
+			builder.ValueNumeric(cast.ToInt64(vearchpb.ErrCode(item.Err.Code)))
+
+			builder.More()
+			builder.Field("error")
+			builder.ValueString(item.Err.Msg)
+		}
+
+		if doc.Fields != nil {
+			source, _ := docFieldSerialize(doc, space, returnFieldsMap)
+			builder.More()
+			builder.Field("_source")
+			builder.ValueInterface(source)
+		}
+		builder.EndObject()
+	}
+	builder.EndArray()
+	builder.EndObject()
+
+	return builder.Output()
+}
+
+func documentSearchResponse(sr *vearchpb.SearchResult, head *vearchpb.ResponseHead, took time.Duration, space *entity.Space) ([]byte, error) {
+	var builder = cbjson.ContentBuilderFactory()
+
+	builder.BeginObject()
+	builder.Field("code")
+	if head == nil || head.Err == nil {
+		builder.ValueNumeric(int64(vearchpb.ErrorEnum_SUCCESS))
+		builder.More()
+		builder.Field("msg")
+		builder.ValueString("success")
+	} else {
+		if head != nil && head.Err != nil {
+			builder.ValueNumeric(int64(head.Err.Code))
+			builder.More()
+			builder.Field("msg")
+			builder.ValueString(head.Err.Msg)
+		} else {
+			builder.ValueNumeric(int64(vearchpb.ErrorEnum_INTERNAL_ERROR))
+		}
+	}
+
+	builder.More()
+	builder.Field("took")
+	builder.ValueNumeric(int64(took) / 1e6)
+	if sr == nil {
+		searchStatus := &vearchpb.SearchStatus{Failed: 0, Successful: 0, Total: 0}
+		builder.More()
+		builder.Field("timed_out")
+		builder.ValueBool(false)
+
+		builder.More()
+		builder.Field("_shards")
+		builder.ValueInterface(searchStatus)
+
+		builder.More()
+		builder.Field("total")
+		builder.ValueNumeric(0)
+	} else {
+		builder.More()
+		builder.Field("timed_out")
+		builder.ValueBool(sr.Timeout)
+
+		builder.More()
+		builder.Field("_shards")
+		builder.ValueInterface(sr.Status)
+
+		builder.More()
+		builder.Field("total")
+		total := len(sr.ResultItems)
+		builder.ValueNumeric(int64(total))
+	}
+
+	if sr != nil && sr.ResultItems != nil {
+		builder.More()
+		builder.BeginArrayWithField("documents")
+		content, err := documentToContent(sr.ResultItems, space)
+		if err != nil {
+			return nil, err
+		}
+		builder.ValueRaw(string(content))
+
+		builder.EndArray()
+	}
+
+	/*if sr.Explain != nil && len(sr.Explain) > 0 {
+		builder.More()
+		builder.Field("_explain")
+		builder.ValueInterface(sr.Explain)
+	}*/
+
+	builder.EndObject()
+
+	return builder.Output()
+}
+
+func documentToContent(dh []*vearchpb.ResultItem, space *entity.Space) ([]byte, error) {
+	var builder = cbjson.ContentBuilderFactory()
+	idIsLong := idIsLong(space)
+	for i, u := range dh {
+
+		if i != 0 {
+			builder.More()
+		}
+		builder.BeginObject()
+
+		builder.Field("_id")
+		if idIsLong {
+			idInt64, err := strconv.ParseInt(u.PKey, 10, 64)
+			if err == nil {
+				builder.ValueNumeric(idInt64)
+			}
+		} else {
+			builder.ValueString(u.PKey)
+		}
+
+		if u.Fields != nil {
+			builder.More()
+			builder.Field("_score")
+			builder.ValueFloat(float64(u.Score))
+
+			/*if u.Extra != "" && len(u.Extra) > 0 {
+				builder.More()
+				var extra map[string]interface{}
+				if err := json.Unmarshal([]byte(u.Extra), &extra); err == nil {
+					builder.Field("_extra")
+					builder.ValueInterface(extra)
+				}
+			}*/
+			if u.Source != nil {
+				var sourceJson json.RawMessage
+				if err := json.Unmarshal(u.Source, &sourceJson); err != nil {
+					log.Error("DocToContent Source Unmarshal error:%v", err)
+				} else {
+					builder.More()
+					builder.Field("_source")
+					builder.ValueInterface(sourceJson)
+				}
+			}
+		}
+
+		builder.EndObject()
+	}
+
+	return builder.Output()
+}
+
 func documentDeleteResponse(items []*vearchpb.Item, head *vearchpb.ResponseHead, resultIds []string) ([]byte, error) {
 	var builder = cbjson.ContentBuilderFactory()
 	for _, item := range items {
@@ -278,7 +500,10 @@ func documentDeleteResponse(items []*vearchpb.Item, head *vearchpb.ResponseHead,
 	builder.BeginObject()
 	builder.Field("code")
 	if head == nil || head.Err == nil {
-		builder.ValueNumeric(0)
+		builder.ValueNumeric(int64(vearchpb.ErrorEnum_SUCCESS))
+		builder.More()
+		builder.Field("msg")
+		builder.ValueString("success")
 	} else {
 		if head != nil && head.Err != nil {
 			builder.ValueNumeric(int64(head.Err.Code))
@@ -286,7 +511,7 @@ func documentDeleteResponse(items []*vearchpb.Item, head *vearchpb.ResponseHead,
 			builder.Field("msg")
 			builder.ValueString(head.Err.Msg)
 		} else {
-			builder.ValueNumeric(1)
+			builder.ValueNumeric(int64(vearchpb.ErrorEnum_INTERNAL_ERROR))
 		}
 	}
 
@@ -506,129 +731,6 @@ func ToContent(sr *vearchpb.SearchResult, head *vearchpb.RequestHead, took time.
 
 	return builder.Output()
 
-}
-
-func documentSearchResponse(sr *vearchpb.SearchResult, head *vearchpb.ResponseHead, took time.Duration, space *entity.Space) ([]byte, error) {
-	var builder = cbjson.ContentBuilderFactory()
-
-	builder.BeginObject()
-	builder.Field("code")
-	if head == nil || head.Err == nil {
-		builder.ValueNumeric(0)
-	} else {
-		if head != nil && head.Err != nil {
-			builder.ValueNumeric(int64(head.Err.Code))
-			builder.More()
-			builder.Field("msg")
-			builder.ValueString(head.Err.Msg)
-		} else {
-			builder.ValueNumeric(1)
-		}
-	}
-
-	builder.More()
-	builder.Field("took")
-	builder.ValueNumeric(int64(took) / 1e6)
-	if sr == nil {
-		searchStatus := &vearchpb.SearchStatus{Failed: 0, Successful: 0, Total: 0}
-		builder.More()
-		builder.Field("timed_out")
-		builder.ValueBool(false)
-
-		builder.More()
-		builder.Field("_shards")
-		builder.ValueInterface(searchStatus)
-
-		builder.More()
-		builder.Field("total")
-		builder.ValueNumeric(0)
-	} else {
-		builder.More()
-		builder.Field("timed_out")
-		builder.ValueBool(sr.Timeout)
-
-		builder.More()
-		builder.Field("_shards")
-		builder.ValueInterface(sr.Status)
-
-		builder.More()
-		builder.Field("total")
-		total := len(sr.ResultItems)
-		builder.ValueNumeric(int64(total))
-	}
-
-	if sr != nil && sr.ResultItems != nil {
-		builder.More()
-		builder.BeginArrayWithField("documents")
-		content, err := documentToContent(sr.ResultItems, space)
-		if err != nil {
-			return nil, err
-		}
-		builder.ValueRaw(string(content))
-
-		builder.EndArray()
-	}
-
-	/*if sr.Explain != nil && len(sr.Explain) > 0 {
-		builder.More()
-		builder.Field("_explain")
-		builder.ValueInterface(sr.Explain)
-	}*/
-
-	builder.EndObject()
-
-	return builder.Output()
-}
-
-func documentToContent(dh []*vearchpb.ResultItem, space *entity.Space) ([]byte, error) {
-	var builder = cbjson.ContentBuilderFactory()
-	idIsLong := idIsLong(space)
-	for i, u := range dh {
-
-		if i != 0 {
-			builder.More()
-		}
-		builder.BeginObject()
-
-		builder.Field("_id")
-		if idIsLong {
-			idInt64, err := strconv.ParseInt(u.PKey, 10, 64)
-			if err == nil {
-				builder.ValueNumeric(idInt64)
-			}
-		} else {
-			builder.ValueString(u.PKey)
-		}
-
-		if u.Fields != nil {
-			builder.More()
-			builder.Field("_score")
-			builder.ValueFloat(float64(u.Score))
-
-			/*if u.Extra != "" && len(u.Extra) > 0 {
-				builder.More()
-				var extra map[string]interface{}
-				if err := json.Unmarshal([]byte(u.Extra), &extra); err == nil {
-					builder.Field("_extra")
-					builder.ValueInterface(extra)
-				}
-			}*/
-			if u.Source != nil {
-				var sourceJson json.RawMessage
-				if err := json.Unmarshal(u.Source, &sourceJson); err != nil {
-					log.Error("DocToContent Source Unmarshal error:%v", err)
-				} else {
-					builder.More()
-					builder.Field("_source")
-					builder.ValueInterface(sourceJson)
-				}
-			}
-		}
-
-		builder.EndObject()
-	}
-
-	return builder.Output()
 }
 
 func DocToContent(dh []*vearchpb.ResultItem, head *vearchpb.RequestHead, space *entity.Space) ([]byte, error) {
@@ -1005,6 +1107,9 @@ func deleteByQueryResult(resp *vearchpb.DelByQueryeResponse) ([]byte, error) {
 	builder.Field("code")
 	if resp.Head == nil || resp.Head.Err == nil {
 		builder.ValueNumeric(0)
+		builder.More()
+		builder.Field("msg")
+		builder.ValueString("success")
 	} else {
 		if resp.Head != nil && resp.Head.Err != nil {
 			builder.ValueNumeric(int64(resp.Head.Err.Code))
