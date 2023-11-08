@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/cast"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/proto/request"
 	"github.com/vearch/vearch/proto/vearchpb"
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/util/cbbytes"
@@ -335,10 +336,6 @@ func documentGetResponse(client *client.Client, args *vearchpb.GetRequest, reply
 			builder.ValueString(doc.PKey)
 		}
 
-		builder.More()
-		builder.Field("_score")
-		builder.ValueNumeric(0)
-
 		if item.Err != nil {
 			builder.More()
 			builder.Field("status")
@@ -363,7 +360,7 @@ func documentGetResponse(client *client.Client, args *vearchpb.GetRequest, reply
 	return builder.Output()
 }
 
-func documentSearchResponse(sr *vearchpb.SearchResult, head *vearchpb.ResponseHead, took time.Duration, space *entity.Space) ([]byte, error) {
+func documentSearchResponse(sr *vearchpb.SearchResult, head *vearchpb.ResponseHead, took time.Duration, space *entity.Space, response_type string) ([]byte, error) {
 	var builder = cbjson.ContentBuilderFactory()
 
 	builder.BeginObject()
@@ -384,30 +381,31 @@ func documentSearchResponse(sr *vearchpb.SearchResult, head *vearchpb.ResponseHe
 		}
 	}
 
-	builder.More()
-	builder.Field("took")
-	builder.ValueNumeric(int64(took) / 1e6)
-	if sr == nil {
-		searchStatus := &vearchpb.SearchStatus{Failed: 0, Successful: 0, Total: 0}
-		builder.More()
-		builder.Field("timed_out")
-		builder.ValueBool(false)
+	//	builder.More()
+	//	builder.Field("took")
+	//	builder.ValueNumeric(int64(took) / 1e6)
 
-		builder.More()
-		builder.Field("_shards")
-		builder.ValueInterface(searchStatus)
+	if sr == nil {
+		//	searchStatus := &vearchpb.SearchStatus{Failed: 0, Successful: 0, Total: 0}
+		//	builder.More()
+		//	builder.Field("timed_out")
+		//	builder.ValueBool(false)
+
+		//	builder.More()
+		//	builder.Field("_shards")
+		//	builder.ValueInterface(searchStatus)
 
 		builder.More()
 		builder.Field("total")
 		builder.ValueNumeric(0)
 	} else {
-		builder.More()
-		builder.Field("timed_out")
-		builder.ValueBool(sr.Timeout)
+		//	builder.More()
+		//	builder.Field("timed_out")
+		//	builder.ValueBool(sr.Timeout)
 
-		builder.More()
-		builder.Field("_shards")
-		builder.ValueInterface(sr.Status)
+		//	builder.More()
+		//	builder.Field("_shards")
+		//	builder.ValueInterface(sr.Status)
 
 		builder.More()
 		builder.Field("total")
@@ -418,7 +416,7 @@ func documentSearchResponse(sr *vearchpb.SearchResult, head *vearchpb.ResponseHe
 	if sr != nil && sr.ResultItems != nil {
 		builder.More()
 		builder.BeginArrayWithField("documents")
-		content, err := documentToContent(sr.ResultItems, space)
+		content, err := documentToContent(sr.ResultItems, space, response_type)
 		if err != nil {
 			return nil, err
 		}
@@ -438,7 +436,7 @@ func documentSearchResponse(sr *vearchpb.SearchResult, head *vearchpb.ResponseHe
 	return builder.Output()
 }
 
-func documentToContent(dh []*vearchpb.ResultItem, space *entity.Space) ([]byte, error) {
+func documentToContent(dh []*vearchpb.ResultItem, space *entity.Space, response_type string) ([]byte, error) {
 	var builder = cbjson.ContentBuilderFactory()
 	idIsLong := idIsLong(space)
 	for i, u := range dh {
@@ -459,9 +457,11 @@ func documentToContent(dh []*vearchpb.ResultItem, space *entity.Space) ([]byte, 
 		}
 
 		if u.Fields != nil {
-			builder.More()
-			builder.Field("_score")
-			builder.ValueFloat(float64(u.Score))
+			if response_type == request.SearchResponse {
+				builder.More()
+				builder.Field("_score")
+				builder.ValueFloat(float64(u.Score))
+			}
 
 			/*if u.Extra != "" && len(u.Extra) > 0 {
 				builder.More()
