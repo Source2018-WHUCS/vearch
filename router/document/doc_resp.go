@@ -360,7 +360,7 @@ func documentGetResponse(client *client.Client, args *vearchpb.GetRequest, reply
 	return builder.Output()
 }
 
-func documentSearchResponse(sr *vearchpb.SearchResult, head *vearchpb.ResponseHead, took time.Duration, space *entity.Space, response_type string) ([]byte, error) {
+func documentSearchResponse(srs []*vearchpb.SearchResult, head *vearchpb.ResponseHead, took time.Duration, space *entity.Space, response_type string) ([]byte, error) {
 	var builder = cbjson.ContentBuilderFactory()
 
 	builder.BeginObject()
@@ -385,45 +385,84 @@ func documentSearchResponse(sr *vearchpb.SearchResult, head *vearchpb.ResponseHe
 	//	builder.Field("took")
 	//	builder.ValueNumeric(int64(took) / 1e6)
 
-	if sr == nil {
-		//	searchStatus := &vearchpb.SearchStatus{Failed: 0, Successful: 0, Total: 0}
-		//	builder.More()
-		//	builder.Field("timed_out")
-		//	builder.ValueBool(false)
+	if response_type == request.QueryResponse {
+		if srs == nil {
+			//	searchStatus := &vearchpb.SearchStatus{Failed: 0, Successful: 0, Total: 0}
+			//	builder.More()
+			//	builder.Field("timed_out")
+			//	builder.ValueBool(false)
 
-		//	builder.More()
-		//	builder.Field("_shards")
-		//	builder.ValueInterface(searchStatus)
+			//	builder.More()
+			//	builder.Field("_shards")
+			//	builder.ValueInterface(searchStatus)
 
-		builder.More()
-		builder.Field("total")
-		builder.ValueNumeric(0)
-	} else {
-		//	builder.More()
-		//	builder.Field("timed_out")
-		//	builder.ValueBool(sr.Timeout)
+			builder.More()
+			builder.Field("total")
+			builder.ValueNumeric(0)
+		} else {
+			//	builder.More()
+			//	builder.Field("timed_out")
+			//	builder.ValueBool(sr.Timeout)
 
-		//	builder.More()
-		//	builder.Field("_shards")
-		//	builder.ValueInterface(sr.Status)
-
-		builder.More()
-		builder.Field("total")
-		total := len(sr.ResultItems)
-		builder.ValueNumeric(int64(total))
-	}
-
-	if sr != nil && sr.ResultItems != nil {
-		builder.More()
-		builder.BeginArrayWithField("documents")
-		content, err := documentToContent(sr.ResultItems, space, response_type)
-		if err != nil {
-			return nil, err
+			//	builder.More()
+			//	builder.Field("_shards")
+			//	builder.ValueInterface(sr.Status)
+			builder.More()
+			builder.Field("total")
+			total := len(srs[0].ResultItems)
+			builder.ValueNumeric(int64(total))
 		}
-		builder.ValueRaw(string(content))
-
-		builder.EndArray()
 	}
+
+	builder.More()
+	builder.BeginArrayWithField("documents")
+
+	if len(srs) > 1 {
+		var wg sync.WaitGroup
+		respChain := make(chan map[int][]byte, len(srs))
+		for i, sr := range srs {
+			wg.Add(1)
+			go func(sr *vearchpb.SearchResult, space *entity.Space, index int) {
+				bytes, err := documentToContent(sr.ResultItems, space, response_type)
+				if err == nil {
+					respMap := make(map[int][]byte)
+					respMap[index] = bytes
+					respChain <- respMap
+				}
+				wg.Done()
+			}(sr, space, i)
+		}
+		wg.Wait()
+		close(respChain)
+
+		byteArr := make([][]byte, len(srs))
+		for resp := range respChain {
+			for index, value := range resp {
+				byteArr[index] = value
+			}
+		}
+
+		for i := 0; i < len(srs); i++ {
+			builder.ValueRaw(string(byteArr[i]))
+			if i+1 < len(srs) {
+				builder.More()
+			}
+		}
+	} else {
+		for i, sr := range srs {
+			if bytes, err := documentToContent(sr.ResultItems, space, response_type); err != nil {
+				return nil, err
+			} else {
+				builder.ValueRaw(string(bytes))
+			}
+
+			if i+1 < len(srs) {
+				builder.More()
+			}
+		}
+	}
+
+	builder.EndArray()
 
 	/*if sr.Explain != nil && len(sr.Explain) > 0 {
 		builder.More()
@@ -439,6 +478,9 @@ func documentSearchResponse(sr *vearchpb.SearchResult, head *vearchpb.ResponseHe
 func documentToContent(dh []*vearchpb.ResultItem, space *entity.Space, response_type string) ([]byte, error) {
 	var builder = cbjson.ContentBuilderFactory()
 	idIsLong := idIsLong(space)
+	if response_type == request.SearchResponse {
+		builder.BeginArray()
+	}
 	for i, u := range dh {
 
 		if i != 0 {
@@ -484,6 +526,9 @@ func documentToContent(dh []*vearchpb.ResultItem, space *entity.Space, response_
 		}
 
 		builder.EndObject()
+	}
+	if response_type == request.SearchResponse {
+		builder.EndArray()
 	}
 
 	return builder.Output()

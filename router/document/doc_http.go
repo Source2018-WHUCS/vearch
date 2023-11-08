@@ -1056,7 +1056,7 @@ func (handler *DocumentHandler) handleDocumentQuery(ctx context.Context, w http.
 	if searchResp.Results == nil || len(searchResp.Results) == 0 {
 		bs, err = documentSearchResponse(nil, searchResp.Head, serviceCost, space, request.QueryResponse)
 	} else {
-		bs, err = documentSearchResponse(searchResp.Results[0], searchResp.Head, serviceCost, space, request.QueryResponse)
+		bs, err = documentSearchResponse(searchResp.Results, searchResp.Head, serviceCost, space, request.QueryResponse)
 	}
 
 	if err != nil {
@@ -1171,7 +1171,7 @@ func (handler *DocumentHandler) handleDocumentSearch(ctx context.Context, w http
 	if searchResp.Results == nil || len(searchResp.Results) == 0 {
 		bs, err = documentSearchResponse(nil, searchResp.Head, serviceCost, space, request.SearchResponse)
 	} else {
-		bs, err = documentSearchResponse(searchResp.Results[0], searchResp.Head, serviceCost, space, request.SearchResponse)
+		bs, err = documentSearchResponse(searchResp.Results, searchResp.Head, serviceCost, space, request.SearchResponse)
 	}
 
 	if err != nil {
