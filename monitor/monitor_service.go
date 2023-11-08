@@ -26,7 +26,6 @@ import (
 	"github.com/vearch/vearch/util/errutil"
 	"github.com/vearch/vearch/util/metrics/mserver"
 
-	//"github.com/vearch/vearch/client"
 	"net/http"
 	"sync"
 	"time"
