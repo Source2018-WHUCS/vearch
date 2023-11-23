@@ -142,7 +142,7 @@ func (s *Store) Flush(ctx context.Context) error {
 
 	s.Partition.ResourceExhausted, err = os.CheckResource(s.RaftPath)
 	if err != nil {
-		return err
+		log.Warn(err.Error())
 	}
 	raftCmd := vearchpb.CreateRaftCommand()
 	raftCmd.Type = vearchpb.CmdType_FLUSH

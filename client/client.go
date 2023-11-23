@@ -371,15 +371,15 @@ func (r *routerRequest) Execute() []*vearchpb.Item {
 						}
 						float32s, _, err := cbbytes.ByteToVectorForFloat32(field.Value)
 						if err != nil {
-							panic(err.Error())
+							log.Panic(err.Error())
 						}
 						if err := util.Normalization(float32s); err != nil {
-							panic(err.Error())
+							log.Panic(err.Error())
 						}
 						bs, err := cbbytes.VectorToByte(float32s, "")
 						if err != nil {
 							log.Error("processVector VectorToByte error: %v", err)
-							panic(err.Error())
+							log.Panic(err.Error())
 						}
 						field.Value = bs
 					}
