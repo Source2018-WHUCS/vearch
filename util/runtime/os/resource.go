@@ -26,7 +26,7 @@ import (
 )
 
 func readCgroupMemory() (available, limit uint64, err error) {
-	memoryLimitPath := "/sys/fs/cgroup/memory/memory.memsw.limit_in_bytes"
+	memoryLimitPath := "/sys/fs/cgroup/memory/memory.limit_in_bytes"
 
 	data, err := os.ReadFile(memoryLimitPath)
 	if err != nil {
