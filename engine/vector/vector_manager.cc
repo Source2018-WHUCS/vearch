@@ -33,10 +33,6 @@ VectorManager::~VectorManager() { Close(); }
 
 int VectorManager::SetVectorStoreType(std::string &retrieval_type, std::string &store_type_str,
                                       VectorStorageType &store_type) {
-  if (retrieval_type == "IVFFLAT" && strcasecmp("RocksDB", store_type_str.c_str())) {
-    LOG(ERROR) << "IVFFLAT should use RocksDB";
-    return -1;
-  }
   if (store_type_str != "") {
     if (!strcasecmp("MemoryOnly", store_type_str.c_str())) {
       store_type = VectorStorageType::MemoryOnly;
@@ -46,6 +42,10 @@ int VectorManager::SetVectorStoreType(std::string &retrieval_type, std::string &
       store_type = VectorStorageType::RocksDB;
     } else {
       LOG(WARNING) << "NO support for store type " << store_type_str;
+      return -1;
+    }
+    if (retrieval_type == "IVFFLAT" && strcasecmp("RocksDB", store_type_str.c_str())) {
+      LOG(ERROR) << "IVFFLAT should use RocksDB";
       return -1;
     }
   } else {
