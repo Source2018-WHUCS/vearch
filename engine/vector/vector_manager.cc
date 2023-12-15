@@ -44,8 +44,9 @@ int VectorManager::SetVectorStoreType(std::string &retrieval_type, std::string &
       LOG(WARNING) << "NO support for store type " << store_type_str;
       return -1;
     }
+    // ivfflat has raw vector data in index, so just use rocksdb to reduce memory footprint
     if (retrieval_type == "IVFFLAT" && strcasecmp("RocksDB", store_type_str.c_str())) {
-      LOG(ERROR) << "IVFFLAT should use RocksDB";
+      LOG(ERROR) << "IVFFLAT should use RocksDB, now store_type = " << store_type_str;
       return -1;
     }
   } else {
