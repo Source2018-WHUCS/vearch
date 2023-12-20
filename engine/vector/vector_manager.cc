@@ -229,6 +229,7 @@ void VectorManager::SetVectorIndexes(std::map<std::string, RetrievalModel *> &re
   for (const auto &iter : rebuild_vector_indexes) {
     if (iter.second != nullptr) {
       vector_indexes_[iter.first] = iter.second;
+      LOG(INFO) << "Set " << iter.first << "index";
     }
   }
 }

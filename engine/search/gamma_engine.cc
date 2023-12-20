@@ -864,7 +864,6 @@ int GammaEngine::RebuildIndex(int drop_before_rebuild, int limit_cpu) {
   std::map<std::string, RetrievalModel *> vector_indexes;
 
   if (!drop_before_rebuild) {
-    std::map<std::string, RetrievalModel *> vector_indexes;
     ret = vec_manager_->CreateVectorIndexes(indexing_size_, vector_indexes);
     if (vec_manager_->TrainIndex(vector_indexes) != 0) {
       LOG(ERROR) << "RebuildIndex TrainIndex failed!";
@@ -897,6 +896,7 @@ int GammaEngine::RebuildIndex(int drop_before_rebuild, int limit_cpu) {
     LOG(INFO) << "vector manager RebuildIndex TrainIndex success!";
   } else {
     vec_manager_->SetVectorIndexes(vector_indexes);
+    LOG(INFO) << "vector manager SetVectorIndexes success!";
   }
 
   ret = BuildIndex();
