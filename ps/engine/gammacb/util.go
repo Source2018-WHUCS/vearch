@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/spf13/cast"
 	"github.com/vearch/vearch/engine/sdk/go/gamma"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/vearchpb"
@@ -81,7 +82,7 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*gamma.T
 	}
 
 	table := &gamma.Table{
-		Name:            cfg.Space.Name,
+		Name:            cfg.Space.Name + "-" + cast.ToString(cfg.PartitionID),
 		IndexingSize:    int32(engine.IndexSize),
 		RetrievalType:   engine.RetrievalType,
 		RetrievalTypes:  engine.RetrievalTypes,
