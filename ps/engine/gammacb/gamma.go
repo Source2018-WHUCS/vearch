@@ -60,7 +60,11 @@ func New(cfg register.EngineConfig) (engine.Engine, error) {
 		return nil, e
 	}
 
-	config := &gamma.Config{Path: cfg.Path, LogDir: config.Conf().GetLogDir()}
+	config := &gamma.Config{
+		Path:      cfg.Path,
+		SpaceName: cfg.Space.Name,
+		LogDir:    config.Conf().GetLogDir()}
+
 	ge := &gammaEngine{
 		ctx:          ctx,
 		cancel:       cancel,
