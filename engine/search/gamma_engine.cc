@@ -852,6 +852,7 @@ int GammaEngine::BuildIndex() {
   return 0;
 }
 
+// TODO set limit for cpu and should to avoid using vector indexes on the same time
 int GammaEngine::RebuildIndex(int drop_before_rebuild, int limit_cpu) {
   int ret = 0;
   std::map<std::string, RetrievalModel *> vector_indexes;
@@ -879,7 +880,7 @@ int GammaEngine::RebuildIndex(int drop_before_rebuild, int limit_cpu) {
     ret = vec_manager_->CreateVectorIndexes(indexing_size_, vec_manager_->VectorIndexes());
     if (ret) {
       LOG(ERROR) << "RebuildIndex CreateVectorIndexes failed, ret: " << ret;
-      vec_manager_->Close();
+      vec_manager_->DestroyVectorIndexes();
       return ret;
     }
     if (vec_manager_->TrainIndex(vec_manager_->VectorIndexes()) != 0) {
