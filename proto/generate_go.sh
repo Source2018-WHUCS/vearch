@@ -64,7 +64,7 @@ fi
 ret=0
 for file in $(ls ${proto_dir}/*.proto); do
     name=$(echo "$file" | awk -F '/' '{print $2}')
-    protoc -I=$GOPATH/pkg/mod -I=$GOPATH/src --proto_path=$GOPATH/src/github.com/vearch/vearch/proto --gofast_out=plugins=grpc,$GO_OUT_M:$gen_out_dir $name || ret=$?
+    protoc -I=$GOPATH/pkg/mod -I=$GOPATH/src -I=${proto_dir} --gofast_out=plugins=grpc,$GO_OUT_M:$gen_out_dir $name || ret=$?
     pb_files=${gen_out_dir}/*.pb.go
     rm -f ${gen_out_dir}/*.bak
     goimports -w $pb_files

@@ -1649,7 +1649,7 @@ func (r *routerRequest) ForceMergeExecute() *vearchpb.ForceMergeResponse {
 	return forceMergeResponse
 }
 
-// ForceMergeExecute Execute request
+// RebuildIndexExecute Execute request
 func (r *routerRequest) RebuildIndexExecute() *vearchpb.IndexResponse {
 	// ctx := context.WithValue(r.ctx, share.ReqMetaDataKey, r.md)
 	var wg sync.WaitGroup
@@ -1671,7 +1671,7 @@ func (r *routerRequest) RebuildIndexExecute() *vearchpb.IndexResponse {
 			if e != nil {
 				panic(e.Error())
 			}
-			responsePartition := r.ReplicaForceMergeExecute(partition, ctx, d, replyPartition)
+			responsePartition := r.ReplicaRebuildIndexExecute(partition, ctx, d, replyPartition)
 			respChain <- responsePartition
 		}(c, partitionID, pData)
 	}
@@ -1741,7 +1741,7 @@ func (r *routerRequest) FlushExecute() *vearchpb.FlushResponse {
 	return flushResponse
 }
 
-// replicaForceMergeExecute Execute request
+// ReplicaForceMergeExecute Execute request
 func (r *routerRequest) ReplicaForceMergeExecute(partition *entity.Partition, ctx context.Context, d *vearchpb.PartitionData, replyPartition *vearchpb.PartitionData) *vearchpb.PartitionData {
 	var wgOther sync.WaitGroup
 	nodeIds := partition.Replicas
