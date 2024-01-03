@@ -182,10 +182,6 @@ func (r *routerRequest) SetDocs(docs []*vearchpb.Document) *routerRequest {
 			r.Err = vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, errors.New("the doc is nil"))
 			return r
 		}
-		if len(doc.Fields) != len(r.space.SpaceProperties) {
-			r.Err = vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("the length[%d] of doc.fields is not equal to space[%d]", len(doc.Fields), len(r.space.SpaceProperties)))
-			return r
-		}
 		for _, field := range doc.Fields {
 			if _, ok := r.space.SpaceProperties[field.Name]; !ok {
 				r.Err = vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("the field[%s] in doc not needed in space", field.Name))

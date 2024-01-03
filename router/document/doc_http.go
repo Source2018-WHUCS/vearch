@@ -1190,9 +1190,7 @@ func (handler *DocumentHandler) handleDocumentSearch(ctx context.Context, w http
 		return ctx, true
 	}
 	resp.SendJsonBytes(ctx, w, bs)
-	endTime := time.Now()
-	log.Debug("handleDocumentSearch total use :[%f] service use :[%f]",
-		(endTime.Sub(startTime).Seconds())*1000, serviceCost.Seconds()*1000)
+	log.Debug("handleDocumentSearch total use :[%d] service use :[%d]", time.Since(startTime).Milliseconds(), serviceCost.Milliseconds())
 	return ctx, true
 }
 
@@ -1278,8 +1276,7 @@ func (handler *DocumentHandler) handleDocumentDelete(ctx context.Context, w http
 	}
 	serviceStart := time.Now()
 	delByQueryResp := handler.docService.deleteByQuery(ctx, args)
-	serviceEnd := time.Now()
-	serviceCost := serviceEnd.Sub(serviceStart)
+	serviceCost := time.Since(serviceStart)
 
 	log.Debug("handleDocumentDelete cost :%f", serviceCost)
 	shardsBytes, err := deleteByQueryResult(delByQueryResp)

@@ -96,12 +96,14 @@ func parseJSON(path []string, v *fastjson.Value, space *entity.Space, proMap map
 
 	haveNoField := false
 	errorField := ""
-	haveVector := false
 	parseErr := fmt.Errorf("")
 	obj.Visit(func(key []byte, val *fastjson.Value) {
 		fieldName := string(key)
+		if fieldName == IDField {
+			return
+		}
 		pro, ok := proMap[fieldName]
-		if !ok && fieldName != IDField {
+		if !ok {
 			haveNoField = true
 			errorField = fieldName
 			log.Warnf("unrecognizable field, %s is not found in space fields", fieldName)
@@ -128,9 +130,6 @@ func parseJSON(path []string, v *fastjson.Value, space *entity.Space, proMap map
 			parseErr = err
 			return
 		}
-		if field != nil && field.Type == vearchpb.FieldType_VECTOR && field.Value != nil {
-			haveVector = true
-		}
 		fields = append(fields, field)
 	})
 
@@ -140,12 +139,6 @@ func parseJSON(path []string, v *fastjson.Value, space *entity.Space, proMap map
 
 	if haveNoField {
 		return nil, fmt.Errorf("param have error field [%s]", errorField)
-	}
-
-	if !strings.EqualFold("scalar", space.Engine.DataType) {
-		if !haveVector {
-			return nil, fmt.Errorf("param have not vector value")
-		}
 	}
 
 	return fields, nil
