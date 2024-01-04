@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 __description__ = """ test case for vearch """
 
-ip = "testinsert-routerpre.vectorbase.svc.lf09.n.jd.local"
+ip = "127.0.0.1"
 ip_master = ip + ":8817"
-ip_router = ip + ":80"
+ip_router = ip + ":9001"
 proxy = "http://" + ip_router
 db_name = "ts_db"
 space_name = "ts_space"
