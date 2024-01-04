@@ -323,7 +323,8 @@ func (handler *DocumentHandler) handleUpdateDoc(ctx context.Context, w http.Resp
 		return ctx, true
 	}
 
-	err = docParse(ctx, r, space, args)
+	pkey := params.ByName(URLParamID)
+	err = docParse(ctx, handler, r, space, args, pkey)
 	if err != nil {
 		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error())
 		return ctx, false
@@ -358,7 +359,7 @@ func (handler *DocumentHandler) handleBulk(ctx context.Context, w http.ResponseW
 		space.SpaceProperties = spaceProperties
 	}
 
-	err = docBulkParse(ctx, r, space, args)
+	err = docBulkParse(ctx, handler, r, space, args)
 	if err != nil {
 		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error())
 		return ctx, false
@@ -951,7 +952,7 @@ func (handler *DocumentHandler) handleDocumentUpsert(ctx context.Context, w http
 		return ctx, false
 	}
 
-	err = documentParse(r, docRequest, space, args)
+	err = documentParse(ctx, handler, r, docRequest, space, args)
 	if err != nil {
 		resp.SendErrorRootCause(ctx, w, http.StatusBadRequest, "", err.Error())
 		return ctx, false

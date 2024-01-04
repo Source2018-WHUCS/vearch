@@ -726,7 +726,7 @@ class VearchCase():
         response = requests.post(
             url, headers=headers, data=json.dumps(json_data))
         logger.debug("document_upsert_singlefield:" + response.text)
-        assert response.status_code == 200
+        assert response.status_code != 200
 
     def test_documentDeleteByDocumentIds(self):
         logger.info("documentDeleteByDocumentIds")

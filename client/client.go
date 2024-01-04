@@ -299,7 +299,6 @@ func (r *routerRequest) SetSendMap(partitionId string) *routerRequest {
 
 // Execute Execute request
 func (r *routerRequest) Execute() []*vearchpb.Item {
-	// ctx := context.WithValue(r.ctx, share.ReqMetaDataKey, r.md)
 	normalIsOrNot := false
 	normalField := make(map[string]string)
 	if r.md[HandlerType] == BatchHandler || r.md[HandlerType] == ReplaceDocHandler {
