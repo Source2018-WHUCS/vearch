@@ -170,7 +170,8 @@ int StorageManager::GetString(int id, std::string &field_name,
   rocksdb::Status s =
       db_->Get(rocksdb::ReadOptions(), rocksdb::Slice(key_str), &value);
   if (!s.ok()) {
-    value = "";
+    LOG(DEBUG) << "rocksdb get error:" << s.ToString() << ", key=" << key_str;
+    return IO_ERR;
   }
 
   return 0;

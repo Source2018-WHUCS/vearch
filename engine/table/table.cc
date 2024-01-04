@@ -285,6 +285,17 @@ int Table::Add(const std::string &key,
   std::string v = std::string(vChar, sizeof(docid));
   item_to_docid_->Put(key, v);
 
+  for (size_t i = 0; i < attrs_.size(); i++) {
+    DataType data_type = attrs_[i];
+    if (data_type != DataType::STRING) {
+      continue;
+    }
+
+    if (fields.find(idx_attr_map_[i]) == fields.end()) {
+      storage_mgr_->AddString(docid, idx_attr_map_[i], "", 0);
+    }
+  }
+
   uint8_t doc_value[item_length_] = {0};
 
   for (const auto &[name, field] : fields) {
