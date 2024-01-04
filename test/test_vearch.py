@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 __description__ = """ test case for vearch """
 
-ip = "127.0.0.1"
+ip = "testinsert-routerpre.vectorbase.svc.lf09.n.jd.local"
 ip_master = ip + ":8817"
-ip_router = ip + ":9001"
+ip_router = ip + ":80"
 proxy = "http://" + ip_router
 db_name = "ts_db"
 space_name = "ts_space"
@@ -708,6 +708,26 @@ class VearchCase():
         assert result["_source"]["float"] == 888.88
         assert result["_source"]["string"] == "test"
 
+    def test_document_upsert_singlefield(self):
+        logger.info("document_upsert_singlefield")
+        headers = {"content-type": "application/json"}
+        # upsert single field
+        url = proxy + "/document/upsert"
+        json_data = {
+            "db_name": db_name,
+            "space_name": space_name,
+            "documents": [
+                {
+                    "float": 888.88,
+                    "string": "test"
+                }]
+        }
+        logger.debug("document_upsert_singlefield:" + json.dumps(json_data))
+        response = requests.post(
+            url, headers=headers, data=json.dumps(json_data))
+        logger.debug("document_upsert_singlefield:" + response.text)
+        assert response.status_code == 200
+
     def test_documentDeleteByDocumentIds(self):
         logger.info("documentDeleteByDocumentIds")
         headers = {"content-type": "application/json"}
@@ -804,6 +824,7 @@ class VearchCase():
         self.test_documentSearchByDocumentIds()
         self.test_documentSearchByVector()
         self.test_document_modify_singlefield()
+        self.test_document_upsert_singlefield()
         self.test_documentDeleteByDocumentIds()
         self.test_documentDeleteByFilter()
 
