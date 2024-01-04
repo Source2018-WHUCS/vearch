@@ -601,11 +601,6 @@ int GammaEngine::AddOrUpdate(Doc &doc) {
   int docid = -1;
   table_->GetDocIDByKey(key, docid);
   if (docid == -1) {
-    if (fields_vec.size() < vec_manager_->RawVectors().size()) {
-      LOG(DEBUG) << "vec field " << fields_vec.size() << " < "
-                 << vec_manager_->RawVectors().size();
-      return 0;
-    }
     int ret = table_->Add(key, fields_table, max_docid_);
     if (ret != 0) return -2;
     for (auto &[name, field] : fields_table) {
