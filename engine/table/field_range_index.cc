@@ -371,6 +371,8 @@ class FieldRangeIndex {
 
   bool IsNumeric() { return is_numeric_; }
 
+  enum DataType DataType() { return data_type_; }
+
   char *Delim() { return kDelim_; }
 
   // for debug
@@ -382,6 +384,7 @@ class FieldRangeIndex {
   BtMgr *cache_mgr_;
 #endif
   bool is_numeric_;
+  enum DataType data_type_;
   char *kDelim_;
   std::string path_;
   std::string name_;
@@ -419,6 +422,7 @@ FieldRangeIndex::FieldRangeIndex(std::string &path, int field_idx,
   } else {
     is_numeric_ = true;
   }
+  data_type_ = field_type;
   kDelim_ = const_cast<char *>(bt_param.kDelim);
 
   int ret = pthread_rwlock_init(&rw_lock_, nullptr);
@@ -1031,6 +1035,20 @@ int MultiFieldsRangeIndex::DeleteDoc(int docid, int field, std::string &key) {
   return 0;
 }
 
+template <typename type>
+static void process_bound(std::string &bound, int shift) {
+  static_assert(std::is_fundamental<type>::value, "Type must be fundamental.");
+
+  type v;
+  if (bound.size() >= sizeof(type)) {
+    std::vector<char> vec(sizeof(v));
+    memcpy(&v, bound.data(), sizeof(v));
+    v += shift;
+    memcpy(vec.data(), &v, sizeof(v));
+    bound = std::string(vec.begin(), vec.end());
+  }
+}
+
 int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &origin_filters,
                                   MultiRangeQueryResults *out) {
   out->Clear();
@@ -1066,6 +1084,22 @@ int MultiFieldsRangeIndex::Search(const std::vector<FilterInfo> &origin_filters,
     RangeQueryResult result;
     FieldRangeIndex *index = fields_[filter.field];
 
+    if (index->DataType() == DataType::INT ||
+        index->DataType() == DataType::LONG) {
+      if (not filter.include_lower && index->DataType() == DataType::INT) {
+        process_bound<int>(filter.lower_value, 1);
+      } else if (not filter.include_lower &&
+                 index->DataType() == DataType::LONG) {
+        process_bound<long>(filter.lower_value, 1);
+      }
+
+      if (not filter.include_upper && index->DataType() == DataType::INT) {
+        process_bound<int>(filter.upper_value, -1);
+      } else if (not filter.include_upper &&
+                 index->DataType() == DataType::LONG) {
+        process_bound<long>(filter.upper_value, -1);
+      }
+    }
     int retval = index->Search(filter.lower_value, filter.upper_value, &result);
     if (retval > 0) {
       if (filter.is_union == FilterOperator::Not) {

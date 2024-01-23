@@ -442,6 +442,8 @@ int GammaEngine::MultiRangeQuery(Request &request,
     filters[idx].field = table_->GetAttrIdx(filter.field);
     filters[idx].lower_value = filter.lower_value;
     filters[idx].upper_value = filter.upper_value;
+    filters[idx].include_lower = filter.include_lower;
+    filters[idx].include_upper = filter.include_upper;
 
     ++idx;
   }
