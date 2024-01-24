@@ -182,11 +182,11 @@ def prepare_filter(filter, index, batch_size, seed, full_field):
                     "lt": (index + 1) * batch_size * seed
                 },
                 "field_float": {
-                    "gte": float(index * batch_size * seed),
+                    "gt": float(index * batch_size * seed),
                     "lt": float((index + 1) * batch_size * seed)
                 },
                 "field_double": {
-                    "gte": float(index * batch_size * seed),
+                    "gt": float(index * batch_size * seed),
                     "lt": float((index + 1) * batch_size * seed)
                 }
             }
@@ -196,7 +196,7 @@ def prepare_filter(filter, index, batch_size, seed, full_field):
         range_filter = {
             "range": {
                 "field_int": {
-                    "gt": (index * batch_size) * seed,
+                    "gte": (index * batch_size) * seed,
                     "lt": (index + 1) * batch_size * seed
                 }
             }
