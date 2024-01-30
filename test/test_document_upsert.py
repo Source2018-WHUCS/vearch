@@ -229,6 +229,10 @@ def check_badcase(total, xb, wrong_parameters):
             "type": "string",
             "index": True
         },
+        "field_string1": {
+            "type": "string",
+            "index": False
+        },
         "field_vector": {
             "type": "vector",
             "index": True,
@@ -242,17 +246,26 @@ def check_badcase(total, xb, wrong_parameters):
 
     add_error(total_batch, batch_size, xb, logger, wrong_parameters)
 
+    assert get_space_num() == 0
+
     destroy(router_url, db_name, space_name)
 
-@ pytest.mark.parametrize(["wrong_number_value", "wrong_str_value", "without_vector", "wrong_db", "wrong_space", "wrong_field", "empty_documents"], [
-    [True, False,False,False,False,False,False],
-    [False, True,False,False,False,False,False],
-    [False, False,True,False,False,False,False],
-    [False, False,False,True,False,False,False],
-    [False, False,False,False,True,False,False],
-    [False, False,False,False,False,True,False],
-    [False, False,False,False,False,False,True],
+@ pytest.mark.parametrize(["wrong_number_value", "wrong_str_value", "without_vector", "wrong_db", "wrong_space", 
+                           "wrong_field", "empty_documents", "wrong_index_string_length", "wrong_string_length"], [
+    [True, False,False,False,False,False,False, False,False],
+    [False, True,False,False,False,False,False, False,False],
+    [False, False,True,False,False,False,False, False,False],
+    [False, False,False,True,False,False,False, False,False],
+    [False, False,False,False,True,False,False, False,False],
+    [False, False,False,False,False,True,False, False,False],
+    [False, False,False,False,False,False,True, False,False],
+    [False, False,False,False,False,False,False, True,False],
+    [False, False,False,False,False,False,False, False,True],
 ])
-def test_vearch_document_upsert_badcase(wrong_number_value, wrong_str_value, without_vector, wrong_db, wrong_space, wrong_field, empty_documents):
-    wrong_parameters = [wrong_number_value, wrong_str_value, without_vector, wrong_db, wrong_space, wrong_field, empty_documents]
+def test_vearch_document_upsert_badcase(wrong_number_value, wrong_str_value, without_vector, wrong_db, wrong_space, 
+                                        wrong_field, empty_documents, wrong_index_string_length, wrong_string_length):
+    wrong_parameters = [wrong_number_value, wrong_str_value, without_vector, \
+                        wrong_db, wrong_space, wrong_field, empty_documents, \
+                        wrong_index_string_length, wrong_string_length]
+
     check_badcase(1, xb, wrong_parameters)

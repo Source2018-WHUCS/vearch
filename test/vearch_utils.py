@@ -181,6 +181,11 @@ def process_add_error_data(items):
     wrong_space = items[4][4]
     wrong_field = items[4][5]
     empty_documents = items[4][6]
+    wrong_index_string_length = items[4][7]
+    wrong_string_length = items[4][8]
+    max_index_str_length = 1025
+    max_str_length = 65536
+
     if wrong_db:
         data["db_name"] = "wrong_db"
     if wrong_space:
@@ -193,10 +198,16 @@ def process_add_error_data(items):
             param_dict["field_vector"] = {
                 "feature": features[j].tolist()
             }
+
+        param_dict["field_string"] = str(param_dict["field_int"])
         if wrong_str_value:
             param_dict["field_string"] = float(param_dict["field_int"])
-        else:
-            param_dict["field_string"] = str(param_dict["field_int"])
+
+        if wrong_index_string_length:
+            param_dict["field_string"] = "".join(["0" for _ in range(max_index_str_length)])
+
+        if wrong_string_length:
+            param_dict["field_string1"] = "".join(["0" for _ in range(max_str_length)])
 
         if wrong_number_value:
             param_dict["field_long"] = param_dict["field_int"]
@@ -213,8 +224,11 @@ def process_add_error_data(items):
     
     json_str = json.dumps(data)
     rs = requests.post(url, json_str)
-    logger.info(json_str)
+
+    if not wrong_string_length:
+        logger.info(json_str)
     logger.info(rs.json())
+
     assert rs.status_code != 200
 
 
