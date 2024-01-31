@@ -81,24 +81,24 @@ func ExportDocumentHandler(httpServer *gin.Engine, client *client.Client) {
 
 func (handler *DocumentHandler) proxyMaster() error {
 	// list/*
-	handler.httpServer.Handle(http.MethodGet, "/list/server", handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodGet, "/list/db", handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodGet, "/list/space", handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodGet, "/list/partition", handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodGet, "/list/router", handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodGet, "/list/server", handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodGet, "/list/db", handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodGet, "/list/space", handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodGet, "/list/partition", handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodGet, "/list/router", handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
 	// db handler
-	handler.httpServer.Handle(http.MethodPut, "/db/_create", handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodGet, fmt.Sprintf("/db/:%s", URLParamDbName), handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodDelete, fmt.Sprintf("/db/:%s", URLParamDbName), handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodPost, "/db/modify", handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodPut, "/db/_create", handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodGet, fmt.Sprintf("/db/:%s", URLParamDbName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodDelete, fmt.Sprintf("/db/:%s", URLParamDbName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodPost, "/db/modify", handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
 	// space handler
-	handler.httpServer.Handle(http.MethodPut, fmt.Sprintf("/space/:%s/_create", URLParamDbName), handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodGet, fmt.Sprintf("/space/:%s/:%s", URLParamDbName, URLParamSpaceName), handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodPost, fmt.Sprintf("/space/:%s/:%s", URLParamDbName, URLParamSpaceName), handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodDelete, fmt.Sprintf("/space/:%s/:%s", URLParamDbName, URLParamSpaceName), handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodPut, fmt.Sprintf("/space/:%s/_create", URLParamDbName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodGet, fmt.Sprintf("/space/:%s/:%s", URLParamDbName, URLParamSpaceName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodPost, fmt.Sprintf("/space/:%s/:%s", URLParamDbName, URLParamSpaceName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodDelete, fmt.Sprintf("/space/:%s/:%s", URLParamDbName, URLParamSpaceName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
 	// cluster handler
-	handler.httpServer.Handle(http.MethodGet, "/_cluster/health", handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodGet, "/_cluster/stats", handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodGet, "/_cluster/health", handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodGet, "/_cluster/stats", handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
 
 	return nil
 }
