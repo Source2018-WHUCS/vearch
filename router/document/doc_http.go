@@ -819,6 +819,8 @@ func (handler *DocumentHandler) handleDocumentUpsert(c *gin.Context) {
 	startTime := time.Now()
 	operateName := "handleDocumentUpsert"
 	defer monitor.Profiler(operateName, startTime)
+	span, _ := opentracing.StartSpanFromContext(c.Request.Context(), operateName)
+	defer span.Finish()
 
 	args := &vearchpb.BulkRequest{}
 	args.Head = setRequestHeadFromGin(c)

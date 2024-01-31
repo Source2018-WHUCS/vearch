@@ -59,9 +59,10 @@ func NewServer(ctx context.Context) (*Server, error) {
 	// netutil.SetMode(netutil.RouterModeGorilla) //no need
 
 	// httpServer := netutil.NewServer(httpServerConfig)
-	if !log.IsDebugEnabled() {
-		gin.SetMode(gin.ReleaseMode)
-	}
+	// if !log.IsDebugEnabled() {
+	// 	gin.SetMode(gin.ReleaseMode)
+	// }
+	gin.SetMode(gin.ReleaseMode)
 	httpServer := gin.New()
 
 	document.ExportDocumentHandler(httpServer, cli)
