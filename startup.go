@@ -123,7 +123,7 @@ func main() {
 					runtime.ReadMemStats(&mem)
 					log.Debug(fmt.Sprint("mem.Alloc:", mem.Alloc, " mem.TotalAlloc:", mem.TotalAlloc, " mem.HeapAlloc:", mem.HeapAlloc, " mem.HeapSys:", mem.HeapSys, " routing :", runtime.NumGoroutine()))
 				}
-				time.Sleep(10 * time.Second)
+				time.Sleep(3 * time.Minute)
 			}
 		}()
 	}
