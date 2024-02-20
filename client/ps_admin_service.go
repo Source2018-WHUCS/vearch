@@ -18,15 +18,15 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/bytedance/sonic"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/vearchpb"
-	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/util/metrics/mserver"
 )
 
 func operatePartition(method, addr string, space *entity.Space, pid uint32) error {
-	bytes, e := cbjson.Marshal(space)
+	bytes, e := sonic.Marshal(space)
 	if e != nil {
 		return e
 	}
@@ -61,7 +61,7 @@ func GetEngineCfg(addr string, pid entity.PartitionID) (cfg *entity.EngineCfg, e
 	}
 	if reply.Data != nil {
 		cfg := &entity.EngineCfg{}
-		err = cbjson.Unmarshal(reply.Data, cfg)
+		err = sonic.Unmarshal(reply.Data, cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +74,7 @@ func GetEngineCfg(addr string, pid entity.PartitionID) (cfg *entity.EngineCfg, e
 }
 
 func UpdateEngineCfg(addr string, cacheCfg *entity.EngineCfg, pid entity.PartitionID) error {
-	value, err := cbjson.Marshal(cacheCfg)
+	value, err := sonic.Marshal(cacheCfg)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func ServerStats(addr string) *mserver.ServerStats {
 		return mserver.NewErrServerStatus(strings.Split(addr, ":")[0], err)
 	}
 	serverStats := new(mserver.ServerStats)
-	err = cbjson.Unmarshal(reply.Data, serverStats)
+	err = sonic.Unmarshal(reply.Data, serverStats)
 	if err != nil {
 		return mserver.NewErrServerStatus(strings.Split(addr, ":")[0], err)
 	}
@@ -170,7 +170,7 @@ func _partitionsInfo(addr string, pid entity.PartitionID, detail_info bool) (val
 		return nil, vearchpb.NewError(reply.Err.Code, nil)
 	}
 	value = make([]*entity.PartitionInfo, 0, 1)
-	err = cbjson.Unmarshal(reply.Data, &value)
+	err = sonic.Unmarshal(reply.Data, &value)
 	if err != nil {
 		log.Error("Unmarshal partition info failed, err: [%v]", err)
 		return
@@ -179,7 +179,7 @@ func _partitionsInfo(addr string, pid entity.PartitionID, detail_info bool) (val
 }
 
 func ChangeMember(addr string, changeMember *entity.ChangeMember) error {
-	value, err := cbjson.Marshal(changeMember)
+	value, err := sonic.Marshal(changeMember)
 	if err != nil {
 		return err
 	}

@@ -20,13 +20,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bytedance/sonic"
 	"github.com/spf13/cast"
 	"github.com/vearch/vearch/engine/sdk/go/gamma"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/vearchpb"
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/ps/engine/register"
-	"github.com/vearch/vearch/util/cbjson"
 )
 
 var empty = []byte{0}
@@ -58,7 +58,7 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*gamma.T
 	var retrievalParamsArr []string
 	retrievalParams := &entity.RetrievalParams{}
 	if engine.RetrievalParams != nil {
-		err := cbjson.Unmarshal(engine.RetrievalParams, &retrievalParams.RetrievalParamArr)
+		err := sonic.Unmarshal(engine.RetrievalParams, &retrievalParams.RetrievalParamArr)
 		if err != nil {
 			return nil, fmt.Errorf("retrieval_params Unmarshal error")
 		}

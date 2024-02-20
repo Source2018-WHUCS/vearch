@@ -741,7 +741,7 @@ func docSearchParse(r *http.Request, space *entity.Space, searchReq *vearchpb.Se
 	}
 
 	searchDoc := &request.SearchDocumentRequest{}
-	err = cbjson.Unmarshal(reqBody, searchDoc)
+	err = sonic.Unmarshal(reqBody, searchDoc)
 	if err != nil {
 		err = fmt.Errorf("query param convert json err: [%s]", string(reqBody))
 		return
@@ -767,10 +767,10 @@ func docSearchByIdsParse(r *http.Request, space *entity.Space) (fieldsParam []st
 		Query json.RawMessage `json:"query"`
 	}{}
 
-	err = cbjson.Unmarshal(reqBody, &queryParam)
+	err = sonic.Unmarshal(reqBody, &queryParam)
 	if err != nil {
-		log.Error("docSearchByIdsParse cbjson.Unmarshal error :%v", err)
-		err = fmt.Errorf("docSearchByIdsParse cbjson.Unmarshal error :%v", err)
+		log.Error("docSearchByIdsParse Unmarshal error :%v", err)
+		err = fmt.Errorf("docSearchByIdsParse Unmarshal error :%v", err)
 		return nil, nil, reqBodyByte, err
 	}
 
@@ -836,7 +836,7 @@ func arrayToMap(feilds []string) map[string]string {
 
 func docSearchByFeaturesParse(space *entity.Space, reqBody []byte, searchReq *vearchpb.SearchRequest, items []*vearchpb.Item, query_type string) (err error) {
 	searchDoc := &request.SearchDocumentRequest{}
-	err = cbjson.Unmarshal(reqBody, searchDoc)
+	err = sonic.Unmarshal(reqBody, searchDoc)
 	if err != nil {
 		err = fmt.Errorf("query param convert json err: [%s]", string(reqBody))
 		return
@@ -878,7 +878,7 @@ func docBulkSearchParse(r *http.Request, space *entity.Space, head *vearchpb.Req
 
 	var paramMap []map[string]interface{}
 	if err := json.Unmarshal([]byte(reqBody), &paramMap); err != nil {
-		log.Error("docBulkSearchParse cbjson.Unmarshal error :%v", err)
+		log.Error("docBulkSearchParse Unmarshal error :%v", err)
 		err = fmt.Errorf("query param Unmarshal error")
 		return nil, err
 	}
@@ -903,7 +903,7 @@ func docBulkSearchParse(r *http.Request, space *entity.Space, head *vearchpb.Req
 		}
 		searchRequest.SearchDocumentRequestArr = searchDocReqArr
 	}
-	err = cbjson.Unmarshal(reqBody, &searchRequest.SearchDocumentRequestArr)
+	err = sonic.Unmarshal(reqBody, &searchRequest.SearchDocumentRequestArr)
 	if err != nil {
 		log.Error("param Unmarshal error :%v", err)
 		err = fmt.Errorf("query param Unmarshal error")
@@ -960,7 +960,7 @@ func documentHeadParse(r *http.Request) (docRequest *request.DocumentRequest, db
 	}
 
 	docRequest = &request.DocumentRequest{}
-	err = cbjson.Unmarshal(reqBody, docRequest)
+	err = sonic.Unmarshal(reqBody, docRequest)
 	if err != nil {
 		err = fmt.Errorf("documentRequest param convert json %s err: %v", string(reqBody), err)
 		return nil, "", "", err
@@ -1101,7 +1101,7 @@ func IndexRequestParse(r *http.Request) (index *request.IndexRequest, err error)
 	}
 
 	index = &request.IndexRequest{}
-	err = cbjson.Unmarshal(reqBody, index)
+	err = sonic.Unmarshal(reqBody, index)
 	if err != nil {
 		err = fmt.Errorf("index param convert json %s err: %v", string(reqBody), err)
 		return nil, err

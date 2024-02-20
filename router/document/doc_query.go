@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bytedance/sonic"
 	"github.com/spf13/cast"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/request"
@@ -31,7 +32,6 @@ import (
 	"github.com/vearch/vearch/router/document/rutil"
 	"github.com/vearch/vearch/util"
 	"github.com/vearch/vearch/util/cbbytes"
-	"github.com/vearch/vearch/util/cbjson"
 )
 
 const (
@@ -81,7 +81,7 @@ func parseQuery(data []byte, req *vearchpb.SearchRequest, space *entity.Space) e
 		OnlineLogLevel string            `json:"online_log_level"`
 	}{}
 
-	err := cbjson.Unmarshal(data, &temp)
+	err := sonic.Unmarshal(data, &temp)
 	if err != nil {
 		return fmt.Errorf("unmarshal err:[%s] , query:[%s]", err.Error(), string(data))
 	}
@@ -115,7 +115,7 @@ func parseQuery(data []byte, req *vearchpb.SearchRequest, space *entity.Space) e
 
 	for _, filterBytes := range temp.Filter {
 		tmp := make(map[string]json.RawMessage)
-		err := cbjson.Unmarshal(filterBytes, &tmp)
+		err := sonic.Unmarshal(filterBytes, &tmp)
 		if err != nil {
 			return err
 		}
@@ -716,7 +716,7 @@ func searchParamToSearchPb(searchDoc *request.SearchDocumentRequest, searchReq *
 			Nprobe     int64  `json:"nprobe,omitempty"`
 		}{}
 
-		err := cbjson.Unmarshal(searchDoc.RetrievalParam, &temp)
+		err := sonic.Unmarshal(searchDoc.RetrievalParam, &temp)
 		if err != nil {
 			return fmt.Errorf("unmarshal err:[%s] , query:[%s]", err.Error(), string(searchDoc.RetrievalParam))
 		}
@@ -736,17 +736,13 @@ func searchParamToSearchPb(searchDoc *request.SearchDocumentRequest, searchReq *
 		}
 	} else {
 		if searchDoc.Nprobe != 0 {
-			var builder = cbjson.ContentBuilderFactory()
-			builder.BeginObject()
-			builder.Field("nprobe")
-			builder.ValueInterface(searchDoc.Nprobe)
-			builder.EndObject()
-			jsonByte, err := builder.Output()
-			if err == nil {
-				searchReq.RetrievalParams = string(jsonByte)
-			} else {
+			retrievalParams := map[string]int{"nprobe": int(searchDoc.Nprobe)}
+
+			jsonByte, err := sonic.Marshal(retrievalParams)
+			if err != nil {
 				return fmt.Errorf("query param RetrievalParam parse err")
 			}
+			searchReq.RetrievalParams = string(jsonByte)
 		}
 	}
 	if searchDoc.Size != nil {

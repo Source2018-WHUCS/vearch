@@ -23,9 +23,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/proto/entity"
-	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/ioutil2"
 	"github.com/vearch/vearch/util/log"
 )
@@ -72,7 +72,7 @@ func InitMeta(client *client.Client, cluster, dataPath string) entity.NodeID {
 func readMeta(cluster, metaPath string) entity.NodeID {
 	if b, err := os.ReadFile(metaPath); err == nil {
 		temp := &meta{}
-		if err := cbjson.Unmarshal(b, temp); err != nil {
+		if err := sonic.Unmarshal(b, temp); err != nil {
 			panic(err)
 		}
 
@@ -102,7 +102,7 @@ func createMeta(client *client.Client, cluster, metaPath string) entity.NodeID {
 	}
 
 	temp := meta{ClusterName: cluster, Id: entity.NodeID(id)}
-	bytes, err := cbjson.Marshal(temp)
+	bytes, err := sonic.Marshal(temp)
 	if err != nil {
 		panic(err)
 	}
@@ -177,7 +177,7 @@ func LoadPartitionMeta(dataPath string, id entity.PartitionID) (*entity.Space, e
 
 	space := &entity.Space{}
 
-	err = cbjson.Unmarshal(bytes, space)
+	err = sonic.Unmarshal(bytes, space)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func LoadPartitionMeta(dataPath string, id entity.PartitionID) (*entity.Space, e
 
 func SavePartitionMeta(dataPath string, id entity.PartitionID, space *entity.Space) error {
 	_, _, meta := GetPartitionPaths(dataPath, id)
-	bytes, err := cbjson.Marshal(space)
+	bytes, err := sonic.Marshal(space)
 	if err != nil {
 		return err
 	}

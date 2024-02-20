@@ -20,11 +20,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/patrickmn/go-cache"
 	"github.com/spf13/cast"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/vearchpb"
-	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/log"
 	server "github.com/vearch/vearch/util/server/rpc"
 )
@@ -58,17 +58,17 @@ const (
 	MSearchNewHandler    = "MSearchNewHandler"
 	StreamSearchHandler  = "StreamSearchHandler"
 
-	GetDocHandler             = "GetDocHandler"
-	GetDocsHandler            = "GetDocsHandler"
-	GetDocsByPartitionHandler = "GetDocsByPartitionHandler"
+	GetDocHandler                 = "GetDocHandler"
+	GetDocsHandler                = "GetDocsHandler"
+	GetDocsByPartitionHandler     = "GetDocsByPartitionHandler"
 	GetNextDocsByPartitionHandler = "GetNextDocsByPartitionHandler"
-	CreateDocHandler          = "CreateDocHandler"
-	DeleteDocsHandler         = "DeleteDocsHandler"
-	ReplaceDocHandler         = "ReplaceDocHandler"
-	BatchHandler              = "BatchHandler"
-	ForceMergeHandler         = "ForceMergeHandler"
-	RebuildIndexHandler       = "RebuildIndexHandler"
-	FlushHandler              = "FlushHandler"
+	CreateDocHandler              = "CreateDocHandler"
+	DeleteDocsHandler             = "DeleteDocsHandler"
+	ReplaceDocHandler             = "ReplaceDocHandler"
+	BatchHandler                  = "BatchHandler"
+	ForceMergeHandler             = "ForceMergeHandler"
+	RebuildIndexHandler           = "RebuildIndexHandler"
+	FlushHandler                  = "FlushHandler"
 
 	CreatePartitionHandler = "CreatePartitionHandler"
 	DeletePartitionHandler = "DeletePartitionHandler"
@@ -200,7 +200,7 @@ func Execute(addr, servicePath string, args *vearchpb.PartitionData, reply *vear
 			continue
 		} else if reply.Err != nil && reply.Err.Code == vearchpb.ErrorEnum_PARTITION_NOT_LEADER {
 			addrs := new(entity.Replica)
-			err = cbjson.Unmarshal([]byte(reply.Err.Msg), addrs)
+			err = sonic.Unmarshal([]byte(reply.Err.Msg), addrs)
 			if err != nil {
 				return err
 			}
