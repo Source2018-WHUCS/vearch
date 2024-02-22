@@ -452,7 +452,7 @@ func (m *masterClient) Register(ctx context.Context, clusterName string, nodeID 
 		return nil, err
 	}
 	server = &entity.Server{}
-	if err := sonic.Unmarshal(data, server); err != nil {
+	if err := cbjson.Unmarshal(data, server); err != nil {
 		return nil, err
 	}
 

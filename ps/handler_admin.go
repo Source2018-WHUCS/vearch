@@ -28,6 +28,7 @@ import (
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/vearchpb"
 	"github.com/vearch/vearch/ps/engine"
+	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/errutil"
 	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/util/metrics/mserver"
@@ -92,7 +93,7 @@ type CreatePartitionHandler struct {
 func (c *CreatePartitionHandler) Execute(ctx context.Context, req *vearchpb.PartitionData, reply *vearchpb.PartitionData) error {
 	reply.Err = &vearchpb.Error{Code: vearchpb.ErrorEnum_SUCCESS}
 	space := new(entity.Space)
-	err := sonic.Unmarshal(req.Data, space)
+	err := cbjson.Unmarshal(req.Data, space)
 	if err != nil {
 		log.Error("Create partition failed, err: [%s]", err.Error())
 		return vearchpb.NewError(vearchpb.ErrorEnum_RPC_PARAM_ERROR, err)
@@ -141,7 +142,7 @@ func (handler *UpdatePartitionHandler) Execute(ctx context.Context, req *vearchp
 	reply.Err = &vearchpb.Error{Code: vearchpb.ErrorEnum_SUCCESS}
 
 	space := new(entity.Space)
-	if err := sonic.Unmarshal(req.Data, space); err != nil {
+	if err := cbjson.Unmarshal(req.Data, space); err != nil {
 		return vearchpb.NewError(vearchpb.ErrorEnum_RPC_PARAM_ERROR, err)
 	}
 
@@ -285,7 +286,7 @@ func (ch *ChangeMemberHandler) Execute(ctx context.Context, req *vearchpb.Partit
 	reply.Err = &vearchpb.Error{Code: vearchpb.ErrorEnum_SUCCESS}
 
 	reqObj := new(entity.ChangeMember)
-	if err := sonic.Unmarshal(req.Data, reqObj); err != nil {
+	if err := cbjson.Unmarshal(req.Data, reqObj); err != nil {
 		return err
 	}
 
@@ -376,7 +377,7 @@ func (ch *EngineCfgHandler) Execute(ctx context.Context, req *vearchpb.Partition
 	}
 	if req.Type == vearchpb.OpType_CREATE {
 		cacheCfg := new(entity.EngineCfg)
-		if err := sonic.Unmarshal(req.Data, cacheCfg); err != nil {
+		if err := cbjson.Unmarshal(req.Data, cacheCfg); err != nil {
 			errutil.ThrowError(err)
 			return err
 		}

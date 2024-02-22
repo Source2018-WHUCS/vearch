@@ -21,6 +21,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/vearchpb"
+	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/log"
 	"github.com/vearch/vearch/util/metrics/mserver"
 )
@@ -61,7 +62,7 @@ func GetEngineCfg(addr string, pid entity.PartitionID) (cfg *entity.EngineCfg, e
 	}
 	if reply.Data != nil {
 		cfg := &entity.EngineCfg{}
-		err = sonic.Unmarshal(reply.Data, cfg)
+		err = cbjson.Unmarshal(reply.Data, cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +126,7 @@ func ServerStats(addr string) *mserver.ServerStats {
 		return mserver.NewErrServerStatus(strings.Split(addr, ":")[0], err)
 	}
 	serverStats := new(mserver.ServerStats)
-	err = sonic.Unmarshal(reply.Data, serverStats)
+	err = cbjson.Unmarshal(reply.Data, serverStats)
 	if err != nil {
 		return mserver.NewErrServerStatus(strings.Split(addr, ":")[0], err)
 	}
@@ -170,7 +171,7 @@ func _partitionsInfo(addr string, pid entity.PartitionID, detail_info bool) (val
 		return nil, vearchpb.NewError(reply.Err.Code, nil)
 	}
 	value = make([]*entity.PartitionInfo, 0, 1)
-	err = sonic.Unmarshal(reply.Data, &value)
+	err = cbjson.Unmarshal(reply.Data, &value)
 	if err != nil {
 		log.Error("Unmarshal partition info failed, err: [%v]", err)
 		return

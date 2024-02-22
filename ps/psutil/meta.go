@@ -26,6 +26,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/vearch/vearch/client"
 	"github.com/vearch/vearch/proto/entity"
+	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/ioutil2"
 	"github.com/vearch/vearch/util/log"
 )
@@ -72,7 +73,7 @@ func InitMeta(client *client.Client, cluster, dataPath string) entity.NodeID {
 func readMeta(cluster, metaPath string) entity.NodeID {
 	if b, err := os.ReadFile(metaPath); err == nil {
 		temp := &meta{}
-		if err := sonic.Unmarshal(b, temp); err != nil {
+		if err := cbjson.Unmarshal(b, temp); err != nil {
 			panic(err)
 		}
 
@@ -177,7 +178,7 @@ func LoadPartitionMeta(dataPath string, id entity.PartitionID) (*entity.Space, e
 
 	space := &entity.Space{}
 
-	err = sonic.Unmarshal(bytes, space)
+	err = cbjson.Unmarshal(bytes, space)
 	if err != nil {
 		return nil, err
 	}

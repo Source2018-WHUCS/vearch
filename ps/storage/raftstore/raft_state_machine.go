@@ -17,13 +17,13 @@ package raftstore
 import (
 	"fmt"
 
-	"github.com/bytedance/sonic"
 	"github.com/cubefs/cubefs/depends/tiglabs/raft"
 	"github.com/cubefs/cubefs/depends/tiglabs/raft/proto"
 	"github.com/vearch/vearch/config"
 	"github.com/vearch/vearch/proto/entity"
 	"github.com/vearch/vearch/proto/vearchpb"
 	"github.com/vearch/vearch/ps/psutil"
+	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/log"
 )
 
@@ -145,7 +145,7 @@ func (s *Store) updateSchemaBySpace(spaceBytes []byte, version uint64) (rap *Raf
 	}*/
 
 	space := &entity.Space{}
-	err := sonic.Unmarshal(spaceBytes, space)
+	err := cbjson.Unmarshal(spaceBytes, space)
 	if err != nil {
 		return rap.SetErr(err)
 	}

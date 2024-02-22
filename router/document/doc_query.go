@@ -32,6 +32,7 @@ import (
 	"github.com/vearch/vearch/router/document/rutil"
 	"github.com/vearch/vearch/util"
 	"github.com/vearch/vearch/util/cbbytes"
+	"github.com/vearch/vearch/util/cbjson"
 )
 
 const (
@@ -81,7 +82,7 @@ func parseQuery(data []byte, req *vearchpb.SearchRequest, space *entity.Space) e
 		OnlineLogLevel string            `json:"online_log_level"`
 	}{}
 
-	err := sonic.Unmarshal(data, &temp)
+	err := cbjson.Unmarshal(data, &temp)
 	if err != nil {
 		return fmt.Errorf("unmarshal err:[%s] , query:[%s]", err.Error(), string(data))
 	}
@@ -115,7 +116,7 @@ func parseQuery(data []byte, req *vearchpb.SearchRequest, space *entity.Space) e
 
 	for _, filterBytes := range temp.Filter {
 		tmp := make(map[string]json.RawMessage)
-		err := sonic.Unmarshal(filterBytes, &tmp)
+		err := cbjson.Unmarshal(filterBytes, &tmp)
 		if err != nil {
 			return err
 		}
@@ -716,7 +717,7 @@ func searchParamToSearchPb(searchDoc *request.SearchDocumentRequest, searchReq *
 			Nprobe     int64  `json:"nprobe,omitempty"`
 		}{}
 
-		err := sonic.Unmarshal(searchDoc.RetrievalParam, &temp)
+		err := cbjson.Unmarshal(searchDoc.RetrievalParam, &temp)
 		if err != nil {
 			return fmt.Errorf("unmarshal err:[%s] , query:[%s]", err.Error(), string(searchDoc.RetrievalParam))
 		}
