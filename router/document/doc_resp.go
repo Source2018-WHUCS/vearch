@@ -32,6 +32,7 @@ import (
 	"github.com/vearch/vearch/proto/vearchpb"
 	"github.com/vearch/vearch/ps/engine/mapping"
 	"github.com/vearch/vearch/util/cbbytes"
+	"github.com/vearch/vearch/util/cbjson"
 	"github.com/vearch/vearch/util/log"
 )
 
@@ -266,7 +267,7 @@ func documentGetResponse(client *client.Client, args *vearchpb.GetRequest, reply
 	}
 	response["total"] = total
 
-	documents := make([]interface{}, 0, len(reply.Items))
+	documents := []interface{}{}
 	for _, item := range reply.Items {
 		doc := make(map[string]interface{})
 
@@ -301,34 +302,51 @@ func documentGetResponse(client *client.Client, args *vearchpb.GetRequest, reply
 }
 
 func documentSearchResponse(srs []*vearchpb.SearchResult, head *vearchpb.ResponseHead, took time.Duration, space *entity.Space, response_type string) ([]byte, error) {
-	response := make(map[string]interface{})
-	response["code"] = int64(vearchpb.ErrorEnum_SUCCESS)
-	response["msg"] = "success"
+	var builder = cbjson.ContentBuilderFactory()
 
-	if head != nil && head.Err != nil {
-		response["code"] = int64(head.Err.Code)
-		response["msg"] = head.Err.Msg
+	builder.BeginObject()
+	builder.Field("code")
+	if head == nil || head.Err == nil {
+		builder.ValueNumeric(int64(vearchpb.ErrorEnum_SUCCESS))
+		builder.More()
+		builder.Field("msg")
+		builder.ValueString("success")
+	} else {
+		if head != nil && head.Err != nil {
+			builder.ValueNumeric(int64(head.Err.Code))
+			builder.More()
+			builder.Field("msg")
+			builder.ValueString(head.Err.Msg)
+		} else {
+			builder.ValueNumeric(int64(vearchpb.ErrorEnum_INTERNAL_ERROR))
+		}
 	}
 
 	if response_type == request.QueryResponse {
-		total := 0
-		if len(srs) > 0 {
-			total = len(srs[0].ResultItems)
+		if srs == nil {
+			builder.More()
+			builder.Field("total")
+			builder.ValueNumeric(0)
+		} else {
+			builder.More()
+			builder.Field("total")
+			total := len(srs[0].ResultItems)
+			builder.ValueNumeric(int64(total))
 		}
-		response["total"] = total
 	}
 
-	documents := make([]interface{}, 0)
+	builder.More()
+	builder.BeginArrayWithField("documents")
 
 	if len(srs) > 1 {
 		var wg sync.WaitGroup
-		respChain := make(chan map[int]interface{}, len(srs))
+		respChain := make(chan map[int][]byte, len(srs))
 		for i, sr := range srs {
 			wg.Add(1)
 			go func(sr *vearchpb.SearchResult, space *entity.Space, index int) {
 				bytes, err := documentToContent(sr.ResultItems, space, response_type)
 				if err == nil {
-					respMap := make(map[int]interface{})
+					respMap := make(map[int][]byte)
 					respMap[index] = bytes
 					respChain <- respMap
 				}
@@ -338,69 +356,88 @@ func documentSearchResponse(srs []*vearchpb.SearchResult, head *vearchpb.Respons
 		wg.Wait()
 		close(respChain)
 
+		byteArr := make([][]byte, len(srs))
 		for resp := range respChain {
 			for index, value := range resp {
-				documents[index] = value
+				byteArr[index] = value
+			}
+		}
+
+		for i := 0; i < len(srs); i++ {
+			builder.ValueRaw(string(byteArr[i]))
+			if i+1 < len(srs) {
+				builder.More()
 			}
 		}
 	} else {
-		for _, sr := range srs {
-			bytes, err := documentToContent(sr.ResultItems, space, response_type)
-			if err != nil {
+		for i, sr := range srs {
+			if bytes, err := documentToContent(sr.ResultItems, space, response_type); err != nil {
 				return nil, err
+			} else {
+				builder.ValueRaw(string(bytes))
 			}
-			documents = append(documents, bytes)
+
+			if i+1 < len(srs) {
+				builder.More()
+			}
 		}
 	}
 
-	response["documents"] = documents
+	builder.EndArray()
+	builder.EndObject()
 
-	return sonic.Marshal(response)
+	return builder.Output()
 }
 
-func documentToContent(dh []*vearchpb.ResultItem, space *entity.Space, response_type string) (interface{}, error) {
+func documentToContent(dh []*vearchpb.ResultItem, space *entity.Space, response_type string) ([]byte, error) {
+	var builder = cbjson.ContentBuilderFactory()
 	idIsLong := idIsLong(space)
-	var contents []interface{}
+	if response_type == request.SearchResponse {
+		builder.BeginArray()
+	}
+	for i, u := range dh {
 
-	for _, u := range dh {
-		content := make(map[string]interface{})
+		if i != 0 {
+			builder.More()
+		}
+		builder.BeginObject()
+
+		builder.Field("_id")
 		if idIsLong {
-			if idInt64, err := strconv.ParseInt(u.PKey, 10, 64); err == nil {
-				content["_id"] = idInt64
-			} else {
-				content["_id"] = u.PKey
+			idInt64, err := strconv.ParseInt(u.PKey, 10, 64)
+			if err == nil {
+				builder.ValueNumeric(idInt64)
 			}
 		} else {
-			content["_id"] = u.PKey
+			builder.ValueString(u.PKey)
 		}
 
 		if u.Fields != nil {
 			if response_type == request.SearchResponse {
-				content["_score"] = u.Score
+				builder.More()
+				builder.Field("_score")
+				builder.ValueFloat(float64(u.Score))
 			}
 
 			if u.Source != nil {
 				var sourceJson json.RawMessage
 				if err := json.Unmarshal(u.Source, &sourceJson); err != nil {
-					log.Error("documentToContent Source Unmarshal error: %v", err)
+					log.Error("DocToContent Source Unmarshal error:%v", err)
 				} else {
-					content["_source"] = sourceJson
+					builder.More()
+					builder.Field("_source")
+					builder.ValueInterface(sourceJson)
 				}
 			}
 		}
 
-		contents = append(contents, content)
+		builder.EndObject()
 	}
-
 	if response_type == request.SearchResponse {
-		return contents, nil
+		builder.EndArray()
 	}
 
-	if len(contents) > 0 {
-		return contents[0], nil
-	}
-
-	return nil, nil
+	return builder.Output()
 }
 
 func documentDeleteResponse(items []*vearchpb.Item, head *vearchpb.ResponseHead, resultIds []string) ([]byte, error) {
@@ -752,6 +789,8 @@ func GetVectorFieldValue(doc *vearchpb.Document, space *entity.Space) (floatFeat
 			source[name] = time.Unix(u/1e6, u%1e6)
 		case entity.FieldType_FLOAT:
 			source[name] = cbbytes.ByteToFloat32(fv.Value)
+		case entity.FieldType_DOUBLE:
+			source[name] = cbbytes.ByteToFloat64New(fv.Value)
 		case entity.FieldType_VECTOR:
 			if strings.Compare(space.Engine.RetrievalType, "BINARYIVF") == 0 {
 				featureByteC := fv.Value
@@ -794,7 +833,7 @@ func GetVectorFieldValue(doc *vearchpb.Document, space *entity.Space) (floatFeat
 			}
 
 		default:
-			log.Warn("can not set value by type:[%v] ", field.FieldType)
+			log.Warn("can not set value by name:[%v], type:[%v] ", name, field.FieldType)
 		}
 	}
 	return floatFeatureMap, binaryFeatureMap, nil
