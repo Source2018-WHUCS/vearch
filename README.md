@@ -54,17 +54,16 @@ $ docker-compose up
 ```
 
 #### Deploy by docker
-Quickly start with vearch docker image, please see [SourceCompileDeployment.md](docs/SourceCompileDeployment.md).
+Quickly start with vearch docker image, please see [DelopyByDocker](docs/DeployByDocker.md) | [docker编译部署](docs/DeployByDockerZH_CN.md).
 
 #### Compile by source code
-Quickly compile the source codes to build a distributed vector search system with RESTful API, please see [SourceCompileDeployment.md](docs/SourceCompileDeployment.md).
+Quickly compile the source codes, please see [SourceCompileDeployment](docs/SourceCompileDeployment.md) | [源码编译部署](docs/SourceCompileDeploymentZH_CN.md).
 
 
 ## APIs and Use Cases
 
 
 ### LowLevelAPI
-* [APILowLevel.md](docs/APILowLevel.md)
 * For GPU [APILowLevel.md](docs/APILowLevelOnGPU.md)
 
 
