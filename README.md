@@ -1,7 +1,7 @@
 <div align="center">
   <img src="docs/img/vearch_logo.png">
   <p>
-    <a href="https://github.com/vearch/vearch/blob/master/README_CN.md">简体中文</a> | <a href="https://github.com/vearch/vearch/blob/master/README.md">English</a>
+    <a href="https://github.com/vearch/vearch/blob/master/README_ZH_CN.md">简体中文</a> | <a href="https://github.com/vearch/vearch/blob/master/README.md">English</a>
   </p>
 </div>
 
