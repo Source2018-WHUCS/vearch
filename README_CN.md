@@ -14,7 +14,7 @@ Vearch 是一个云原生分布式向量数据库，用于在 AI 应用程序中
 
 ## 主要特性
 
--  **混合检索**: 向量搜索和标量过滤。
+- **混合检索**: 向量搜索和标量过滤。
 
 - **性能**: 快速矢量检索 - 在几毫秒内搜索数百万个对象。
 
@@ -40,7 +40,7 @@ $ git clone https://github.com/vearch/vearch-helm.git && cd vearch-helm
 $ helm install my-release ./charts -f ./charts/values.yaml
 ```
 
-**使用docker-compose**
+**通过docker-compose使用vearch**
 ```
 $ cd cloud
 $ cp ../config/config.toml .
@@ -52,7 +52,7 @@ $ docker-compose up
 **源码编译部署**: 通过源码快速编译部署，请查看 [源码编译部署](docs/SourceCompileDeploymentZH_CN.md).
 
 
-## 接口和使用按理
+## 使用教程
 
 **图片检索插件**: Vearch 可用于构建完整的视觉搜索系统来索引数十亿张图像。 还需要用于对象检测和特征提取的图像检索插件。请参阅 [Quickstart.md](docs/Quickstart.md).
 
