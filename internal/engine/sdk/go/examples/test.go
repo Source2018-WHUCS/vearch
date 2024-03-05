@@ -76,7 +76,6 @@ func Init() {
 		Path:            "./files",
 		LogDir:          "./log",
 		VectorName:      "abc",
-		ModelID:         "model",
 		RetrievalType:   "IVFPQ",
 		StoreType:       "RocksDB",
 		Profiles:        make([]string, MaxDocSize*len(FieldsVec)),
