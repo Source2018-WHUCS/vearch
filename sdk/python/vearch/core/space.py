@@ -13,9 +13,16 @@ class Space(object):
         self.client = client
 
     def create(self, space: SpaceSchema) -> Result:
-        url_params = {"database_name": self.name, "space_name": space._name}
+        url_params = {"database_name": self.db_name, "space_name": space._name}
         url = self.client.host + SPACE_URI % url_params
         req = requests.request(method="POST", url=url, data=space.dict(), headers={"token": self.client.token})
+        resp = self.client.s.send(req)
+        return get_result(resp)
+
+    def drop(self) -> Result:
+        url_params = {"database_name": self.name, "space_name": self.name}
+        url = self.client.host + SPACE_URI % url_params
+        req = requests.request(method="POST", url=url, headers={"token": self.client.token})
         resp = self.client.s.send(req)
         return get_result(resp)
 
