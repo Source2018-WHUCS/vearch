@@ -29,7 +29,7 @@ __description__ = """ test case for index hnsw """
 
 def create(router_url, embedding_size, nlinks=32, efConstruction=120):
     properties = {}
-    properties["properties"] = {
+    properties["fields"] = {
         "field_int": {
             "type": "integer",
             "index": False
@@ -47,18 +47,18 @@ def create(router_url, embedding_size, nlinks=32, efConstruction=120):
         "name": space_name,
         "partition_num": 1,
         "replica_num": 1,
-        "engine": {
-            "name": "gamma",
+        "index": {
+            "index_name": "gamma",
             "index_size": 1,
-            "retrieval_type": "HNSW",
-            "retrieval_param": {
+            "index_type": "HNSW",
+            "index_params": {
                 "metric_type": "L2",
                 "nlinks": nlinks,
                 "efConstruction": efConstruction,
                 "efSearch": 64
             }
         },
-        "properties": properties["properties"]
+        "fields": properties["fields"]
     }
     logger.info(create_db(router_url, db_name))
 
@@ -69,7 +69,7 @@ def query(do_efSearch_check, efSearch, xq, gt, k, logger):
         "query": {
             "vector": []
         },
-        "retrieval_param": {
+        "index_params": {
             "efSearch": efSearch,
             "do_efSearch_check": do_efSearch_check
         },

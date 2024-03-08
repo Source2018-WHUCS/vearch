@@ -853,15 +853,15 @@ def create_for_document_test(logger, router_url, embedding_size, properties):
         "name": space_name,
         "partition_num": 1,
         "replica_num": 1,
-        "engine": {
-            "name": "gamma",
+        "index": {
+            "index_name": "gamma",
             "index_size": 1,
-            "retrieval_type": "FLAT",
-            "retrieval_param": {
+            "index_type": "FLAT",
+            "index_params": {
                 "metric_type": "L2",
             },
         },
-        "properties": properties["properties"],
+        "fields": properties["fields"],
     }
     logger.info(create_db(router_url, db_name))
 
@@ -879,7 +879,7 @@ def prepare_cluster_for_document_test(logger, total, xb):
     seed = 1
 
     properties = {}
-    properties["properties"] = {
+    properties["fields"] = {
         "field_int": {"type": "integer", "index": True},
         "field_long": {"type": "long", "index": False},
         "field_float": {"type": "float", "index": False},

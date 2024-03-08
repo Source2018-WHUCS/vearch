@@ -99,10 +99,10 @@ class VearchCase:
             "name": space_name,
             "partition_num": 1,
             "replica_num": 1,
-            "engine": {
-                "index_size": self.index_size,
-                "retrieval_type": self.retrieval_type,
-                "retrieval_param": {
+            "Index": {
+                "index_name": "gamma"
+                "index_type": self.index_type,
+                "index_param": {
                     "metric_type": "InnerProduct",
                     "nprobe": 15,
                     "ncentroids": 256,
@@ -110,9 +110,11 @@ class VearchCase:
                     "nlinks": 16,
                     "efConstruction": 60,
                     "efSearch": 32,
+                    "training_threshold": self.training_threshold,
+
                 },
             },
-            "properties": {
+            "fields": {
                 "string": {"type": "keyword", "index": True},
                 "int": {"type": "integer", "index": True},
                 "float": {"type": "float", "index": True},
@@ -120,7 +122,6 @@ class VearchCase:
                     "type": "vector",
                     "dimension": 128,
                     "format": "normalization",
-                    # "retrieval_type": "GPU",
                     "store_type": self.store_type,
                     "store_param": {"cache_size": 1024},
                 },
@@ -510,7 +511,7 @@ class VearchCase:
 
 
 @pytest.mark.parametrize(
-    ["index_size", "retrieval_type", "store_type"],
+    ["training_threshold", "index_type", "store_type"],
     [
         [1, "FLAT", ""],
         [1, "FLAT", ""],
@@ -521,10 +522,10 @@ class VearchCase:
     ],
 )
 def test_vearch_usage(
-    index_size: int, retrieval_type: str, store_type: str
+    training_threshold: int, index_type: str, store_type: str
 ):
     case = VearchCase()
-    case.setup(index_size, retrieval_type, store_type)
+    case.setup(training_threshold, index_type, store_type)
     case.run_basic_usage_test()
     case.run_db_space_create_multi_test()
 
@@ -533,7 +534,7 @@ def test_vearch_usage(
 
 
 @pytest.mark.parametrize(
-    ["index_size", "retrieval_type", "store_type"],
+    ["training_threshold", "index_type", "store_type"],
     [
         [1, "FLAT", "RocksDB"],
         [1, "FLAT", "NOTSUPPORTTYPE"],
@@ -542,8 +543,8 @@ def test_vearch_usage(
     ],
 )
 def test_vearch_create_space(
-    index_size: int, retrieval_type: str, store_type: str
+    training_threshold: int, index_type: str, store_type: str
 ):
     case = VearchCase()
-    case.setup(index_size, retrieval_type, store_type)
+    case.setup(training_threshold, index_type, store_type)
     case.run_db_space_create_test(False)

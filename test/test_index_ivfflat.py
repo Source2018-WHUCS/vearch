@@ -29,7 +29,7 @@ __description__ = """ test case for index ivfflat """
 
 def create(router_url, embedding_size, store_type="MemoryOnly", ncentroids=256):
     properties = {}
-    properties["properties"] = {
+    properties["fields"] = {
         "field_int": {
             "type": "integer",
             "index": False
@@ -47,16 +47,16 @@ def create(router_url, embedding_size, store_type="MemoryOnly", ncentroids=256):
         "name": space_name,
         "partition_num": 1,
         "replica_num": 1,
-        "engine": {
-            "name": "gamma",
+        "index": {
+            "index_name": "gamma",
             "index_size": ncentroids * 39,
-            "retrieval_type": "IVFFLAT",
-            "retrieval_param": {
+            "index_type": "IVFFLAT",
+            "index_params": {
                 "metric_type": "L2",
                 "ncentroids": ncentroids,
             }
         },
-        "properties": properties["properties"]
+        "fields": properties["fields"]
     }
     logger.info(create_db(router_url, db_name))
 
@@ -67,7 +67,7 @@ def query(nprobe, parallel_on_queries, xq, gt, k, logger):
         "query": {
             "vector": []
         },
-        "retrieval_param": {
+        "index_params": {
             "nprobe": nprobe,
             "parallel_on_queries": parallel_on_queries
         },
