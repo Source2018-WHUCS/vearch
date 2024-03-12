@@ -43,8 +43,8 @@ const (
 
 type Index struct {
 	IndexName   string          `json:"index_name"`
-	IndexType   string          `json:"index_type,omitempty"`
 	IndexParams json.RawMessage `json:"index_params,omitempty"`
+	IndexType   string          `json:"index_type,omitempty"`
 }
 
 func NewDefaultIndex() *Index {
@@ -53,12 +53,12 @@ func NewDefaultIndex() *Index {
 
 type IndexParams struct {
 	Nlinks            int    `json:"nlinks"`
-	EfSearch          int    `json:"efSearch"`
+	EfSearch          int    `json:"efSearch,omitempty"`
 	EfConstruction    int    `json:"efConstruction"`
 	MetricType        string `json:"metric_type,omitempty"`
 	Ncentroids        int    `json:"ncentroids"`
-	Nprobe            int    `json:"nprobe"`
-	Nsubvector        int    `json:"nsubvector"`
+	Nprobe            int    `json:"nprobe,omitempty"`
+	Nsubvector        int    `json:"nsubvector,omitempty"`
 	TrainingThreshold int    `json:"training_threshold,omitempty"`
 }
 
@@ -168,53 +168,73 @@ func (s *Space) PartitionId(slotID SlotID) PartitionID {
 }
 
 func (index *Index) UnmarshalJSON(bs []byte) error {
-	if err := json.Unmarshal(bs, index); err != nil {
-		return fmt.Errorf("Index json.Unmarshal err:%v", err)
+	if len(bs) == 0 {
+		return fmt.Errorf("space Index json.Unmarshal err: empty json")
+	}
+	tempIndex := &struct {
+		IndexName   string          `json:"index_name,omitempty"`
+		IndexParams json.RawMessage `json:"index_params,omitempty"`
+		IndexType   string          `json:"index_type,omitempty"`
+	}{}
+	if err := json.Unmarshal(bs, tempIndex); err != nil {
+		return fmt.Errorf("space Index json.Unmarshal err:%v", err)
 	}
 
 	indexTypeMap := map[string]string{"IVFPQ": "IVFPQ", "IVFFLAT": "IVFFLAT", "BINARYIVF": "BINARYIVF", "FLAT": "FLAT",
 		"HNSW": "HNSW", "GPU": "GPU", "SSG": "SSG", "IVFPQ_RELAYOUT": "IVFPQ_RELAYOUT", "SCANN": "SCANN"}
-	if index.IndexType == "" {
+	if tempIndex.IndexType == "" {
 		return fmt.Errorf("IndexType is null")
 	}
-	_, have := indexTypeMap[index.IndexType]
+	_, have := indexTypeMap[tempIndex.IndexType]
 	if !have {
-		return fmt.Errorf("IndexType not support :%s", index.IndexType)
+		return fmt.Errorf("IndexType not support :%s", tempIndex.IndexType)
 	}
 
-	if index.IndexParams != nil {
-		var v IndexParams
-		if err := json.Unmarshal(index.IndexParams, &v); err != nil {
+	var v IndexParams
+	if tempIndex.IndexParams != nil && len(tempIndex.IndexParams) != 0 {
+		if err := json.Unmarshal(tempIndex.IndexParams, &v); err != nil {
 			return fmt.Errorf("IndexParams json.Unmarshal err :[%s]", err.Error())
 		}
 
-		if strings.Compare(index.IndexType, "HNSW") == 0 {
+		if strings.Compare(tempIndex.IndexType, "HNSW") == 0 {
 			if v.Nlinks == 0 || v.EfConstruction == 0 {
-				return fmt.Errorf(index.IndexType + " index param has 0")
+				return fmt.Errorf(tempIndex.IndexType + " index param has 0")
 			}
-		} else if strings.Compare(index.IndexType, "FLAT") == 0 {
+		} else if strings.Compare(tempIndex.IndexType, "FLAT") == 0 {
 
-		} else if strings.Compare("BINARYIVF", index.IndexType) == 0 ||
-			strings.Compare("IVFFLAT", index.IndexType) == 0 {
-			if v.Nsubvector == 0 || v.Ncentroids == 0 {
-				return fmt.Errorf(index.IndexType + " index param has 0")
+		} else if strings.Compare("BINARYIVF", tempIndex.IndexType) == 0 ||
+			strings.Compare("IVFFLAT", tempIndex.IndexType) == 0 {
+			if v.Ncentroids == 0 {
+				return fmt.Errorf(tempIndex.IndexType + " index param has 0")
 			} else {
 				if v.TrainingThreshold != 0 && int64(v.TrainingThreshold) < int64(v.Ncentroids) {
-					return fmt.Errorf(index.IndexType+" TrainingThreshold:[%d] less than ncentroids:[%d] so can not to index", int64(v.TrainingThreshold), v.Ncentroids)
+					return fmt.Errorf(tempIndex.IndexType+" training_threshold:[%d] less than ncentroids:[%d] so can not to index", int64(v.TrainingThreshold), v.Ncentroids)
+				}
+				if v.TrainingThreshold == 0 {
+					v.TrainingThreshold = 39 * v.Ncentroids
 				}
 			}
-		} else if strings.Compare("IVFPQ", index.IndexType) == 0 ||
-			strings.Compare("GPU", index.IndexType) == 0 {
+		} else if strings.Compare("IVFPQ", tempIndex.IndexType) == 0 ||
+			strings.Compare("GPU", tempIndex.IndexType) == 0 {
 			if v.Nsubvector == 0 || v.Ncentroids == 0 {
-				return fmt.Errorf(index.IndexType + " index param has 0")
+				return fmt.Errorf(tempIndex.IndexType + " index param has 0")
 			} else {
 				if v.TrainingThreshold != 0 && int64(v.TrainingThreshold) < int64(v.Ncentroids) {
-					return fmt.Errorf(index.IndexType+" TrainingThreshold:[%d] less than ncentroids:[%d] so can not to index", int64(v.TrainingThreshold), v.Ncentroids)
+					return fmt.Errorf(tempIndex.IndexType+" training_threshold:[%d] less than ncentroids:[%d] so can not to index", int64(v.TrainingThreshold), v.Ncentroids)
+				}
+				if v.TrainingThreshold == 0 {
+					v.TrainingThreshold = 39 * v.Ncentroids
 				}
 			}
 		}
+	} else {
+		return fmt.Errorf("IndexParams is empty")
 	}
-
+	*index = Index{
+		IndexName:   tempIndex.IndexName,
+		IndexType:   tempIndex.IndexType,
+		IndexParams: tempIndex.IndexParams,
+	}
 	return nil
 }
 

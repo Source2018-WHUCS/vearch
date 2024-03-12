@@ -48,13 +48,16 @@ class TestSpaceCreate:
             "index": {
                 "index_name": "gamma",
                 "index_type": index_type,
-                "retrieval_param": {
+                "index_params": {
                     "metric_type": "InnerProduct",
                     "ncentroids": 2048,
                     "nsubvector": 32,
                     "nlinks": 32,
                     "efConstruction": 40,
-                },
+                    "nprobe":80,
+                    "efSearch":64,
+                    "training_threshold":70000
+                }
             },
             "fields": {
                 "field_string": {"type": "keyword"},
@@ -66,15 +69,16 @@ class TestSpaceCreate:
                 "field_vector_normal": {
                     "type": "vector",
                     "dimension": int(embedding_size * 2),
-                    "format": "normalization",
-                },
-            },
+                    "format": "normalization"
+                }
+            }
         }
 
         response = create_space(router_url, db_name, space_config)
         assert response["code"] == 200
 
         response = describe_space(logger, router_url, db_name, space_name)
+        logger.info(response)
         assert response["code"] == 200
 
         response = drop_space(router_url, db_name, space_name)

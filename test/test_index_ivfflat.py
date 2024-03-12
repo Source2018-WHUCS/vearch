@@ -49,11 +49,11 @@ def create(router_url, embedding_size, store_type="MemoryOnly", ncentroids=256):
         "replica_num": 1,
         "index": {
             "index_name": "gamma",
-            "index_size": ncentroids * 39,
             "index_type": "IVFFLAT",
             "index_params": {
                 "metric_type": "L2",
                 "ncentroids": ncentroids,
+                "training_threshold": ncentroids * 39
             }
         },
         "fields": properties["fields"]
@@ -85,7 +85,7 @@ def query(nprobe, parallel_on_queries, xq, gt, k, logger):
         for recall in recalls:
             result += "recall@%d = %.2f%% " % (recall, recalls[recall] * 100)
             if recall == k and nprobe > 1:
-                assert recalls[recall] >= 0.8
+                assert recalls[recall] >= 0.9
         logger.info(result)
 
 def benchmark(store_type, ncentroids, xb, xq, xt, gt):

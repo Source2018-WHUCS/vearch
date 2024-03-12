@@ -65,7 +65,7 @@ class TestIndexFlush:
                     "nsubvector": 32,
                     "nlinks": 32,
                     "efConstruction": 40,
-                    "training_threshold": training_threshold,
+                    "training_threshold": training_threshold
                 },
             },
             "fields": {
@@ -86,12 +86,12 @@ class TestIndexFlush:
         logger.info(create_space(router_url, db_name, space_config))
         add(total_batch, batch_size, xb, with_id, full_field)
 
-        if retrieval_type != "FLAT":
+        if index_type != "FLAT":
             waiting_index_finish(logger, total)
 
         logger.info(index_rebuild(router_url, db_name, space_name))
 
-        if retrieval_type != "FLAT":
+        if index_type != "FLAT":
             waiting_index_finish(logger, total)
 
         logger.info(drop_space(router_url, db_name, space_name))

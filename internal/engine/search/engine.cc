@@ -527,6 +527,7 @@ int Engine::CreateTable(TableInfo &table) {
   }
   int ret_table = table_->CreateTable(table, disk_table_params, docids_bitmap_);
   training_threshold_ = table.TrainingThreshold();
+  LOG(INFO) << space_name_ << " training_threshold=" << training_threshold_;
   if (ret_table != 0) {
     LOG(ERROR) << space_name_ << " cannot create table!";
     return -2;
@@ -629,7 +630,8 @@ int Engine::AddOrUpdate(Doc &doc) {
 
   if (not b_running_ and index_status_ == UNINDEXED) {
     if (max_docid_ >= training_threshold_) {
-      LOG(INFO) << "Begin indexing.";
+      LOG(INFO) << space_name_
+                << " begin indexing. training_threshold=" << training_threshold_;
       this->BuildIndex();
     }
   }

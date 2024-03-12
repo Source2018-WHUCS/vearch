@@ -104,6 +104,8 @@ def benchmark(index_type, store_type, xb, xq, xt, gt):
         result = "batch: %d, search avarage time: %.2f ms, " % (batch, avarage)
         for recall in recalls:
             result += "recall@%d = %.2f%% " % (recall, recalls[recall] * 100)
+            if recall == k:
+                assert recalls[recall] >= 0.98
         logger.info(result)
 
     destroy(router_url, db_name, space_name)

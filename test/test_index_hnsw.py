@@ -49,7 +49,6 @@ def create(router_url, embedding_size, nlinks=32, efConstruction=120):
         "replica_num": 1,
         "index": {
             "index_name": "gamma",
-            "index_size": 1,
             "index_type": "HNSW",
             "index_params": {
                 "metric_type": "L2",
@@ -87,7 +86,7 @@ def query(do_efSearch_check, efSearch, xq, gt, k, logger):
         for recall in recalls:
             result += "recall@%d = %.2f%% " % (recall, recalls[recall] * 100)
             if recall == k:
-                assert recalls[recall] >= 0.8
+                assert recalls[recall] >= 0.9
         logger.info(result)
 
 def benchmark(nlinks, efConstruction, xb, xq, xt, gt):

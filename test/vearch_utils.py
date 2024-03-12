@@ -855,7 +855,6 @@ def create_for_document_test(logger, router_url, embedding_size, properties):
         "replica_num": 1,
         "index": {
             "index_name": "gamma",
-            "index_size": 1,
             "index_type": "FLAT",
             "index_params": {
                 "metric_type": "L2",
@@ -991,7 +990,7 @@ def drop_db(router_url: str, db_name: str):
 
 
 def drop_space(router_url: str, db_name: str, space_name: str):
-    url = f"{router_url}/space/{db_name}/{space_name}"
+    url = f"{router_url}/dbs/{db_name}/spaces/{space_name}"
     resp = requests.delete(url)
     return resp.json()
 
@@ -1001,21 +1000,14 @@ def destroy(router_url: str, db_name: str, space_name: str):
     print(drop_db(router_url, db_name))
 
 
-def create_db(router_url: str, db_name: str):
-    url = f"{router_url}/db/_create"
-    data = {"name": db_name}
-    resp = requests.put(url, json=data)
-    return resp.json()
-
-
 def create_space(router_url: str, db_name: str, space_config: dict):
-    url = f"{router_url}/space/{db_name}/_create"
-    resp = requests.put(url, json=space_config)
+    url = f"{router_url}/dbs/{db_name}/spaces"
+    resp = requests.post(url, json=space_config)
     return resp.json()
 
 
 def get_space(router_url: str, db_name: str, space_name: str):
-    url = f"{router_url}/space/{db_name}/{space_name}"
+    url = f"{router_url}/dbs/{db_name}/spaces/{space_name}"
     resp = requests.get(url)
     return resp.json()
 
@@ -1034,9 +1026,6 @@ def get_cluster_stats(router_url: str):
     url = f"{router_url}/_cluster/stats"
     resp = requests.get(url)
     return resp.json()
-
-
-# doc num and health
 
 
 def get_cluster_health(router_url: str):
@@ -1075,7 +1064,7 @@ def list_spaces(router_url: str, db_name: str):
     return resp.json()
 
 def describe_space(logger, router_url: str, db_name: str, space_name: str):
-    url = f"{router_url}/space/describe?db_name={db_name}&space_name={space_name}&detail=true"
+    url = f"{router_url}/dbs/{db_name}/spaces/{space_name}?detail=true"
     try:
         resp = requests.get(url)
         return resp.json()

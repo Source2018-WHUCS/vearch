@@ -31,10 +31,10 @@ class VearchCase:
     logger.info("test class")
 
     def setup(
-        self, index_size: int, retrieval_type: str, store_type: str
+        self, training_threshold: int, index_type: str, store_type: str
     ):
-        self.index_size = index_size
-        self.retrieval_type = retrieval_type
+        self.training_threshold = training_threshold
+        self.index_type = index_type
         self.store_type = store_type
 
     logging.info("cluster_information")
@@ -93,16 +93,16 @@ class VearchCase:
         assert response.text.find('"msg":"success"') >= 0
 
     def test_createspace(self, supported=True):
-        url = proxy + "/space/" + db_name + "/_create"
+        url = proxy + "/dbs/" + db_name + "/spaces"
         headers = {"content-type": "application/json"}
         data = {
             "name": space_name,
             "partition_num": 1,
             "replica_num": 1,
             "Index": {
-                "index_name": "gamma"
+                "index_name": "gamma",
                 "index_type": self.index_type,
-                "index_param": {
+                "index_params": {
                     "metric_type": "InnerProduct",
                     "nprobe": 15,
                     "ncentroids": 256,
@@ -129,7 +129,7 @@ class VearchCase:
             },
         }
         logger.debug(url + "---" + json.dumps(data))
-        response = requests.put(url, headers=headers, data=json.dumps(data))
+        response = requests.post(url, headers=headers, data=json.dumps(data))
         logger.debug("space_create---\n" + response.text)
         assert response.status_code == 200
         if supported:
@@ -138,7 +138,7 @@ class VearchCase:
             assert response.text.find('"code":550') >= 0
 
     def test_getspace(self):
-        url = proxy + "/space/" + db_name + "/" + space_name
+        url = proxy + "/dbs/" + db_name + "/spaces/" + space_name
         response = requests.get(url)
         logger.debug("get_space---\n" + response.text)
         assert response.status_code == 200
@@ -252,14 +252,14 @@ class VearchCase:
 
     def test_documentQueryOnSpecifyPartiton(self):
         logger.info("documentQueryOnSpecifyPartiton")
-        url = proxy + "/space/" + db_name + "/" + space_name
+        url = proxy + "/dbs/" + db_name + "/spaces/" + space_name
         response = requests.get(url)
         assert response.status_code == 200
         assert response.text.find('"msg":"success"') >= 0
 
         partitions = response.json()["data"]["partitions"]
         assert len(partitions) > 0
-        partition = str(partitions[0]["id"])
+        partition = str(partitions[0]["pid"])
 
         url = proxy + "/document/query"
         headers = {"content-type": "application/json"}
@@ -443,7 +443,7 @@ class VearchCase:
                 assert response.status_code == 200
 
     def test_deleteSpace(self):
-        url = proxy + "/space/" + db_name + "/" + space_name
+        url = proxy + "/dbs/" + db_name + "/spaces/" + space_name
         response = requests.delete(url)
         logger.debug("deleteSpace:" + response.text)
         assert response.status_code == 200

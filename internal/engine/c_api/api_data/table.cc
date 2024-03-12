@@ -77,6 +77,12 @@ void TableInfo::Deserialize(const char *data, int len) {
 
   index_type_ = table_->index_type()->str();
   index_params_ = table_->index_params()->str();
+  utils::JsonParser params_parser;
+  int training_threshold = 0;
+  params_parser.GetInt("training_threshold", training_threshold);
+  if (training_threshold > 0) {
+    training_threshold_ = training_threshold;
+  }
   compress_mode_ = table_->compress_mode();
 }
 

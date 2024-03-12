@@ -41,7 +41,7 @@ def create(router_url, properties):
                 "metric_type": "L2",
             }
         },
-        "properties": properties["properties"]
+        "fields": properties["fields"]
     }
     logger.info(create_db(router_url, db_name))
     logger.info(create_space(router_url, db_name, space_config))

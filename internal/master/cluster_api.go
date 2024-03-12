@@ -275,7 +275,6 @@ func (ca *clusterAPI) createSpace(c *gin.Context) {
 	dbName := c.Param(dbName)
 
 	space := &entity.Space{}
-
 	if err := c.ShouldBindJSON(space); err != nil {
 		body, _ := netutil.GetReqBody(c.Request)
 		log.Error("create space request: %s, err: %s", body, err.Error())

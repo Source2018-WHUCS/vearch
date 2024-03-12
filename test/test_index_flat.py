@@ -81,7 +81,7 @@ def query(parallel_on_queries, xq, gt, k, logger):
         for recall in recalls:
             result += "recall@%d = %.2f%% " % (recall, recalls[recall] * 100)
             if recall == k:
-                assert recalls[recall] >= 0.8
+                assert recalls[recall] >= 0.99
         logger.info(result)
 
 def benchmark(store_type, xb, xq, xt, gt):

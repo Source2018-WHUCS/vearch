@@ -90,7 +90,7 @@ class TableInfo : public RawData {
   std::vector<struct FieldInfo> fields_;
   std::vector<struct VectorInfo> vectors_infos_;
 
-  int training_threshold_;
+  int training_threshold_ = 0;
   std::string index_type_;
   std::string index_params_;
   int compress_mode_;

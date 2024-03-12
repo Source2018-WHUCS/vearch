@@ -92,7 +92,7 @@ func (handler *DocumentHandler) proxyMaster() error {
 	// space handler
 	handler.httpServer.Handle(http.MethodPost, fmt.Sprintf("/dbs/:%s/spaces", URLParamDbName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
 	handler.httpServer.Handle(http.MethodGet, fmt.Sprintf("/dbs/:%s/spaces/:%s", URLParamDbName, URLParamSpaceName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
-	handler.httpServer.Handle(http.MethodGet, fmt.Sprintf("/dbs/:%s/spaces", URLParamDbName, URLParamSpaceName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
+	handler.httpServer.Handle(http.MethodGet, fmt.Sprintf("/dbs/:%s/spaces", URLParamDbName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
 	handler.httpServer.Handle(http.MethodDelete, fmt.Sprintf("/dbs/:%s/spaces/:%s", URLParamDbName, URLParamSpaceName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
 	handler.httpServer.Handle(http.MethodPut, fmt.Sprintf("/dbs/:%s/spaces/:%s", URLParamDbName, URLParamSpaceName), handler.handleTimeout, handler.handleAuth, handler.handleMasterRequest)
 
