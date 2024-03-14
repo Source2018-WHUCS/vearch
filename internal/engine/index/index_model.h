@@ -218,23 +218,23 @@ class VectorReader {
   VectorMetaInfo *meta_info_;
 };
 
-// RetrievalModel is a virtual base class, each model should implement it
-class RetrievalModel {
+// IndexModel is a virtual base class, each index should implement it
+class IndexModel {
  public:
-  RetrievalModel() {
+  IndexModel() {
     vector_ = nullptr;
     indexed_count_ = 0;
-    indexing_size_ = 0;
+    training_threshold_ = 0;
   }
 
-  virtual ~RetrievalModel() {}
+  virtual ~IndexModel() {}
 
-  /** Init retrieval model
+  /** Init index model
    *
    * @param model_parameters   include model params, need parse by yourself
    * @return 0 if successed
    */
-  virtual int Init(const std::string &model_parameters, int indexing_size) = 0;
+  virtual int Init(const std::string &model_parameters, int training_threshold) = 0;
 
   /** Parse parameters for dynamic retrieval
    *
@@ -249,7 +249,7 @@ class RetrievalModel {
    */
   virtual int Indexing() = 0;
 
-  /** Add vectors into retrieval model
+  /** Add vectors into index model
    *
    * @param n     number of vectors
    * @param vec   vectors to add
@@ -257,7 +257,7 @@ class RetrievalModel {
    */
   virtual bool Add(int n, const uint8_t *vec) = 0;
 
-  /** Update vectors from retrieval model
+  /** Update vectors from index model
    *
    * @param ids   vectors ids to be updated
    * @param vecs  vectors value to be updated
@@ -266,14 +266,14 @@ class RetrievalModel {
   virtual int Update(const std::vector<int64_t> &ids,
                      const std::vector<const uint8_t *> &vecs) = 0;
 
-  /** Delete from retrieval model
+  /** Delete from index model
    *
    * @param ids ids to be deleted
    * @return 0 if successed
    */
   virtual int Delete(const std::vector<int64_t> &ids) = 0;
 
-  /** Search interface for each retrieval model
+  /** Search interface for each index model
    *
    * @param retrieval_context retrieval context, contains
    *                          RetrievalParameters and valid info
@@ -312,5 +312,5 @@ class RetrievalModel {
   tbb::concurrent_bounded_queue<int> updated_vids_;
   // warining: indexed_count_ is only used by framework, sub-class cann't use it
   int indexed_count_;
-  int indexing_size_;
+  int training_threshold_;
 };
