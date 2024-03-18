@@ -20,7 +20,7 @@ import json
 import time
 import random
 from multiprocessing import Pool as ThreadPool
-
+import numpy as np
 
 ip = "127.0.0.1"
 ip_master = ip + ":8817"
