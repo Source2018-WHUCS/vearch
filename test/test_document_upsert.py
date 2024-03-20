@@ -135,6 +135,7 @@ def update(total, bulk, full_field, xb):
         {"name": "field_string", "type": "string", "index": True},
         {
             "name": "field_vector",
+            "type": "vector",
             "index": True,
             "dimension": embedding_size,
             "store_type": "MemoryOnly",
