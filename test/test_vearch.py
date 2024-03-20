@@ -92,19 +92,20 @@ class VearchCase:
 
                 },
             },
-            "fields": {
-                "string": {"type": "keyword", "index": True},
-                "int": {"type": "integer", "index": True},
-                "float": {"type": "float", "index": True},
-                "vector": {
+            "fields": [
+                {"name": "string", "type": "keyword", "index": True},
+                {"name": "int", "type": "integer", "index": True},
+                {"name": "float", "type": "float", "index": True},
+                {
+                    "name": "vector",
                     "type": "vector",
                     "dimension": 128,
                     "format": "normalization",
                     "store_type": self.store_type,
                     "store_param": {"cache_size": 1024},
                 },
-                "string_tags": {"type": "string", "array": True, "index": True},
-            },
+                {"name": "string_tags", "type": "string", "array": True, "index": True},
+            ],
         }
         logger.debug(router_url + "---" + json.dumps(data))
         response = create_space(router_url, db_name, data)

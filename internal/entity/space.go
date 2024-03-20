@@ -20,6 +20,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/cubefs/cubefs/blobstore/util/log"
 	"github.com/vearch/vearch/internal/proto/vearchpb"
 )
 
@@ -286,22 +287,32 @@ func (space *Space) Validate() error {
 	return nil
 }
 
+type Field struct {
+	Name       string  `json:"name"`
+	Type       string  `json:"type"`
+	Index      *bool   `json:"index,omitempty"`
+	Array      *bool   `json:"array,omitempty"`
+	Dimension  int     `json:"dimension,omitempty"`
+	StoreType  *string `json:"store_type,omitempty"`
+	Format     *string `json:"format,omitempty"`
+	StoreParam *struct {
+		CacheSize int `json:"cache_size,omitempty"`
+	} `json:"store_param,omitempty"`
+}
+
 func UnmarshalPropertyJSON(propertity []byte) (map[string]*SpaceProperties, error) {
 	tmpPro := make(map[string]*SpaceProperties)
-	tmp := make(map[string]json.RawMessage)
-	err := json.Unmarshal([]byte(propertity), &tmp)
+	tmp := make([]Field, 0)
+	err := json.Unmarshal(propertity, &tmp)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
+		return nil, err
 	}
 
-	for name, data := range tmp {
+	for _, data := range tmp {
 		sp := &SpaceProperties{}
-		err = json.Unmarshal(data, sp)
-		if err != nil {
-			return nil, err
-		}
-
 		isVector := false
+		sp.Type = data.Type
 
 		switch sp.Type {
 		case "text", "keyword", "string":
@@ -322,17 +333,19 @@ func UnmarshalPropertyJSON(propertity []byte) (map[string]*SpaceProperties, erro
 			sp.FieldType = FieldType_VECTOR
 
 			isVector = true
-			if sp.Dimension == 0 {
-				return nil, fmt.Errorf("dimension can not be zero by field : [%s] ", string(data))
+			if data.Dimension == 0 {
+				return nil, fmt.Errorf("dimension can not be zero by field : [%s] ", data.Name)
 			}
+			sp.Dimension = data.Dimension
 
-			if sp.StoreType != nil && *sp.StoreType != "" {
-				if *sp.StoreType != "RocksDB" && *sp.StoreType != "MemoryOnly" {
-					return nil, fmt.Errorf("vector field:[%s] not support this store type:[%s] it only RocksDB or MemoryOnly", name, *sp.StoreType)
+			if data.StoreType != nil && *data.StoreType != "" {
+				if *data.StoreType != "RocksDB" && *data.StoreType != "MemoryOnly" {
+					return nil, fmt.Errorf("vector field:[%s] not support this store type:[%s] it only RocksDB or MemoryOnly", data.Name, *sp.StoreType)
 				}
 			}
-
-			format := sp.Format
+			sp.StoreType = data.StoreType
+			sp.Format = data.Format
+			format := data.Format
 			if format != nil && *format != "" && !(strings.Compare(*format, "normalization") == 0 ||
 				strings.Compare(*format, "normal") == 0 || strings.Compare(*format, "no") == 0) {
 				return nil, fmt.Errorf("unknow vector process method:[%s]", *format)
@@ -340,6 +353,11 @@ func UnmarshalPropertyJSON(propertity []byte) (map[string]*SpaceProperties, erro
 
 		default:
 			return nil, fmt.Errorf("space property invalid field type")
+		}
+		sp.Index = data.Index
+		sp.Array = false
+		if data.Array != nil {
+			sp.Array = *data.Array
 		}
 
 		if isVector {
@@ -371,7 +389,7 @@ func UnmarshalPropertyJSON(propertity []byte) (map[string]*SpaceProperties, erro
 			}
 		}
 
-		tmpPro[name] = sp
+		tmpPro[data.Name] = sp
 	}
 	return tmpPro, nil
 }

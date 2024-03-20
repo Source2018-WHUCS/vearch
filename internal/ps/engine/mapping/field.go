@@ -73,6 +73,7 @@ func NewFieldMapping(name string, i FieldMappingI) *FieldMapping {
 
 func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 	tmp := struct {
+		Name       *string         `json:"name,omitempty"`
 		Type       string          `json:"type"`
 		Index      *bool           `json:"index,omitempty"`
 		Format     *string         `json:"format,omitempty"`
@@ -84,6 +85,9 @@ func (f *FieldMapping) UnmarshalJSON(data []byte) error {
 	err := json.Unmarshal(data, &tmp)
 	if err != nil {
 		return err
+	}
+	if tmp.Name != nil {
+		f.Name = *tmp.Name
 	}
 
 	var fieldMapping FieldMappingI
