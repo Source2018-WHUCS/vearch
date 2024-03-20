@@ -284,7 +284,7 @@ func (ms *masterService) createSpaceService(ctx context.Context, dbName string, 
 		return err
 	}
 
-	// it will lock cluster ,to create space
+	// it will lock cluster to create space
 	mutex := ms.Master().NewLock(ctx, "space", time.Second*300)
 	if err = mutex.Lock(); err != nil {
 		return err
@@ -362,6 +362,11 @@ func (ms *masterService) createSpaceService(ctx context.Context, dbName string, 
 	}
 
 	space.SpaceProperties = spaceProperties
+	for _, f := range spaceProperties {
+		if f.FieldType == entity.FieldType_VECTOR && f.Index != nil {
+			space.Index = f.Index
+		}
+	}
 
 	marshal, err := json.Marshal(space)
 	if err != nil {

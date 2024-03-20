@@ -51,15 +51,21 @@ def check(total, bulk, full_field, delete_type, xb):
 
     properties = {}
     properties["fields"] = [
-        {"name": "field_int", "type": "integer", "index": True},
-        {"name": "field_long", "type": "long", "index": True},
-        {"name": "field_float", "type": "float", "index": True},
-        {"name": "field_double", "type": "double", "index": True},
-        {"name": "field_string", "type": "string", "index": True},
+        {"name": "field_int", "type": "integer", "index": {"name": "field_int","type": "SCALAR"}},
+        {"name": "field_long", "type": "long", "index": {"name": "field_long","type": "SCALAR"}},
+        {"name": "field_float", "type": "float", "index": {"name": "field_float","type": "SCALAR"}},
+        {"name": "field_double", "type": "double", "index": {"name": "field_double","type": "SCALAR"}},
+        {"name": "field_string", "type": "string", "index": {"name": "field_string","type": "SCALAR"}},
         {
             "name": "field_vector",
             "type": "vector",
-            "index": True,
+            "index": {
+                "name": "gamma",
+                "type": "FLAT",
+                "params": {
+                    "metric_type": "L2",
+                },
+            },
             "dimension": embedding_size,
             "store_type": "MemoryOnly",
             # "format": "normalization"

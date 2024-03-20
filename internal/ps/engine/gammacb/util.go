@@ -29,13 +29,13 @@ func mapping2Table(cfg register.EngineConfig, m *mapping.IndexMapping) (*gamma.T
 
 	index := cfg.Space.Index
 	indexParams := ""
-	if index.IndexParams != nil {
-		indexParams = string(index.IndexParams)
+	if index.Params != nil {
+		indexParams = string(index.Params)
 	}
 
 	table := &gamma.Table{
 		Name:        cfg.Space.Name + "-" + cast.ToString(cfg.PartitionID),
-		IndexType:   index.IndexType,
+		IndexType:   index.Type,
 		IndexParams: indexParams,
 	}
 

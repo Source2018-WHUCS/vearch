@@ -43,9 +43,9 @@ const (
 )
 
 type Index struct {
-	IndexName   string          `json:"index_name"`
-	IndexType   string          `json:"index_type,omitempty"`
-	IndexParams json.RawMessage `json:"index_params,omitempty"`
+	Name   string          `json:"name"`
+	Type   string          `json:"type,omitempty"`
+	Params json.RawMessage `json:"params,omitempty"`
 }
 
 func NewDefaultIndex() *Index {
@@ -89,8 +89,7 @@ type Space struct {
 	PartitionNum    int                         `json:"partition_num"`
 	ReplicaNum      uint8                       `json:"replica_num"`
 	Fields          json.RawMessage             `json:"fields"`
-	Index           *Index                      `json:"index"`
-	Models          json.RawMessage             `json:"models,omitempty"` //json model config for python plugin
+	Index           *Index                      `json:"index,omitempty"`
 	SpaceProperties map[string]*SpaceProperties `json:"space_properties"`
 }
 
@@ -130,7 +129,7 @@ type CacheModel struct {
 type SpaceProperties struct {
 	FieldType  vearchpb.FieldType   `json:"field_type"`
 	Type       string               `json:"type"`
-	Index      *bool                `json:"index,omitempty"`
+	Index      *Index               `json:"index,omitempty"`
 	Format     *string              `json:"format,omitempty"`
 	Dimension  int                  `json:"dimension,omitempty"`
 	StoreType  *string              `json:"store_type,omitempty"`
@@ -186,16 +185,16 @@ func (index *Index) UnmarshalJSON(bs []byte) error {
 		return fmt.Errorf("space Index json.Unmarshal err: empty json")
 	}
 	tempIndex := &struct {
-		IndexName   string          `json:"index_name,omitempty"`
-		IndexType   string          `json:"index_type,omitempty"`
-		IndexParams json.RawMessage `json:"index_params,omitempty"`
+		IndexName   string          `json:"name,omitempty"`
+		IndexType   string          `json:"type,omitempty"`
+		IndexParams json.RawMessage `json:"params,omitempty"`
 	}{}
 	if err := json.Unmarshal(bs, tempIndex); err != nil {
 		return fmt.Errorf("space Index json.Unmarshal err:%v", err)
 	}
 
 	indexTypeMap := map[string]string{"IVFPQ": "IVFPQ", "IVFFLAT": "IVFFLAT", "BINARYIVF": "BINARYIVF", "FLAT": "FLAT",
-		"HNSW": "HNSW", "GPU": "GPU", "SSG": "SSG", "IVFPQ_RELAYOUT": "IVFPQ_RELAYOUT", "SCANN": "SCANN"}
+		"HNSW": "HNSW", "GPU": "GPU", "SSG": "SSG", "IVFPQ_RELAYOUT": "IVFPQ_RELAYOUT", "SCANN": "SCANN", "SCALAR": "SCALAR"}
 	if tempIndex.IndexType == "" {
 		return fmt.Errorf("IndexType is null")
 	}
@@ -253,9 +252,9 @@ func (index *Index) UnmarshalJSON(bs []byte) error {
 	}
 
 	*index = Index{
-		IndexName:   tempIndex.IndexName,
-		IndexType:   tempIndex.IndexType,
-		IndexParams: tempIndex.IndexParams,
+		Name:   tempIndex.IndexName,
+		Type:   tempIndex.IndexType,
+		Params: tempIndex.IndexParams,
 	}
 
 	return nil
@@ -290,11 +289,11 @@ func (space *Space) Validate() error {
 type Field struct {
 	Name       string  `json:"name"`
 	Type       string  `json:"type"`
-	Index      *bool   `json:"index,omitempty"`
 	Array      *bool   `json:"array,omitempty"`
 	Dimension  int     `json:"dimension,omitempty"`
 	StoreType  *string `json:"store_type,omitempty"`
 	Format     *string `json:"format,omitempty"`
+	Index      *Index  `json:"index,omitempty"`
 	StoreParam *struct {
 		CacheSize int `json:"cache_size,omitempty"`
 	} `json:"store_param,omitempty"`
@@ -360,29 +359,17 @@ func UnmarshalPropertyJSON(propertity []byte) (map[string]*SpaceProperties, erro
 			sp.Array = *data.Array
 		}
 
-		if isVector {
-			if sp.Index != nil {
-				if *sp.Index {
-					sp.Option = FieldOption_Index
-				} else {
-					sp.Option = FieldOption_Null
-				}
-			} else {
-				sp.Option = FieldOption_Index
-			}
+		if sp.Index != nil {
+			sp.Option = FieldOption_Index
 		} else {
-			if sp.Index != nil {
-				if *sp.Index {
-					sp.Option = FieldOption_Index
-				} else {
-					sp.Option = FieldOption_Null
-				}
-			} else {
-				sp.Option = FieldOption_Null
-			}
+			sp.Option = FieldOption_Null
 		}
 
-		//set date format
+		if isVector {
+			sp.Index = data.Index
+		}
+
+		// set date format
 		if sp.Format != nil {
 			if !(sp.FieldType == FieldType_DATE || sp.FieldType == FieldType_VECTOR) {
 				return nil, fmt.Errorf("type:[%d] can not set format", sp.FieldType)
