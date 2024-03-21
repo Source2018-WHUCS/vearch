@@ -3,8 +3,6 @@ package vjson
 import (
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestJson(t *testing.T) {
@@ -13,6 +11,8 @@ func TestJson(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		require.Equal(t, "\"1970-01-01T08:00:01.000001002+08:00\"", string(output))
+		if string(output) != "\"1970-01-01T08:00:01.000001002+08:00\"" {
+			t.Fatalf("%v", string(output))
+		}
 	})
 }
