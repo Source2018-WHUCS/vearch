@@ -6,6 +6,7 @@ from vearch.schema.space import SpaceSchema
 from vearch.utils import DataType, MetricType
 from vearch.schema.index import IvfPQIndex, Index, ScalarIndex
 import logging
+from typing import List
 
 logger = logging.getLogger("vearch")
 
@@ -13,7 +14,7 @@ logger = logging.getLogger("vearch")
 def create_space_schema() -> SpaceSchema:
     book_name = Field("book_name", DataType.STRING, desc="the name of book", index=ScalarIndex("book_name_idx"))
     book_vector = Field("book_character", DataType.VECTOR,
-                        IvfPQIndex("book_vec_idx", 10000, MetricType.Inner_product, 2048, 40), dimension=512)
+                        IvfPQIndex("book_vec_idx", 10000, MetricType.Inner_product, 2048, 8), dimension=512)
     ractor_address = Field("ractor_address", DataType.STRING, desc="the place of the book put")
     space_schema = SpaceSchema("book_info", fields=[book_name, book_vector, ractor_address])
     return space_schema
@@ -37,12 +38,12 @@ def create_space(vc: Vearch):
     print(ret.text, ret.err_msg)
 
 
-def upsert_document(vc: Vearch):
+def upsert_document(vc: Vearch) -> List:
     import random
     ractor = ["ractor_logical", "ractor_industry", "ractor_philosophy"]
     book_name_template = "abcdefghijklmnopqrstuvwxyz0123456789"
     data = []
-    for i in range(50):
+    for i in range(5):
         book_item = ["".join(random.choices(book_name_template, k=5)),
                      [random.uniform(0, 1) for _ in range(512)],
                      ractor[random.randint(0, 2)]]
@@ -51,9 +52,15 @@ def upsert_document(vc: Vearch):
     space = Space("database1", "book_info")
     ret = space.upsert_doc(data)
     if ret:
-        print(ret.text)
+        return ret.get_document_ids()
+    return []
 
-    pass
+
+def query_documents(ids: List):
+    space = Space("database1", "book_info")
+    ret = space.query(ids)
+    for doc in ret:
+        logger.debug(doc)
 
 
 def is_database_exist(vc: Vearch):
@@ -94,7 +101,8 @@ if __name__ == "__main__":
     print(space_exist)
     if not space_exist:
         create_space(vc)
-    upsert_document(vc)
+    ids = upsert_document(vc)
+    query_documents(ids)
 
     delete_space(vc)
     drop_database(vc)
