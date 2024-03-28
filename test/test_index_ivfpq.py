@@ -121,7 +121,7 @@ xb, xq, xt, gt = get_sift10K(logger)
     ["MemoryOnly", 128],
     ["RocksDB", 128],
 ])
-def test_vearch_index_ivfpq(store_type: str, ncentroids: int):
+def test_vearch_index_ivfpq_without_nsubvector(store_type: str, ncentroids: int):
     index_params = {}
     index_params["metric_type"] = "L2"
     index_params["ncentroids"] = ncentroids
