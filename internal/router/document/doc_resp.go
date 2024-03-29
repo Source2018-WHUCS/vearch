@@ -208,7 +208,7 @@ func documentSearchResponse(srs []*vearchpb.SearchResult, head *vearchpb.Respons
 	}
 
 	if response_type == request.QueryResponse {
-		if srs == nil {
+		if len(srs) == 0 {
 			response["total"] = 0
 		} else {
 			response["total"] = len(srs[0].ResultItems)
