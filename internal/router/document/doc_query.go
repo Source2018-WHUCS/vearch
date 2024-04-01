@@ -29,7 +29,6 @@ import (
 	"github.com/vearch/vearch/internal/pkg/vjson"
 	"github.com/vearch/vearch/internal/proto/vearchpb"
 	"github.com/vearch/vearch/internal/ps/engine/mapping"
-	"github.com/vearch/vearch/internal/ps/engine/sortorder"
 )
 
 const (
@@ -601,7 +600,7 @@ func searchUrlParamParse(searchReq *vearchpb.SearchRequest) {
 	searchReq.Head.ClientType = urlParamMap[LoadBalance]
 }
 
-func searchParamToSearchPb(searchDoc *request.SearchDocumentRequest, searchReq *vearchpb.SearchRequest, space *entity.Space, idFeature bool) error {
+func searchParamToSearchPb(searchDoc *request.SearchDocumentRequest, searchReq *vearchpb.SearchRequest, space *entity.Space) error {
 	hasRank := true
 	if searchDoc.Quick {
 		hasRank = false
@@ -675,11 +674,6 @@ func searchParamToSearchPb(searchDoc *request.SearchDocumentRequest, searchReq *
 		queryFieldMap[feild] = feild
 	}
 
-	sortOrder, err := searchDoc.SortOrder()
-	if err != nil {
-		return err
-	}
-
 	if metricType == "" && space != nil && space.Index != nil {
 		indexParams := &entity.IndexParams{}
 		err := vjson.Unmarshal(space.Index.Params, indexParams)
@@ -689,64 +683,21 @@ func searchParamToSearchPb(searchDoc *request.SearchDocumentRequest, searchReq *
 		metricType = indexParams.MetricType
 	}
 
-	if metricType != "" && metricType == "L2" {
-		sortOrder = sortorder.SortOrder{&sortorder.SortScore{Desc: false}}
-	}
-	spaceProMap := space.SpaceProperties
-	if spaceProMap == nil {
-		spacePro, _ := entity.UnmarshalPropertyJSON(space.Fields)
-		spaceProMap = spacePro
-	}
-	sortFieldMap := make(map[string]string)
-
-	sortFieldArr := make([]*vearchpb.SortField, 0, len(sortOrder))
-
-	for _, sort := range sortOrder {
-		sortField := sort.SortField()
-		if !(sortField == "_score" || sortField == "_id" || (spaceProMap[sortField] != nil)) {
-			return fmt.Errorf("query param sort field not space field")
-		}
-
-		sortFieldArr = append(sortFieldArr, &vearchpb.SortField{Field: sort.SortField(), Type: sort.GetSortOrder()})
-
-		if sortField != "_score" && sortField != "_id" && queryFieldMap[sortField] == "" {
-			searchReq.Fields = append(searchReq.Fields, sortField)
-		}
-
-		sortDesc := sort.GetSortOrder()
-		if sortDesc {
-			sortFieldMap[sortField] = "true"
-		} else {
-			sortFieldMap[sortField] = "false"
-		}
-	}
-
-	searchReq.SortFields = sortFieldArr
-	searchReq.SortFieldMap = sortFieldMap
-
 	order := "desc"
-	if len(sortOrder) > 0 {
-		sortBool := sortOrder[0].GetSortOrder()
-		if !sortBool {
-			order = "asc"
-		}
+	if metricType == "L2" {
+		order = "asc"
 	}
 
 	if searchReq.Head.Params == nil {
-		paramMap := make(map[string]string)
-		paramMap["sort"] = order
-		searchReq.Head.Params = paramMap
-	} else {
-		searchReq.Head.Params["sort"] = order
+		searchReq.Head.Params = make(map[string]string)
 	}
+	searchReq.Head.Params["sort"] = order
 
 	searchReq.Head.Params["load_balance"] = searchDoc.LoadBalance
 
-	if !idFeature {
-		parseErr := parseQuery(searchDoc.Query, searchReq, space)
-		if parseErr != nil {
-			return parseErr
-		}
+	parseErr := parseQuery(searchDoc.Query, searchReq, space)
+	if parseErr != nil {
+		return parseErr
 	}
 
 	searchUrlParamParse(searchReq)
