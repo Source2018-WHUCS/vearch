@@ -865,7 +865,7 @@ func quickSortDesc(arr []*vearchpb.ResultItem) []*vearchpb.ResultItem {
 	arr[pivotIndex], arr[right] = arr[right], arr[pivotIndex]
 
 	for i := range arr {
-		if arr[i].Score < arr[right].Score {
+		if arr[i].Score > arr[right].Score {
 			arr[i], arr[left] = arr[left], arr[i]
 			left++
 		}
@@ -890,7 +890,7 @@ func quickSortAsc(arr []*vearchpb.ResultItem) []*vearchpb.ResultItem {
 	arr[pivotIndex], arr[right] = arr[right], arr[pivotIndex]
 
 	for i := range arr {
-		if arr[i].Score > arr[right].Score {
+		if arr[i].Score < arr[right].Score {
 			arr[i], arr[left] = arr[left], arr[i]
 			left++
 		}

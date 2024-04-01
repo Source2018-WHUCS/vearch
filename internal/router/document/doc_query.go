@@ -611,7 +611,6 @@ func searchParamToSearchPb(searchDoc *request.SearchDocumentRequest, searchReq *
 	searchReq.Fields = searchDoc.Fields
 	searchReq.IsBruteSearch = searchDoc.IsBruteSearch
 
-	metricType := ""
 	if searchDoc.IndexParams != nil {
 		searchReq.IndexParams = string(searchDoc.IndexParams)
 	}
@@ -674,24 +673,30 @@ func searchParamToSearchPb(searchDoc *request.SearchDocumentRequest, searchReq *
 		queryFieldMap[feild] = feild
 	}
 
-	if metricType == "" && space != nil && space.Index != nil {
-		indexParams := &entity.IndexParams{}
-		err := vjson.Unmarshal(space.Index.Params, indexParams)
-		if err != nil {
-			return fmt.Errorf("unmarshal err:[%s] , space.Index.IndexParams:[%s]", err.Error(), string(space.Index.Params))
-		}
-		metricType = indexParams.MetricType
-	}
-
-	order := "desc"
-	if metricType == "L2" {
-		order = "asc"
-	}
-
 	if searchReq.Head.Params == nil {
 		searchReq.Head.Params = make(map[string]string)
 	}
-	searchReq.Head.Params["sort"] = order
+
+	indexParams := &entity.IndexParams{}
+	if searchReq.IndexParams != "" {
+		err := vjson.Unmarshal([]byte(searchReq.IndexParams), indexParams)
+		if err != nil {
+			return fmt.Errorf("unmarshal err:[%s], searchReq.IndexParams:[%s]", err.Error(), searchReq.IndexParams)
+		}
+	} else if space != nil && space.Index != nil {
+		err := vjson.Unmarshal(space.Index.Params, indexParams)
+		if err != nil {
+			return fmt.Errorf("unmarshal err:[%s], space.Index.IndexParams:[%s]", err.Error(), string(space.Index.Params))
+		}
+	}
+
+	sort := ""
+	if indexParams.MetricType == "L2" {
+		sort = "asc"
+	} else {
+		sort = "desc"
+	}
+	searchReq.Head.Params["sort"] = sort
 
 	searchReq.Head.Params["load_balance"] = searchDoc.LoadBalance
 
