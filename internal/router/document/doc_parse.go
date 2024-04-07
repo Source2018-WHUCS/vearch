@@ -627,7 +627,12 @@ func documentParse(ctx context.Context, handler *DocumentHandler, r *http.Reques
 	if spaceProperties == nil {
 		spaceProperties, _ = entity.UnmarshalPropertyJSON(space.Fields)
 	}
-
+	vectorFieldNum := 0
+	for _, value := range spaceProperties {
+		if value.FieldType == vearchpb.FieldType_VECTOR {
+			vectorFieldNum += 1
+		}
+	}
 	docs := make([]*vearchpb.Document, 0)
 	for _, docJson := range docRequest.Documents {
 		jsonMap, err := vjson.ByteToJsonMap(docJson)
@@ -635,12 +640,7 @@ func documentParse(ctx context.Context, handler *DocumentHandler, r *http.Reques
 			return err
 		}
 		primaryKey := jsonMap.GetJsonValString(IDField)
-		vectorFieldNum := 0
-		for _, value := range spaceProperties {
-			if value.FieldType == vearchpb.FieldType_VECTOR {
-				vectorFieldNum += 1
-			}
-		}
+
 		fields, haveVector, err := MapDocument(docJson, space, spaceProperties)
 		if err != nil {
 			return err
