@@ -85,6 +85,9 @@ def benchmark(index_type, store_type, xb, xq, gt):
             "vector": []
         },
         "vector_value": False,
+        "index_params": {
+            "efSearch": 200
+        },
         "fields": ["field_int"],
         "quick": True,
         "size": k,

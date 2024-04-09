@@ -121,6 +121,10 @@ def get_sift10K(logger):
     xb, xq, xt, gt = load_sift10K(logger)
     return xb, xq, xt, gt
 
+def normalization(data):
+    data[np.linalg.norm(data, axis=1) == 0] = 1.0 / np.sqrt(data.shape[1])
+    data /= np.linalg.norm(data, axis=1)[:, np.newaxis]
+    return data
 
 class Dataset:
     def __init__(self, logger=None):
@@ -258,17 +262,66 @@ class DatasetGlove(Dataset):
 
     def get_queries(self):
         xq = np.array(self.glove_h5py["test"])
-        xq /= np.linalg.norm(xq)
-        return xq
+        return normalization(xq)
 
     def get_database(self):
         xb = np.array(self.glove_h5py["train"])
-        xb[np.linalg.norm(xb, axis=1) == 0] = 1.0 / np.sqrt(xb.shape[1])
-        xb /= np.linalg.norm(xb, axis=1)[:, np.newaxis]
-        return xb
+        return normalization(xb)
 
     def get_groundtruth(self):
         return self.glove_h5py["neighbors"]
+
+
+class DatasetNytimes(Dataset):
+    """
+    Data from http://ann-benchmarks.com/nytimes-256-angular.hdf5
+    """
+
+    def __init__(self, logger=None):
+        import h5py
+
+        self.metric = "IP"
+        self.d, self.nt = 100, 0
+
+        self.url = "http://ann-benchmarks.com/nytimes-256-angular.hdf5"
+        self.basedir = "datasets/nytimes/"
+        self.logger = logger
+        self.download()
+
+        self.nytimes_h5py = h5py.File(self.basedir + "nytimes-256-angular.hdf5", "r")
+        self.nb = self.nytimes_h5py["train"].shape[0]
+        self.nq = self.nytimes_h5py["test"].shape[0]
+
+    def download(self):
+        import requests
+
+        fname = self.basedir + "nytimes-256-angular.hdf5"
+        if os.path.isfile(fname):
+            self.logger.debug("%s exists, no need to download" % (fname))
+            return
+        if not os.path.exists(self.basedir):
+            os.makedirs(self.basedir)
+        response = requests.get(self.url)
+        if response.status_code == 200:
+            with open(fname, "wb") as file:
+                file.write(response.content)
+        else:
+            self.logger.error(
+                f"Failed to download file. Response status code: {response.status_code}"
+            )
+
+    def get_queries(self):
+        xq = np.array(self.nytimes_h5py["test"])
+        return normalization(xq)
+
+    def get_database(self):
+        xb = np.array(self.nytimes_h5py["train"])
+        if xb.dtype != np.float32:
+            xb = xb.astype(np.float32)
+        return normalization(xb)
+
+    def get_groundtruth(self):
+        return self.nytimes_h5py["neighbors"]
 
 
 class DatasetMusic1M(Dataset):
