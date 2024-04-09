@@ -360,7 +360,7 @@ func parseRange(rangeConditionMap map[string]*Range, proMap map[string]*entity.S
 					return nil, fmt.Errorf("INT %s Unmarshal err %s", string(start), err.Error())
 				}
 			} else {
-				minNum = -math.MaxInt32
+				minNum = math.MinInt32
 			}
 
 			if end != nil {
@@ -382,7 +382,7 @@ func parseRange(rangeConditionMap map[string]*Range, proMap map[string]*entity.S
 					return nil, fmt.Errorf("LONG %s Unmarshal err %s", string(start), err.Error())
 				}
 			} else {
-				minNum = -math.MaxInt64
+				minNum = math.MinInt64
 			}
 
 			if end != nil {
@@ -426,7 +426,7 @@ func parseRange(rangeConditionMap map[string]*Range, proMap map[string]*entity.S
 					return nil, fmt.Errorf("FLOAT64 %s Unmarshal err %s", string(start), err.Error())
 				}
 			} else {
-				minNum = -math.MaxFloat32
+				minNum = -math.MaxFloat64
 			}
 
 			if end != nil {
@@ -435,7 +435,7 @@ func parseRange(rangeConditionMap map[string]*Range, proMap map[string]*entity.S
 					return nil, fmt.Errorf("FLOAT64 %s Unmarshal err %s", string(end), err.Error())
 				}
 			} else {
-				maxNum = math.MaxFloat32
+				maxNum = math.MaxFloat64
 			}
 
 			min, max = minNum, maxNum
