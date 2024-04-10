@@ -10,9 +10,7 @@
 #include <condition_variable>
 #include <string>
 
-#include "c_api/api_data/batch_result.h"
 #include "c_api/api_data/doc.h"
-#include "c_api/api_data/docs.h"
 #include "c_api/api_data/engine_status.h"
 #include "c_api/api_data/memory_info.h"
 #include "c_api/api_data/request.h"
@@ -42,8 +40,6 @@ class Engine {
   Status CreateTable(TableInfo &table);
 
   int AddOrUpdate(Doc &doc);
-
-  int AddOrUpdateDocs(Docs &docs, BatchResult &result);
 
   int Update(int doc_id,
              std::unordered_map<std::string, struct Field> &fields_table,
@@ -93,23 +89,6 @@ class Engine {
 
   bitmap::BitmapManager *GetBitmap() { return docids_bitmap_; }
 
-  int SetBatchDocsNum(int i) {
-    batch_docs_.resize(i);
-    return 0;
-  }
-
-  int BatchDocsPrepare(char *doc_str, int idx) {
-    if (idx >= (int)batch_docs_.size()) {
-      LOG(ERROR) << "idx [" << idx << "] > batch_docs size ["
-                 << batch_docs_.size() << "]";
-      return -1;
-    }
-    batch_docs_[idx] = doc_str;
-    return 0;
-  }
-
-  char **BatchDocsStr() { return batch_docs_.data(); }
-
   int GetConfig(Config &config);
 
   int SetConfig(Config &config);
@@ -157,8 +136,6 @@ class Engine {
   bool created_table_;
 
   bool is_dirty_;
-
-  std::vector<char *> batch_docs_;
 
 #ifdef PERFORMANCE_TESTING
   std::atomic<uint64_t> search_num_;
