@@ -45,11 +45,6 @@ class Engine {
              std::unordered_map<std::string, struct Field> &fields_table,
              std::unordered_map<std::string, struct Field> &fields_vec);
 
-  /**
-   * Delete doc
-   * @param key
-   * @return 0 if successed
-   */
   int Delete(std::string &key);
 
   int GetDoc(const std::string &key, Doc &doc);
