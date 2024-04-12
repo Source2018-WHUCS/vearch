@@ -319,6 +319,9 @@ int Engine::Search(Request &request, Response &response_results,
     } else {
       status = gamma_query.condition->ranker->Parse();
       if (status.code() != status::Code::kOk) {
+        std::string msg = "ranker parse err, ranker: " + gamma_query.condition->ranker->ToString();
+        LOG(WARNING) << msg;
+        RequestConcurrentController::GetInstance().Release(req_num);
         return status.code();
       }
     }
