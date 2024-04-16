@@ -445,14 +445,13 @@ class VearchCase:
                 assert response.status_code == 200
 
     def test_deleteSpace(self):
-        response = drop_space(router_url, db_name, space_name)
-        logger.debug("deleteSpace:" + json.dumps(response))
-        assert response["code"] == 200
-
+        code = drop_space(router_url, db_name, space_name)
+        logger.debug("deleteSpace:" + str(code))
+        assert code in [200, 204]
     def test_deleteDB(self):
-        response = drop_db(router_url, db_name)
-        logger.debug("deleteDB:" + json.dumps(response))
-        assert response["code"] == 200
+        code = drop_db(router_url, db_name)
+        logger.debug("deleteDB:" + str(code))
+        assert code in [200, 204]
 
     def run_db_space_create_test(self, supported=True):
         self.test_createDB()

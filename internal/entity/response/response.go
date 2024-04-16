@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-package ginutil
+package response
 
 import (
 	"fmt"
@@ -20,9 +20,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vearch/vearch/internal/entity/errors"
 	"github.com/vearch/vearch/internal/pkg/log"
 	"github.com/vearch/vearch/internal/pkg/vjson"
-	"github.com/vearch/vearch/internal/proto/vearchpb"
 )
 
 type Response struct {
@@ -32,7 +32,7 @@ type Response struct {
 
 // http protocal
 type HttpReply struct {
-	Code int64       `json:"code"`
+	Code int         `json:"code"`
 	Msg  string      `json:"msg,omitempty"`
 	Data interface{} `json:"data,omitempty"`
 }
@@ -42,14 +42,6 @@ func New(ginContext *gin.Context) *Response {
 		ginContext: ginContext,
 		httpStatus: http.StatusOK,
 	}
-}
-
-func NewAutoMehtodName(ginContext *gin.Context) *Response {
-	response := &Response{
-		ginContext: ginContext,
-		httpStatus: http.StatusOK,
-	}
-	return response
 }
 
 /*
@@ -63,7 +55,7 @@ func (r *Response) SetHttpStatus(httpStatus int64) *Response {
 func (r *Response) SendJson(data interface{}) {
 	reply, err := vjson.Marshal(data)
 	if err != nil {
-		r.SendJsonHttpReplyError(err)
+		r.JsonError(err)
 		return
 	}
 	r.ginContext.Data(int(r.httpStatus), "application/json", reply)
@@ -79,25 +71,45 @@ func (r *Response) SendJsonBytes(bytes []byte) {
 	}
 }
 
-func (r *Response) SendJsonHttpReplySuccess(data interface{}) {
+func (r *Response) JsonSuccess(data interface{}) {
 	httpReply := &HttpReply{
-		Code: int64(vearchpb.ErrCode(vearchpb.ErrorEnum_SUCCESS)),
+		Code: http.StatusOK,
 		Msg:  "",
 		Data: data,
 	}
-	r.SetHttpStatus(httpReply.Code)
+	r.SetHttpStatus(int64(httpReply.Code))
 	r.SendJson(httpReply)
 }
 
-func (r *Response) SendJsonHttpReplyError(err error) {
+func (r *Response) SuccessDelete() {
+	httpReply := &HttpReply{
+		Code: http.StatusNoContent,
+		Msg:  "",
+	}
+	r.SetHttpStatus(int64(httpReply.Code))
+	r.SendJson(httpReply)
+}
+
+func (r *Response) JsonError(err error) {
 	if err == nil {
 		err = fmt.Errorf("")
 	}
 
+	code := http.StatusInternalServerError
+	if _, ok := err.(errors.ErrBadRequest); ok {
+		code = http.StatusBadRequest
+	} else if _, ok := err.(errors.ErrUnprocessable); ok {
+		code = http.StatusUnprocessableEntity
+	} else if _, ok := err.(errors.ErrNotFound); ok {
+		code = http.StatusNotFound
+	} else if _, ok := err.(errors.ErrInternal); ok {
+		code = http.StatusInternalServerError
+	}
+
 	httpReply := &HttpReply{
-		Code: int64(vearchpb.ErrCode(vearchpb.NewError(vearchpb.ErrorEnum_INTERNAL_ERROR, err).GetError().Code)),
+		Code: code,
 		Msg:  err.Error(),
 	}
-	r.SetHttpStatus(httpReply.Code)
+	r.SetHttpStatus(int64(httpReply.Code))
 	r.SendJson(httpReply)
 }

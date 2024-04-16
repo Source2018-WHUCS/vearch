@@ -116,8 +116,8 @@ class TestSpaceCreate:
         logger.info(response)
         assert response["code"] == 200
 
-        response = drop_space(router_url, db_name, space_name)
-        assert response["code"] == 200
+        code = drop_space(router_url, db_name, space_name)
+        assert code in [200, 204]
 
 
     def test_vearch_space_create_bad_field_type(self):
@@ -217,8 +217,8 @@ class TestSpaceCreate:
         logger.info(response)
         assert response["code"] == 200
 
-        response = drop_space(router_url, db_name, space_name)
-        assert response["code"] == 200
+        code = drop_space(router_url, db_name, space_name)
+        assert code in [200, 204]
 
     @pytest.mark.parametrize(
         ["wrong_index", "wrong_type", "index_type"],
@@ -378,8 +378,8 @@ class TestSpaceCreate:
         logger.info(response)
         assert response["code"] != 200
 
-        response = drop_space(router_url, db_name, space_name)
-        assert response["code"] == 200
+        code = drop_space(router_url, db_name, space_name)
+        assert code in [200, 204]
 
     def test_destroy_db(self):
         drop_db(router_url, db_name)

@@ -16,21 +16,21 @@ package resp
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/vearch/vearch/internal/pkg/ginutil"
+	"github.com/vearch/vearch/internal/entity/response"
 )
 
 func SendError(c *gin.Context, httpStatus int, errorMsg string) {
-	ginutil.NewAutoMehtodName(c).SetHttpStatus(int64(httpStatus)).SendJson(NewBody(errorMsg, httpStatus))
+	response.New(c).SetHttpStatus(int64(httpStatus)).SendJson(NewBody(errorMsg, httpStatus))
 }
 
 func SendErrorRootCause(c *gin.Context, httpStatus int, errorType string, errorReason string) {
-	ginutil.NewAutoMehtodName(c).SetHttpStatus(int64(httpStatus)).SendJson(NewBodyRootCause(errorType, errorReason, httpStatus))
+	response.New(c).SetHttpStatus(int64(httpStatus)).SendJson(NewBodyRootCause(errorType, errorReason, httpStatus))
 }
 
 func SendJsonBytes(c *gin.Context, bytes []byte) {
-	ginutil.NewAutoMehtodName(c).SendJsonBytes(bytes)
+	response.New(c).SendJsonBytes(bytes)
 }
 
 func SendJson(c *gin.Context, obj interface{}) {
-	ginutil.NewAutoMehtodName(c).SendJson(obj)
+	response.New(c).SendJson(obj)
 }
