@@ -34,7 +34,7 @@ class TestSpaceCreate:
 
     def test_prepare_db(self):
         response = create_db(router_url, db_name)
-        assert response["code"] == 200
+        assert response["code"] == 0
 
     @pytest.mark.parametrize(
         ["index_type"],
@@ -110,11 +110,11 @@ class TestSpaceCreate:
 
         response = create_space(router_url, db_name, space_config)
         logger.info(response)
-        assert response["code"] == 200
+        assert response["code"] == 0
 
         response = describe_space(logger, router_url, db_name, space_name)
         logger.info(response)
-        assert response["code"] == 200
+        assert response["code"] == 0
 
         code = drop_space(router_url, db_name, space_name)
         assert code in [200, 204]
@@ -145,7 +145,7 @@ class TestSpaceCreate:
 
         response = create_space(router_url, db_name, space_config)
         logger.info(response)
-        assert response["code"] != 200
+        assert response["code"] != 0
 
     @pytest.mark.parametrize(
         ["index_type"],
@@ -211,11 +211,11 @@ class TestSpaceCreate:
 
         response = create_space(router_url, db_name, space_config)
         logger.info(response)
-        assert response["code"] == 200
+        assert response["code"] == 0
 
         response = describe_space(logger, router_url, db_name, space_name)
         logger.info(response)
-        assert response["code"] == 200
+        assert response["code"] == 0
 
         code = drop_space(router_url, db_name, space_name)
         assert code in [200, 204]
@@ -317,7 +317,7 @@ class TestSpaceCreate:
 
         response = create_space(router_url, db_name, space_config)
         logger.info(response)
-        assert response["code"] != 200
+        assert response["code"] != 0
 
     @pytest.mark.parametrize(
         ["wrong_index", "wrong_type"],
@@ -365,7 +365,7 @@ class TestSpaceCreate:
         }
 
         response = create_space(router_url, db_name, space_config)
-        assert response["code"] == 200
+        assert response["code"] == 0
 
         describe_db_name = db_name
         describe_space_name = space_name
@@ -376,7 +376,7 @@ class TestSpaceCreate:
         response = describe_space(
             logger, router_url, describe_db_name, describe_space_name)
         logger.info(response)
-        assert response["code"] != 200
+        assert response["code"] != 0
 
         code = drop_space(router_url, db_name, space_name)
         assert code in [200, 204]

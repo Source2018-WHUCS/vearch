@@ -14,50 +14,96 @@
 
 package errors
 
-type ErrBadRequest struct {
-	err error
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/vearch/vearch/internal/proto/vearchpb"
+)
+
+type ErrRequest struct {
+	err      error
+	msg      string
+	code     int
+	httpCode int
 }
 
-func (e ErrBadRequest) Error() string {
-	return e.err.Error()
+func (e ErrRequest) Msg() string {
+	return e.msg
 }
 
-func NewErrBadRequest(err error) ErrBadRequest {
-	return ErrBadRequest{err}
+func (e ErrRequest) Code() int {
+	return e.code
 }
 
-type ErrUnprocessable struct {
-	err error
+func (e ErrRequest) HttpCode() int {
+	return e.httpCode
 }
 
-func (e ErrUnprocessable) Error() string {
-	return e.err.Error()
+func NewErrBadRequest(err error) *ErrRequest {
+	if vErr, ok := err.(*vearchpb.VearchErr); ok {
+		return &ErrRequest{
+			err:      fmt.Errorf(vErr.Error()),
+			msg:      vErr.Error(),
+			code:     int(vErr.GetError().Code),
+			httpCode: http.StatusBadRequest,
+		}
+	}
+	return &ErrRequest{
+		err:      err,
+		msg:      err.Error(),
+		code:     int(vearchpb.ErrorEnum_UNKNOWN_ERROR),
+		httpCode: http.StatusBadRequest,
+	}
 }
 
-func NewErrUnprocessable(err error) ErrUnprocessable {
-	return ErrUnprocessable{err}
+func NewErrUnprocessable(err error) *ErrRequest {
+	if vErr, ok := err.(*vearchpb.VearchErr); ok {
+		return &ErrRequest{
+			err:      fmt.Errorf(vErr.Error()),
+			msg:      vErr.Error(),
+			code:     int(vErr.GetError().Code),
+			httpCode: http.StatusUnprocessableEntity,
+		}
+	}
+	return &ErrRequest{
+		err:      err,
+		msg:      err.Error(),
+		code:     int(vearchpb.ErrorEnum_UNKNOWN_ERROR),
+		httpCode: http.StatusUnprocessableEntity,
+	}
 }
 
-type ErrNotFound struct {
-	err error
+func NewErrNotFound(err error) *ErrRequest {
+	if vErr, ok := err.(*vearchpb.VearchErr); ok {
+		return &ErrRequest{
+			err:      fmt.Errorf(vErr.Error()),
+			msg:      vErr.Error(),
+			code:     int(vErr.GetError().Code),
+			httpCode: http.StatusNotFound,
+		}
+	}
+	return &ErrRequest{
+		err:      err,
+		msg:      err.Error(),
+		code:     int(vearchpb.ErrorEnum_UNKNOWN_ERROR),
+		httpCode: http.StatusNotFound,
+	}
 }
 
-func (e ErrNotFound) Error() string {
-	return e.err.Error()
-}
-
-func NewErrNotFound(err error) ErrNotFound {
-	return ErrNotFound{err}
-}
-
-type ErrInternal struct {
-	err error
-}
-
-func (e ErrInternal) Error() string {
-	return e.err.Error()
-}
-
-func NewErrInternal(err error) ErrInternal {
-	return ErrInternal{err}
+func NewErrInternal(err error) *ErrRequest {
+	if vErr, ok := err.(*vearchpb.VearchErr); ok {
+		return &ErrRequest{
+			err:      fmt.Errorf(vErr.Error()),
+			msg:      vErr.Error(),
+			code:     int(vErr.GetError().Code),
+			httpCode: http.StatusInternalServerError,
+		}
+	}
+	return &ErrRequest{
+		err:      err,
+		msg:      err.Error(),
+		code:     int(vearchpb.ErrorEnum_UNKNOWN_ERROR),
+		httpCode: http.StatusInternalServerError,
+	}
 }

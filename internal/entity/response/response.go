@@ -15,7 +15,6 @@
 package response
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -23,6 +22,7 @@ import (
 	"github.com/vearch/vearch/internal/entity/errors"
 	"github.com/vearch/vearch/internal/pkg/log"
 	"github.com/vearch/vearch/internal/pkg/vjson"
+	"github.com/vearch/vearch/internal/proto/vearchpb"
 )
 
 type Response struct {
@@ -55,7 +55,7 @@ func (r *Response) SetHttpStatus(httpStatus int64) *Response {
 func (r *Response) SendJson(data interface{}) {
 	reply, err := vjson.Marshal(data)
 	if err != nil {
-		r.JsonError(err)
+		r.JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 	r.ginContext.Data(int(r.httpStatus), "application/json", reply)
@@ -73,43 +73,28 @@ func (r *Response) SendJsonBytes(bytes []byte) {
 
 func (r *Response) JsonSuccess(data interface{}) {
 	httpReply := &HttpReply{
-		Code: http.StatusOK,
+		Code: int(vearchpb.ErrorEnum_SUCCESS),
 		Msg:  "",
 		Data: data,
 	}
-	r.SetHttpStatus(int64(httpReply.Code))
+	r.SetHttpStatus(int64(http.StatusOK))
 	r.SendJson(httpReply)
 }
 
 func (r *Response) SuccessDelete() {
 	httpReply := &HttpReply{
-		Code: http.StatusNoContent,
+		Code: int(vearchpb.ErrorEnum_SUCCESS),
 		Msg:  "",
 	}
-	r.SetHttpStatus(int64(httpReply.Code))
+	r.SetHttpStatus(int64(http.StatusOK))
 	r.SendJson(httpReply)
 }
 
-func (r *Response) JsonError(err error) {
-	if err == nil {
-		err = fmt.Errorf("")
-	}
-
-	code := http.StatusInternalServerError
-	if _, ok := err.(errors.ErrBadRequest); ok {
-		code = http.StatusBadRequest
-	} else if _, ok := err.(errors.ErrUnprocessable); ok {
-		code = http.StatusUnprocessableEntity
-	} else if _, ok := err.(errors.ErrNotFound); ok {
-		code = http.StatusNotFound
-	} else if _, ok := err.(errors.ErrInternal); ok {
-		code = http.StatusInternalServerError
-	}
-
+func (r *Response) JsonError(err *errors.ErrRequest) {
 	httpReply := &HttpReply{
-		Code: code,
-		Msg:  err.Error(),
+		Code: err.Code(),
+		Msg:  err.Msg(),
 	}
-	r.SetHttpStatus(int64(httpReply.Code))
+	r.SetHttpStatus(int64(err.HttpCode()))
 	r.SendJson(httpReply)
 }
