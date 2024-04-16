@@ -16,21 +16,21 @@ package resp
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/vearch/vearch/internal/entity/response"
+	"github.com/vearch/vearch/internal/pkg/httphelper"
 )
 
 func SendError(c *gin.Context, httpStatus int, errorMsg string) {
-	response.New(c).SetHttpStatus(int64(httpStatus)).SendJson(NewBody(errorMsg, httpStatus))
+	httphelper.New(c).SetHttpStatus(int64(httpStatus)).SendJson(NewBody(errorMsg, httpStatus))
 }
 
 func SendErrorRootCause(c *gin.Context, httpStatus int, errorType string, errorReason string) {
-	response.New(c).SetHttpStatus(int64(httpStatus)).SendJson(NewBodyRootCause(errorType, errorReason, httpStatus))
+	httphelper.New(c).SetHttpStatus(int64(httpStatus)).SendJson(NewBodyRootCause(errorType, errorReason, httpStatus))
 }
 
 func SendJsonBytes(c *gin.Context, bytes []byte) {
-	response.New(c).SendJsonBytes(bytes)
+	httphelper.New(c).SendJsonBytes(bytes)
 }
 
 func SendJson(c *gin.Context, obj interface{}) {
-	response.New(c).SendJson(obj)
+	httphelper.New(c).SendJson(obj)
 }
