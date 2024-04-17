@@ -141,14 +141,14 @@ func parseFilter(filters *request.Filter, space *entity.Space) ([]*vearchpb.Rang
 		}
 		filter, err := parseRange(rangeConditionMap, proMap)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%v parseRange err %s", rangeConditionMap, err.Error())
+			return nil, nil, fmt.Errorf("parseRange err %s", err.Error())
 		}
 		if len(filter) != 0 {
 			rfs = append(rfs, filter...)
 		}
 		tmFilter, err := parseTerm(termConditionMap, proMap)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%v parseTerm err %s", termConditionMap, err.Error())
+			return nil, nil, fmt.Errorf("parseTerm err %s", err.Error())
 		}
 		if len(tmFilter) != 0 {
 			tfs = append(tfs, tmFilter...)
