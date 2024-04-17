@@ -136,4 +136,4 @@ xb, xq, gt = get_dataset_by_name(logger, "gist")
     # ["FLAT", "MemoryOnly"]
 ])
 def test_vearch_index_recall_gist1m(index_type: str, store_type: str):
-    benchmark(index_type, store_type, "InnerProduct", xb, xq, gt)
+    benchmark(index_type, store_type, "L2", xb, xq, gt)
