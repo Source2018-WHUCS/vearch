@@ -28,9 +28,10 @@ import (
 	"github.com/vearch/vearch/internal/client"
 	"github.com/vearch/vearch/internal/config"
 	"github.com/vearch/vearch/internal/entity"
+	"github.com/vearch/vearch/internal/entity/errors"
 	"github.com/vearch/vearch/internal/entity/request"
 	"github.com/vearch/vearch/internal/monitor"
-	"github.com/vearch/vearch/internal/pkg/ginutil"
+	"github.com/vearch/vearch/internal/pkg/httphelper"
 	"github.com/vearch/vearch/internal/pkg/log"
 	"github.com/vearch/vearch/internal/pkg/netutil"
 	"github.com/vearch/vearch/internal/proto/vearchpb"
@@ -122,13 +123,13 @@ func (handler *DocumentHandler) handleMasterRequest(c *gin.Context) {
 		return
 	}
 
-	response, err := handler.client.Master().ProxyHTTPRequest(method, c.Request.RequestURI, string(bodyBytes))
+	res, err := handler.client.Master().ProxyHTTPRequest(method, c.Request.RequestURI, string(bodyBytes))
 	if err != nil {
-		log.Error("handleMasterRequest %v, response %s", err, string(response))
-		ginutil.NewAutoMehtodName(c).SetHttpStatus(http.StatusInternalServerError).SendJsonBytes(response)
+		log.Error("handleMasterRequest %v, response %s", err, string(res))
+		httphelper.New(c).SetHttpStatus(http.StatusInternalServerError).SendJsonBytes(res)
 		return
 	}
-	resp.SendJsonBytes(c, response)
+	resp.SendJsonBytes(c, res)
 }
 
 func (handler *DocumentHandler) ExportInterfacesToServer(group *gin.RouterGroup) error {
@@ -164,9 +165,9 @@ func (handler *DocumentHandler) cacheInfo(c *gin.Context) {
 	dbName := c.Param(URLParamDbName)
 	spaceName := c.Param(URLParamSpaceName)
 	if space, err := handler.client.Master().Cache().SpaceByCache(context.Background(), dbName, spaceName); err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 	} else {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(space)
+		httphelper.New(c).JsonSuccess(space)
 	}
 }
 
@@ -217,16 +218,16 @@ func (handler *DocumentHandler) handleLogPrintSwitch(c *gin.Context) {
 
 	printSwitch, err := doLogPrintSwitchParse(c.Request)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 
 	config.LogInfoPrintSwitch = printSwitch
 	if resultBytes, err := docPrintLogSwitchResponse(config.LogInfoPrintSwitch); err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	} else {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(resultBytes)
+		httphelper.New(c).JsonSuccess(resultBytes)
 	}
 }
 
@@ -242,29 +243,29 @@ func (handler *DocumentHandler) handleDocumentUpsert(c *gin.Context) {
 
 	docRequest, dbName, spaceName, err := documentHeadParse(c.Request)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 	args.Head.DbName = dbName
 	args.Head.SpaceName = spaceName
 	space, err := handler.docService.getSpace(c.Request.Context(), args.Head)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 
 	err = documentParse(c.Request.Context(), handler, c.Request, docRequest, space, args)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 	reply := handler.docService.bulk(c.Request.Context(), args)
 	result, err := documentUpsertResponse(args, reply)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrUnprocessable(err))
 		return
 	}
-	ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(result)
+	httphelper.New(c).JsonSuccess(result)
 }
 
 func (handler *DocumentHandler) handleDocumentQuery(c *gin.Context) {
@@ -279,7 +280,7 @@ func (handler *DocumentHandler) handleDocumentQuery(c *gin.Context) {
 
 	searchDoc, err := documentRequestParse(c.Request)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 	args.Head.DbName = searchDoc.DbName
@@ -287,7 +288,7 @@ func (handler *DocumentHandler) handleDocumentQuery(c *gin.Context) {
 
 	space, err := handler.docService.getSpace(c.Request.Context(), args.Head)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 	// update space name because maybe is alias name
@@ -295,14 +296,14 @@ func (handler *DocumentHandler) handleDocumentQuery(c *gin.Context) {
 
 	err = queryRequestToPb(searchDoc, space, args)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 
 	if searchDoc.DocumentIds != nil && len(*searchDoc.DocumentIds) != 0 {
 		if args.TermFilters != nil || args.RangeFilters != nil {
 			err := vearchpb.NewError(vearchpb.ErrorEnum_QUERY_INVALID_PARAMS_BOTH_DOCUMENT_IDS_AND_FILTER, nil)
-			ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+			httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 			return
 		}
 		handler.handleDocumentGet(c, searchDoc)
@@ -310,7 +311,7 @@ func (handler *DocumentHandler) handleDocumentQuery(c *gin.Context) {
 	} else {
 		if args.TermFilters == nil && args.RangeFilters == nil {
 			err := vearchpb.NewError(vearchpb.ErrorEnum_QUERY_INVALID_PARAMS_SHOULD_HAVE_ONE_OF_DOCUMENT_IDS_OR_FILTER, nil)
-			ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+			httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 			return
 		}
 	}
@@ -321,17 +322,17 @@ func (handler *DocumentHandler) handleDocumentQuery(c *gin.Context) {
 	result, err := documentQueryResponse(searchResp.Results, searchResp.Head)
 
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrUnprocessable(err))
 		return
 	}
-	ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(result)
+	httphelper.New(c).JsonSuccess(result)
 	log.Debug("handleDocumentQuery total use :[%f] service use :[%f]", time.Since(startTime).Seconds()*1000, serviceCost.Seconds()*1000)
 }
 
 func (handler *DocumentHandler) handleDocumentGet(c *gin.Context, searchDoc *request.SearchDocumentRequest) {
 	if len(*searchDoc.DocumentIds) >= 500 {
 		err := vearchpb.NewError(vearchpb.ErrorEnum_QUERY_INVALID_PARAMS_LENGTH_OF_DOCUMENT_IDS_BEYOND_500, nil)
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrUnprocessable(err))
 		return
 	}
 	args := &vearchpb.GetRequest{}
@@ -353,10 +354,10 @@ func (handler *DocumentHandler) handleDocumentGet(c *gin.Context, searchDoc *req
 	}
 
 	if result, err := documentGetResponse(handler.client, args, reply, queryFieldsParam, searchDoc.VectorValue); err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	} else {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(result)
+		httphelper.New(c).JsonSuccess(result)
 		return
 	}
 }
@@ -372,7 +373,7 @@ func (handler *DocumentHandler) handleDocumentSearch(c *gin.Context) {
 
 	searchDoc, err := documentRequestParse(c.Request)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 	args.Head.DbName = searchDoc.DbName
@@ -380,7 +381,7 @@ func (handler *DocumentHandler) handleDocumentSearch(c *gin.Context) {
 
 	space, err := handler.docService.getSpace(c.Request.Context(), args.Head)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 	// update space name because maybe is alias name
@@ -388,13 +389,13 @@ func (handler *DocumentHandler) handleDocumentSearch(c *gin.Context) {
 
 	err = requestToPb(searchDoc, space, args)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 
 	if args.VecFields == nil {
 		err := vearchpb.NewError(vearchpb.ErrorEnum_SEARCH_INVALID_PARAMS_SHOULD_HAVE_VECTOR_FIELD, nil)
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 
@@ -405,10 +406,10 @@ func (handler *DocumentHandler) handleDocumentSearch(c *gin.Context) {
 	result, err := documentSearchResponse(searchResp.Results, searchResp.Head)
 
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
-	ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(result)
+	httphelper.New(c).JsonSuccess(result)
 	log.Debug("handleDocumentSearch total use :[%f] service use :[%f]", time.Since(startTime).Seconds()*1000, serviceCost.Seconds()*1000)
 }
 
@@ -421,7 +422,7 @@ func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 
 	searchDoc, err := documentRequestParse(c.Request)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 	args.Head.DbName = searchDoc.DbName
@@ -429,7 +430,7 @@ func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 
 	space, err := handler.docService.getSpace(c.Request.Context(), args.Head)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 	// update space name because maybe is alias name
@@ -437,25 +438,25 @@ func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 
 	err = requestToPb(searchDoc, space, args)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 
 	if args.VecFields != nil {
 		err := vearchpb.NewError(vearchpb.ErrorEnum_DELETE_INVALID_PARAMS_SHOULD_NOT_HAVE_VECTOR_FIELD, nil)
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 
 	if searchDoc.DocumentIds != nil && len(*searchDoc.DocumentIds) != 0 {
 		if args.TermFilters != nil || args.RangeFilters != nil {
 			err := vearchpb.NewError(vearchpb.ErrorEnum_DELETE_INVALID_PARAMS_BOTH_DOCUMENT_IDS_AND_VECTOR, nil)
-			ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+			httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 			return
 		}
 		if len(*searchDoc.DocumentIds) >= 500 {
 			err := vearchpb.NewError(vearchpb.ErrorEnum_DELETE_INVALID_PARAMS_LENGTH_OF_DOCUMENT_IDS_BEYOND_500, nil)
-			ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+			httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 			return
 		}
 		args := &vearchpb.DeleteRequest{}
@@ -466,16 +467,16 @@ func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 		var resultIds []string
 		reply := handler.docService.deleteDocs(c.Request.Context(), args)
 		if result, err := documentDeleteResponse(reply.Items, reply.Head, resultIds); err != nil {
-			ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+			httphelper.New(c).JsonError(errors.NewErrInternal(err))
 			return
 		} else {
-			ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(result)
+			httphelper.New(c).JsonSuccess(result)
 			return
 		}
 	} else {
 		if args.TermFilters == nil && args.RangeFilters == nil {
 			err := vearchpb.NewError(vearchpb.ErrorEnum_DELETE_INVALID_PARAMS_SHOULD_HAVE_ONE_OF_DOCUMENT_IDS_OR_FILTER, nil)
-			ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+			httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 			return
 		}
 	}
@@ -486,11 +487,11 @@ func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 	log.Debug("handleDocumentDelete cost :%f", serviceCost)
 	result, err := deleteByQueryResult(delByQueryResp)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrUnprocessable(err))
 		return
 	}
 
-	ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(result)
+	httphelper.New(c).JsonSuccess(result)
 }
 
 // handleIndexFlush
@@ -503,7 +504,7 @@ func (handler *DocumentHandler) handleIndexFlush(c *gin.Context) {
 
 	indexRequest, err := IndexRequestParse(c.Request)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 
@@ -512,17 +513,12 @@ func (handler *DocumentHandler) handleIndexFlush(c *gin.Context) {
 
 	_, err = handler.docService.getSpace(c.Request.Context(), args.Head)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 	flushResponse := handler.docService.flush(c.Request.Context(), args)
-	result, err := IndexResponseToContent(flushResponse.Shards)
-	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
-		return
-	}
-
-	ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(result)
+	result := IndexResponseToContent(flushResponse.Shards)
+	httphelper.New(c).JsonSuccess(result)
 }
 
 // handleIndexForceMerge build index for gpu
@@ -534,7 +530,7 @@ func (handler *DocumentHandler) handleIndexForceMerge(c *gin.Context) {
 
 	indexRequest, err := IndexRequestParse(c.Request)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 
@@ -543,18 +539,14 @@ func (handler *DocumentHandler) handleIndexForceMerge(c *gin.Context) {
 
 	_, err = handler.docService.getSpace(c.Request.Context(), args.Head)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 
 	forceMergeResponse := handler.docService.forceMerge(c.Request.Context(), args)
-	result, err := IndexResponseToContent(forceMergeResponse.Shards)
-	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
-		return
-	}
+	result := IndexResponseToContent(forceMergeResponse.Shards)
 
-	ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(result)
+	httphelper.New(c).JsonSuccess(result)
 }
 
 // handleIndexRebuild rebuild index
@@ -566,7 +558,7 @@ func (handler *DocumentHandler) handleIndexRebuild(c *gin.Context) {
 
 	indexRequest, err := IndexRequestParse(c.Request)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 
@@ -582,16 +574,12 @@ func (handler *DocumentHandler) handleIndexRebuild(c *gin.Context) {
 
 	_, err = handler.docService.getSpace(c.Request.Context(), args.Head)
 	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
+		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 
 	indexResponse := handler.docService.rebuildIndex(c.Request.Context(), args)
-	result, err := IndexResponseToContent(indexResponse.Shards)
-	if err != nil {
-		ginutil.NewAutoMehtodName(c).SendJsonHttpReplyError(err)
-		return
-	}
+	result := IndexResponseToContent(indexResponse.Shards)
 
-	ginutil.NewAutoMehtodName(c).SendJsonHttpReplySuccess(result)
+	httphelper.New(c).JsonSuccess(result)
 }
