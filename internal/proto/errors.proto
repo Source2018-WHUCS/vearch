@@ -15,26 +15,26 @@ enum ErrorEnum {
   PARAM_ERROR = 6;
 
   // cluster 100-199
-  // master 100-120
+  // master 100-119
   MASTER_PS_NOT_ENOUGH_SELECT = 100;
 
-  // router 121-140
-  ROUTER_NO_PS_CLIENT = 121;
-  ROUTER_CALL_PS_RPC_ERR = 122;
+  // router 120-139
+  ROUTER_NO_PS_CLIENT = 120;
+  ROUTER_CALL_PS_RPC_ERR = 121;
 
-  // partition server 141-160
-  PARTITION_DUPLICATE = 141;
-  PARTITION_NOT_EXIST = 142;
-  PARTITION_NOT_LEADER = 143;
-  PARTITION_NO_LEADER = 144;
-  PARTITION_IS_INVALID = 145;
-  PARTITION_IS_CLOSED = 146;
-  PS_NOT_EXIST = 147;
+  // partition server 140-159
+  PARTITION_DUPLICATE = 140;
+  PARTITION_NOT_EXIST = 141;
+  PARTITION_NOT_LEADER = 142;
+  PARTITION_NO_LEADER = 143;
+  PARTITION_IS_INVALID = 144;
+  PARTITION_IS_CLOSED = 145;
+  PS_NOT_EXIST = 146;
 
-  // server 161-180
+  // server 160-179
 
-  // user 181-199
-  USER_NOT_EXIST = 181;
+  // user 180-199
+  USER_NOT_EXIST = 180;
 
   // schema 200-399
   // db 200-219
@@ -55,14 +55,14 @@ enum ErrorEnum {
   PRIMARY_KEY_IS_INVALID = 261;
 
   // field 280-299
-  // scalar field 500-550
-  // vector field 551-599
+  // scalar field 280-289
+  // vector field 290-299
 
   // filter 300-319
   FILTER_OPERATOR_TYPE_ERR = 300;
   FILTER_CONDITION_OPERATOR_TYPE_ERR = 301;
 
-  // document interface 400-499
+  // data interface 400-499
   // document upsert 400-419
   UPSERT_INVALID_PARAMS = 400;
 
@@ -91,11 +91,11 @@ enum ErrorEnum {
   SEARCH_RESPONSE_PARSE_ERR = 466;
 
   // index interface 500-599
-  FORCE_MERGE_BUILD_INDEX_ERR = 501;
+  FORCE_MERGE_BUILD_INDEX_ERR = 500;
 
   // meta interface 600-699
   // flush
-  FLUSH_ERR = 620;
+  FLUSH_ERR = 600;
 
   // service 700
   SERVICE_UNAVAILABLE = 700;
