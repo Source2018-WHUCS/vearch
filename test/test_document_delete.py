@@ -171,3 +171,34 @@ class TestDocumentDeleteBadCase:
     # destroy for badcase
     def test_destroy_cluster_badcase(self):
         destroy(router_url, db_name, space_name)
+
+class TestDocumentDeleteAndUpsert:
+    def setup_class(self):
+        self.logger = logger
+        self.xb = xb
+
+    # prepare
+    def test_prepare_cluster(self):
+        prepare_cluster_for_document_test(self.logger, 1, self.xb)
+
+    def test_prepare_delete_and_upsert(self):
+        add(1, 1, self.xb, with_id=True, full_field=True)
+
+        query_interface(self.logger, 1, 1, self.xb, query_type="by_ids")
+
+        assert get_space_num() == 1
+
+        delete_interface(self.logger, 1, 1, delete_type="by_ids")
+
+        assert get_space_num() == 0
+
+        add(1, 1, self.xb, with_id=True, full_field=True)
+
+        query_interface(self.logger, 1, 1, self.xb, query_type="by_ids")
+
+        assert get_space_num() == 1
+
+
+    # destroy
+    def test_destroy_cluster(self):
+        destroy(router_url, db_name, space_name)

@@ -199,22 +199,20 @@ Status Engine::Setup() {
     mkdir(dump_path_.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   }
 
-  docids_bitmap_ = new bitmap::BitmapManager();
-  docids_bitmap_->SetDumpFilePath(index_root_path_ + "/bitmap");
-  int init_bitmap_size = 5000 * 10000;
-  bool is_load = false;
-  int file_bytes_size = docids_bitmap_->FileBytesSize();
-  if (file_bytes_size != 0) {
-    init_bitmap_size = file_bytes_size * 8;
-    is_load = true;
+  docids_bitmap_ = new bitmap::RocksdbBitmapManager();
+  int ret = docids_bitmap_->SetDumpFilePath(index_root_path_ + "/bitmap");
+  if(ret) {
+    std::string msg = "Cannot set bitmap dump file path with ret: " + std::to_string(ret);
+    LOG(ERROR) << msg;
+    return Status::IOError(msg);    
   }
-
+  int init_bitmap_size = 5000 * 10000;
   if (docids_bitmap_->Init(init_bitmap_size) != 0) {
     std::string msg = "Cannot create bitmap!";
     LOG(ERROR) << msg;
     return Status::IOError(msg);
   }
-  if (is_load) {
+  if (docids_bitmap_->IsLoad()) {
     docids_bitmap_->Load();
   } else {
     docids_bitmap_->Dump();
@@ -601,14 +599,19 @@ int Engine::AddOrUpdate(Doc &doc) {
 #ifdef PERFORMANCE_TESTING
   double end_table = utils::getmillisecs();
 #endif
-
+  int ret = 0;
   // add vectors by VectorManager
-  if (vec_manager_->AddToStore(max_docid_, fields_vec) != 0) {
-    LOG(ERROR) << "Add to store error max_docid [" << max_docid_ << "]";
+  ret = vec_manager_->AddToStore(max_docid_, fields_vec);
+  if (ret != 0) {
+    LOG(ERROR) << "Add to store error max_docid [" << max_docid_ << "] err=" << ret;
     return -4;
   }
   ++max_docid_;
-  docids_bitmap_->SetMaxID(max_docid_);
+  ret = docids_bitmap_->SetMaxID(max_docid_);
+  if (ret != 0) {
+    LOG(ERROR) << "Bitmap set max_docid [" << max_docid_ << "] err= " << ret;
+    return -5;
+  };
 
   if (not b_running_ and index_status_ == UNINDEXED) {
     if (max_docid_ >= training_threshold_) {
@@ -672,8 +675,12 @@ int Engine::Delete(std::string &key) {
   if (docids_bitmap_->Test(docid)) {
     return ret;
   }
+  ret = docids_bitmap_->Set(docid);
+  if (ret) {
+    LOG(ERROR) << "bitmap set failed: ret=" << ret;
+    return ret;
+  }
   ++delete_num_;
-  docids_bitmap_->Set(docid);
   docids_bitmap_->Dump(docid, 1);
   const auto &name_to_idx = table_->FieldMap();
   for (const auto &ite : name_to_idx) {
