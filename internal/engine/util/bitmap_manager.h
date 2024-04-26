@@ -28,7 +28,7 @@ class BitmapManager {
 
   virtual int Dump(uint32_t begin_bit_id = 0, uint32_t bit_len = 0);
 
-  virtual int Load(uint32_t begin_bit_id = 0, uint32_t bit_len = 0);
+  virtual int Load(uint32_t bit_len = 0);
 
   virtual uint32_t FileBytesSize();
 
@@ -73,7 +73,7 @@ class RocksdbBitmapManager : public BitmapManager {
 
   virtual int Dump(uint32_t begin_bit_id = 0, uint32_t bit_len = 0);
 
-  virtual int Load(uint32_t begin_bit_id = 0, uint32_t bit_len = 0);
+  virtual int Load(uint32_t bit_len = 0);
 
   virtual uint32_t FileBytesSize();
 
