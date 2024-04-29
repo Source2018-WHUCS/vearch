@@ -14,8 +14,6 @@
 
 namespace vearch {
 
-struct MemoryRawVectorIO;
-
 class MemoryRawVector : public RawVector {
  public:
   MemoryRawVector(VectorMetaInfo *meta_info, const std::string &root_path,
@@ -46,7 +44,6 @@ class MemoryRawVector : public RawVector {
   int GetVector(long vid, const uint8_t *&vec, bool &deleteable) const override;
 
  private:
-  friend MemoryRawVectorIO;
   int ExtendSegments();
 
   uint8_t **segments_;

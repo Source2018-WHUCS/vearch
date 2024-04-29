@@ -139,7 +139,6 @@ Engine::Engine(const std::string &index_root_path,
 #ifdef PERFORMANCE_TESTING
   search_num_ = 0;
 #endif
-  af_exector_ = nullptr;
 }
 
 Engine::~Engine() {
@@ -148,11 +147,6 @@ Engine::~Engine() {
     std::mutex running_mutex;
     std::unique_lock<std::mutex> lk(running_mutex);
     running_cv_.wait(lk);
-  }
-
-  if (af_exector_) {
-    af_exector_->Stop();
-    CHECK_DELETE(af_exector_);
   }
 
   if (vec_manager_) {
@@ -540,8 +534,6 @@ Status Engine::CreateTable(TableInfo &table) {
     return Status::ParamError(msg);
   }
 
-  af_exector_ = new AsyncFlushExecutor();
-
   if (!meta_jp) {
     utils::JsonParser dump_meta_;
     dump_meta_.PutInt("version", 327);
@@ -581,8 +573,6 @@ Status Engine::CreateTable(TableInfo &table) {
   if (tio.Write(table)) {
     LOG(ERROR) << "write table schema error, path=" << path;
   }
-
-  af_exector_->Start();
 
   LOG(INFO) << "create table [" << table_name << "] success!";
   created_table_ = true;
@@ -1020,7 +1010,6 @@ int Engine::Load() {
     LOG(INFO) << space_name_
               << " create table from local success, table name=" << table_name;
   }
-  af_exector_->Stop();
 
   std::vector<std::pair<std::time_t, std::string>> folders_tm;
   std::vector<std::string> folders = utils::ls_folder(dump_path_);
@@ -1120,7 +1109,6 @@ int Engine::Load() {
                  << " clean error, not done directory=" << folder;
     }
   }
-  af_exector_->Start();
   last_dump_dir_ = last_dir;
   LOG(INFO) << "load engine success! max docid=" << max_docid_
             << ", delete_num=" << delete_num_ << ", load directory=" << last_dir
