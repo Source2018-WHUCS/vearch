@@ -27,7 +27,6 @@
 
 #include "cjson/cJSON.h"
 #include "common/gamma_common_data.h"
-#include "io/raw_vector_io.h"
 #include "omp.h"
 #include "table/table_io.h"
 #include "util/bitmap.h"
@@ -215,7 +214,8 @@ Engine *Engine::GetInstance(const std::string &index_root_path,
 
 Status Engine::Setup() {
   if (!utils::isFolderExist(index_root_path_.c_str())) {
-    if(mkdir(index_root_path_.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
+    if (mkdir(index_root_path_.c_str(),
+              S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
       std::string msg = "mkdir " + index_root_path_ + " error";
       LOG(ERROR) << msg;
       return Status::IOError(msg);
@@ -224,7 +224,7 @@ Status Engine::Setup() {
 
   dump_path_ = index_root_path_ + "/retrieval_model_index";
   if (!utils::isFolderExist(dump_path_.c_str())) {
-    if(mkdir(dump_path_.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
+    if (mkdir(dump_path_.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
       std::string msg = "mkdir " + dump_path_ + " error";
       LOG(ERROR) << msg;
       return Status::IOError(msg);
@@ -233,7 +233,8 @@ Status Engine::Setup() {
 
   docids_bitmap_ = new bitmap::RocksdbBitmapManager();
   int init_bitmap_size = 5000 * 10000;
-  if (docids_bitmap_->Init(init_bitmap_size, index_root_path_ + "/bitmap") != 0) {
+  if (docids_bitmap_->Init(init_bitmap_size, index_root_path_ + "/bitmap") !=
+      0) {
     std::string msg = "Cannot create bitmap!";
     LOG(ERROR) << msg;
     return Status::IOError(msg);
@@ -564,14 +565,6 @@ Status Engine::CreateTable(TableInfo &table) {
     std::string meta_str = dump_meta_.ToStr(true);
     fio.Write(meta_str.c_str(), 1, meta_str.size());
   }
-  for (auto &[key, raw_vector_ptr] : vec_manager_->RawVectors()) {
-    RawVectorIO *rio = raw_vector_ptr->GetIO();
-    if (rio == nullptr) continue;
-    AsyncFlusher *flusher = dynamic_cast<AsyncFlusher *>(rio);
-    if (flusher) {
-      af_exector_->Add(flusher);
-    }
-  }
 
   std::string scalar_index_path = index_root_path_ + "/scalar_index";
   utils::make_dir(scalar_index_path.c_str());
@@ -630,7 +623,8 @@ int Engine::AddOrUpdate(Doc &doc) {
   // add vectors by VectorManager
   ret = vec_manager_->AddToStore(max_docid_, fields_vec);
   if (ret != 0) {
-    LOG(ERROR) << "Add to store error max_docid [" << max_docid_ << "] err=" << ret;
+    LOG(ERROR) << "Add to store error max_docid [" << max_docid_
+               << "] err=" << ret;
     return -4;
   }
   ++max_docid_;
@@ -689,7 +683,8 @@ int Engine::Update(int doc_id,
     field_range_index_->Add(doc_id, idx);
   }
 
-  LOG(DEBUG) << "update success! key=" << fields_table["_id"].value << ", doc_id=" << doc_id;
+  LOG(DEBUG) << "update success! key=" << fields_table["_id"].value
+             << ", doc_id=" << doc_id;
   is_dirty_ = true;
   return 0;
 }
@@ -1128,8 +1123,7 @@ int Engine::Load() {
   af_exector_->Start();
   last_dump_dir_ = last_dir;
   LOG(INFO) << "load engine success! max docid=" << max_docid_
-            << ", delete_num=" << delete_num_
-            << ", load directory=" << last_dir
+            << ", delete_num=" << delete_num_ << ", load directory=" << last_dir
             << ", clean directorys(not done)="
             << utils::join(folders_not_done, ',');
   return 0;

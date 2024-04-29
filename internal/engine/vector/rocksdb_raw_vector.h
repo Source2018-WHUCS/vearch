@@ -36,6 +36,11 @@ class RocksDBRawVector : public RawVector {
 
   int Gets(const std::vector<int64_t> &vids, ScopeVectors &vecs) const override;
 
+  Status InitIO() override { return Status::OK(); };
+  Status Dump(int start_vid, int end_vid) override { return Status::OK(); };
+  int GetDiskVecNum(int &vec_num) override;
+  Status Load(int vec_num) override;
+
  protected:
   int GetVector(long vid, const uint8_t *&vec, bool &deletable) const override;
 
@@ -48,6 +53,5 @@ class RocksDBRawVector : public RawVector {
   rocksdb::DB *db_;
   rocksdb::BlockBasedTableOptions table_options_;
   size_t block_cache_size_;
-  RawVectorIO *raw_vector_io_;
 };
 }  // namespace vearch
