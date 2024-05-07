@@ -34,7 +34,6 @@ class RocksDBRawVector : public RawVector {
 
   int Gets(const std::vector<int64_t> &vids, ScopeVectors &vecs) const override;
 
-  Status InitIO() override { return Status::OK(); };
   Status Dump(int start_vid, int end_vid) override { return Status::OK(); };
   int GetDiskVecNum(int &vec_num) override;
   Status Load(int vec_num) override;

@@ -88,14 +88,16 @@ Status IndexIVFFlat::init(const std::string &index_param) {
 
   docids_bitmap_ = new bitmap::RocksdbBitmapManager();
   int init_bitmap_size = 1000 * 10000;
-  if (docids_bitmap_->Init(init_bitmap_size, index_root_path_ + "/bitmap") != 0) {
+  if (docids_bitmap_->Init(init_bitmap_size, index_root_path_ + "/bitmap") !=
+      0) {
     std::string msg = "Cannot create bitmap!";
     LOG(ERROR) << msg;
     return Status::IOError(msg);
   }
 
-  raw_vector_ = RawVectorFactory::Create(meta_info, storage_type, vec_root_path,
-                                         store_params, docids_bitmap_);
+  raw_vector_ =
+      RawVectorFactory::Create(meta_info, storage_type, vec_root_path,
+                               store_params, docids_bitmap_, -1, nullptr);
   if (raw_vector_ == nullptr) {
     std::string msg = "create raw vector error";
     LOG(ERROR) << msg;
@@ -224,14 +226,16 @@ Status IndexIVFPQ::init(const std::string &index_param) {
 
   docids_bitmap_ = new bitmap::RocksdbBitmapManager();
   int init_bitmap_size = 1000 * 10000;
-  if (docids_bitmap_->Init(init_bitmap_size, index_root_path_ + "/bitmap") != 0) {
+  if (docids_bitmap_->Init(init_bitmap_size, index_root_path_ + "/bitmap") !=
+      0) {
     std::string msg = "Cannot create bitmap!";
     LOG(ERROR) << msg;
     return Status::IOError(msg);
   }
 
-  raw_vector_ = RawVectorFactory::Create(meta_info, storage_type, vec_root_path,
-                                         store_params, docids_bitmap_);
+  raw_vector_ =
+      RawVectorFactory::Create(meta_info, storage_type, vec_root_path,
+                               store_params, docids_bitmap_, -1, nullptr);
   if (raw_vector_ == nullptr) {
     std::string msg = "create raw vector error";
     LOG(ERROR) << msg;
@@ -366,7 +370,8 @@ int IndexScann::init(const std::string &index_param) {
 
   docids_bitmap_ = new bitmap::RocksdbBitmapManager();
   int init_bitmap_size = 1000 * 10000;
-  if (docids_bitmap_->Init(init_bitmap_size, index_root_path_ + "/bitmap") != 0) {
+  if (docids_bitmap_->Init(init_bitmap_size, index_root_path_ + "/bitmap") !=
+      0) {
     LOG(ERROR) << "Cannot create bitmap!";
     return INTERNAL_ERR;
   }
