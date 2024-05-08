@@ -160,6 +160,7 @@ class RawVector : public VectorReader {
   DumpConfig *GetDumpConfig();
 
   StorageManager *storage_mgr_;
+  int cf_id_;
 
  protected:
   /** get vector by id

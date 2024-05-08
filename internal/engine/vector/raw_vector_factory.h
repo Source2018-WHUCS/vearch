@@ -31,7 +31,7 @@ class RawVectorFactory {
         break;
       case VectorStorageType::RocksDB:
         raw_vector = new RocksDBRawVector(meta_info, root_path, store_params,
-                                          docids_bitmap);
+                                          docids_bitmap, storage_mgr, cf_id);
         break;
       default:
         LOG(ERROR) << "invalid raw feature type:" << static_cast<int>(type);

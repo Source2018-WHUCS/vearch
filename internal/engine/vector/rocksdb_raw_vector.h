@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 
-#include "rocksdb/db.h"
 #include "rocksdb/options.h"
 #include "rocksdb/table.h"
 #include "vector/raw_vector.h"
@@ -21,7 +20,8 @@ class RocksDBRawVector : public RawVector {
  public:
   RocksDBRawVector(VectorMetaInfo *meta_info, const std::string &root_path,
                    const StoreParams &store_params,
-                   bitmap::BitmapManager *docids_bitmap);
+                   bitmap::BitmapManager *docids_bitmap,
+                   StorageManager *storage_mgr, int cf_id);
   ~RocksDBRawVector();
   /* RawVector */
   int InitStore(std::string &vec_name) override;
@@ -45,7 +45,6 @@ class RocksDBRawVector : public RawVector {
   void ToRowKey(int vid, std::string &key) const;
 
  private:
-  rocksdb::DB *db_;
   rocksdb::BlockBasedTableOptions table_options_;
   size_t block_cache_size_;
 };
