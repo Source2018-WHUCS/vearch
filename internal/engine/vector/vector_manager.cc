@@ -95,10 +95,6 @@ Status VectorManager::CreateRawVector(struct VectorInfo &vector_info,
     dimension /= 8;
   }
 
-  std::string vec_root_path = root_path_ + "/vectors";
-  if (utils::make_dir(vec_root_path.c_str())) {
-    return Status::IOError("make directory error, path=", vec_root_path);
-  }
   VectorMetaInfo *meta_info =
       new VectorMetaInfo(vec_name, dimension, value_type);
 
@@ -122,9 +118,8 @@ Status VectorManager::CreateRawVector(struct VectorInfo &vector_info,
               << "]";
   }
 
-  *vec = RawVectorFactory::Create(meta_info, store_type, vec_root_path,
-                                  store_params, docids_bitmap_, cf_id,
-                                  storage_mgr);
+  *vec = RawVectorFactory::Create(meta_info, store_type, store_params,
+                                  docids_bitmap_, cf_id, storage_mgr);
 
   if ((*vec) == nullptr) {
     LOG(ERROR) << "create raw vector error";

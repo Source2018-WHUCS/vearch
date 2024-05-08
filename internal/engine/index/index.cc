@@ -66,14 +66,6 @@ Status IndexIVFFlat::init(const std::string &index_param) {
 
   std::string index_root_path_ = ".";
   VectorValueType value_type = VectorValueType::FLOAT;
-
-  std::string vec_root_path = index_root_path_ + "/vectors";
-  if (utils::make_dir(vec_root_path.c_str())) {
-    std::string msg =
-        std::string("make directory error, path=") + vec_root_path;
-    LOG(ERROR) << msg;
-    return Status::PathNotFound(msg);
-  }
   VectorMetaInfo *meta_info = new VectorMetaInfo(vec_name, d, value_type);
   meta_info->with_io_ = false;
 
@@ -95,9 +87,8 @@ Status IndexIVFFlat::init(const std::string &index_param) {
     return Status::IOError(msg);
   }
 
-  raw_vector_ =
-      RawVectorFactory::Create(meta_info, storage_type, vec_root_path,
-                               store_params, docids_bitmap_, -1, nullptr);
+  raw_vector_ = RawVectorFactory::Create(meta_info, storage_type, store_params,
+                                         docids_bitmap_, -1, nullptr);
   if (raw_vector_ == nullptr) {
     std::string msg = "create raw vector error";
     LOG(ERROR) << msg;
@@ -204,14 +195,6 @@ Status IndexIVFPQ::init(const std::string &index_param) {
 
   std::string index_root_path_ = ".";
   VectorValueType value_type = VectorValueType::FLOAT;
-
-  std::string vec_root_path = index_root_path_ + "/vectors";
-  if (utils::make_dir(vec_root_path.c_str())) {
-    std::string msg =
-        std::string("make directory error, path=") + vec_root_path;
-    LOG(ERROR) << msg;
-    return Status::PathNotFound(msg);
-  }
   VectorMetaInfo *meta_info = new VectorMetaInfo(vec_name, d, value_type);
   meta_info->with_io_ = false;
 
@@ -233,9 +216,8 @@ Status IndexIVFPQ::init(const std::string &index_param) {
     return Status::IOError(msg);
   }
 
-  raw_vector_ =
-      RawVectorFactory::Create(meta_info, storage_type, vec_root_path,
-                               store_params, docids_bitmap_, -1, nullptr);
+  raw_vector_ = RawVectorFactory::Create(meta_info, storage_type, store_params,
+                                         docids_bitmap_, -1, nullptr);
   if (raw_vector_ == nullptr) {
     std::string msg = "create raw vector error";
     LOG(ERROR) << msg;
@@ -352,11 +334,6 @@ int IndexScann::init(const std::string &index_param) {
   std::string index_root_path_ = ".";
   VectorValueType value_type = VectorValueType::FLOAT;
 
-  std::string vec_root_path = index_root_path_ + "/vectors";
-  if (utils::make_dir(vec_root_path.c_str())) {
-    LOG(ERROR) << "make directory error, path=" << vec_root_path;
-    return -2;
-  }
   VectorMetaInfo *meta_info = new VectorMetaInfo(vec_name, d_, value_type);
   meta_info->with_io_ = false;
 
@@ -376,8 +353,8 @@ int IndexScann::init(const std::string &index_param) {
     return INTERNAL_ERR;
   }
 
-  raw_vector_ = RawVectorFactory::Create(meta_info, storage_type, vec_root_path,
-                                         store_params, docids_bitmap_);
+  raw_vector_ = RawVectorFactory::Create(meta_info, storage_type, store_params,
+                                         docids_bitmap_);
   if (raw_vector_ == nullptr) {
     LOG(ERROR) << "create raw vector error";
     return -1;

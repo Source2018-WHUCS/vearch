@@ -16,12 +16,10 @@
 namespace vearch {
 
 RocksDBRawVector::RocksDBRawVector(VectorMetaInfo *meta_info,
-                                   const std::string &root_path,
                                    const StoreParams &store_params,
                                    bitmap::BitmapManager *docids_bitmap,
                                    StorageManager *storage_mgr, int cf_id)
-    : RawVector(meta_info, root_path, docids_bitmap, store_params) {
-  this->root_path_ = root_path;
+    : RawVector(meta_info, docids_bitmap, store_params) {
   storage_mgr_ = storage_mgr;
   cf_id_ = cf_id;
 }

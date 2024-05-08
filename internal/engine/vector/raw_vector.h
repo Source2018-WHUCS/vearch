@@ -63,8 +63,7 @@ struct StoreParams : DumpConfig {
 
 class RawVector : public VectorReader {
  public:
-  RawVector(VectorMetaInfo *meta_info, const std::string &root_path,
-            bitmap::BitmapManager *docids_bitmap,
+  RawVector(VectorMetaInfo *meta_info, bitmap::BitmapManager *docids_bitmap,
             const StoreParams &store_params);
 
   virtual ~RawVector();
@@ -174,7 +173,6 @@ class RawVector : public VectorReader {
   virtual int InitStore(std::string &vec_name) = 0;
 
  protected:
-  std::string root_path_;
   long vector_byte_size_;
   int data_size_;
 

@@ -15,8 +15,7 @@ namespace vearch {
 
 class MemoryRawVector : public RawVector {
  public:
-  MemoryRawVector(VectorMetaInfo *meta_info, const std::string &root_path,
-                  const StoreParams &store_params,
+  MemoryRawVector(VectorMetaInfo *meta_info, const StoreParams &store_params,
                   bitmap::BitmapManager *docids_bitmap,
                   StorageManager *storage_mgr, int cf_id);
 

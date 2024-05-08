@@ -13,11 +13,10 @@ using std::string;
 namespace vearch {
 
 MemoryRawVector::MemoryRawVector(VectorMetaInfo *meta_info,
-                                 const std::string &root_path,
                                  const StoreParams &store_params,
                                  bitmap::BitmapManager *docids_bitmap,
                                  StorageManager *storage_mgr, int cf_id)
-    : RawVector(meta_info, root_path, docids_bitmap, store_params) {
+    : RawVector(meta_info, docids_bitmap, store_params) {
   segments_ = nullptr;
   nsegments_ = 0;
   storage_mgr_ = storage_mgr;
@@ -86,8 +85,7 @@ int MemoryRawVector::InitStore(std::string &vec_name) {
   if (ExtendSegments()) return -2;
 
   LOG(INFO) << "init memory raw vector success! vector byte size="
-            << vector_byte_size_
-            << ", " + meta_info_->Name();
+            << vector_byte_size_ << ", " + meta_info_->Name();
   return 0;
 }
 

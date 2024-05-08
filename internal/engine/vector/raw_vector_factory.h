@@ -19,18 +19,17 @@ namespace vearch {
 class RawVectorFactory {
  public:
   static RawVector *Create(VectorMetaInfo *meta_info, VectorStorageType type,
-                           const std::string &root_path,
                            StoreParams &store_params,
                            bitmap::BitmapManager *docids_bitmap, int cf_id,
                            StorageManager *storage_mgr) {
     RawVector *raw_vector = nullptr;
     switch (type) {
       case VectorStorageType::MemoryOnly:
-        raw_vector = new MemoryRawVector(meta_info, root_path, store_params,
-                                         docids_bitmap, storage_mgr, cf_id);
+        raw_vector = new MemoryRawVector(meta_info, store_params, docids_bitmap,
+                                         storage_mgr, cf_id);
         break;
       case VectorStorageType::RocksDB:
-        raw_vector = new RocksDBRawVector(meta_info, root_path, store_params,
+        raw_vector = new RocksDBRawVector(meta_info, store_params,
                                           docids_bitmap, storage_mgr, cf_id);
         break;
       default:
