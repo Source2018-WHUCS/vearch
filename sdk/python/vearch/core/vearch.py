@@ -1,10 +1,11 @@
 from vearch.config import Config
 from vearch.core.db import Database
+from vearch.core.db import Space
 from vearch.core.client import client
 from vearch.result import Result, get_result, ResultStatus
 from vearch.schema.index import Index
 from vearch.schema.space import SpaceSchema
-from vearch.const import SPACE_URI, INDEX_URI, AUTH_KEY, ERR_CODE_SPACE_NOT_EXIST
+from vearch.const import SPACE_URI, INDEX_URI, AUTH_KEY, SPACE_NOT_EXIST, SUCCESS
 from vearch.exception import DatabaseException, VearchException, SpaceException
 from vearch.utils import CodeType, compute_sign_auth
 import requests
@@ -27,7 +28,7 @@ class Vearch(object):
         result = self.client._list_db()
         l = []
         logger.debug(result.dict_str())
-        if result.code == 0:
+        if result.code == SUCCESS:
             logger.debug(result.text)
             database_names = result.text
             for database_name in database_names:
@@ -82,13 +83,13 @@ class Vearch(object):
             resp = requests.request(method="GET", url=url, auth=sign)
             logger.debug("get space exist result:" + resp.text)
             ret = get_result(resp)
-            if ret.code == 0:
+            if ret.code == SUCCESS:
                 space_schema = json.dumps(ret.text)
                 return True, space_schema
             else:
                 return False, None
         except VearchException as e:
-            if e.code == ERR_CODE_SPACE_NOT_EXIST and "notexists" in e.message:
+            if e.code == SPACE_NOT_EXIST and "not_exist" in e.message:
                 return False, None
             else:
                 raise SpaceException(CodeType.CHECK_SPACE_EXIST, e.message)
@@ -101,3 +102,18 @@ class Vearch(object):
                                auth=sign)
         resp = self.client.s.send(req)
         return get_result(resp)
+
+    def list_spaces(self, database_name: str) -> List[Space]:
+        result = self.client._list_space(database_name)
+        l = []
+        logger.debug(result.dict_str())
+        if result.code == SUCCESS:
+            logger.debug(result.text)
+            space_names = result.text
+            for space_name in space_names:
+                space = Space(database_name, space_name)
+                l.append(space)
+            return l
+        else:
+            logger.error(result.dict_str())
+            raise SpaceException(code=CodeType.LIST_SPACES, message="list space failed:" + result.err_msg)

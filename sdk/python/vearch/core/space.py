@@ -3,7 +3,7 @@ from vearch.core.client import client
 from vearch.schema.space import SpaceSchema
 from vearch.result import Result, ResultStatus, get_result, UpsertResult, SearchResult
 from vearch.const import SPACE_URI, INDEX_URI, UPSERT_DOC_URI, DELETE_DOC_URI, QUERY_DOC_URI, SEARCH_DOC_URI, \
-    ERR_CODE_SPACE_NOT_EXIST, AUTH_KEY
+    SPACE_NOT_EXIST, AUTH_KEY, SUCCESS
 from vearch.exception import SpaceException, DocumentException, VearchException
 from vearch.utils import CodeType, VectorInfo, compute_sign_auth, DataType
 from vearch.filter import Filter
@@ -56,7 +56,7 @@ class Space(object):
             else:
                 return False, None
         except VearchException as e:
-            if e.code == ERR_CODE_SPACE_NOT_EXIST and "notexist" in e.message:
+            if e.code == SPACE_NOT_EXIST and "notexist" in e.message:
                 return False, None
             else:
                 raise SpaceException(CodeType.CHECK_SPACE_EXIST, e.message)
@@ -192,7 +192,6 @@ class Space(object):
         sign = compute_sign_auth(secret=self.client.token)
         resp = requests.request(method="POST", url=url, data=json.dumps(req_body),
                                 auth=sign)
-        print("****search***",resp.__dict__)
         sr = SearchResult.parse_search_result_from_response(resp)
         return sr.documents
 
@@ -227,6 +226,6 @@ class Space(object):
         sign = compute_sign_auth(secret=self.client.token)
         resp = requests.request(method="POST", url=url, data=json.dumps(req_body), auth=sign)
         ret = get_result(resp)
-        if ret.code == 0:
+        if ret.code == SUCCESS:
             return json.dumps(ret.text)
         return []
