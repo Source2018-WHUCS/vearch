@@ -61,7 +61,7 @@ class Vearch(object):
         logger.debug("create space:" + url)
         logger.debug("schema:" + json.dumps(space.dict()))
         resp = requests.request(method="POST", url=url, data=json.dumps(space.dict()), auth=sign)
-        logger.debug(str(resp.status_code) + resp.text)
+        logger.debug("create space status_code and text:"+ str(resp.status_code) + resp.text)
         result = get_result(resp)
         return result
 

@@ -124,12 +124,11 @@ class Space(object):
         req_body = {"database": self.db_name, "space": self.name, "filter": filter.dict()}
         sign = compute_sign_auth()
         req = requests.request(method="POST", url=url, data=json.dumps(req_body), auth=sign)
-
         resp = self.client.s.send(req)
         return get_result(resp)
 
     def search(self, vector_infos: Optional[List[VectorInfo]], filter: Optional[Filter] = None,
-               fields: Optional[List] = None, vector: bool = False, size: int = 50, **kwargs) -> List[Dict]:
+               fields: Optional[List] = None, vector: bool = False, limit: int = 50, **kwargs) -> List[Dict]:
         """
         :param vector_infos: vector infomation contains field name、feature,min score and weight.
         :param filter: through scalar fields filte result to satify the expect
@@ -177,7 +176,7 @@ class Space(object):
         if not vector_infos:
             raise SpaceException(CodeType.SEARCH_DOC, "vector_info can not both null")
         url = self.client.host + SEARCH_DOC_URI
-        req_body = {"db_name": self.db_name, "space_name": self.name, "vector_value": vector, "size": size}
+        req_body = {"db_name": self.db_name, "space_name": self.name, "vector_value": vector, "limit": limit}
         if fields:
             req_body["fields"] = fields
         req_body["vectors"] = []
@@ -188,16 +187,18 @@ class Space(object):
             req_body["filters"] = filter.dict()
         if kwargs:
             req_body.update(kwargs)
+
         logger.debug(json.dumps(req_body))
         sign = compute_sign_auth(secret=self.client.token)
         resp = requests.request(method="POST", url=url, data=json.dumps(req_body),
                                 auth=sign)
+        print("****search***",resp.__dict__)
         sr = SearchResult.parse_search_result_from_response(resp)
         return sr.documents
 
     def query(self, document_ids: Optional[List] = [], filter: Optional[Filter] = None,
               partition_id: Optional[str] = "",
-              fields: Optional[List] = [], vector: bool = False, size: int = 50) -> List[Dict]:
+              fields: Optional[List] = [], vector: bool = False, limit: int = 50) -> List[Dict]:
         """
         you can asign  the document_ids in [xxx,xxx,xxx,xxx,xxx],or give the other filter condition.
         partition id also can be set to reduce the scope of the search space
@@ -220,7 +221,7 @@ class Space(object):
         if fields:
             req_body["fields"] = fields
         if filter:
-            req_body["filter"] = filter.dict()
+            req_body["filters"] = filter.dict()
         logger.debug(url)
         logger.debug(json.dumps(req_body))
         sign = compute_sign_auth(secret=self.client.token)
