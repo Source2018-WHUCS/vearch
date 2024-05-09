@@ -3,7 +3,7 @@ from vearch.core.client import client
 from vearch.schema.space import SpaceSchema
 from vearch.result import Result, ResultStatus, get_result, UpsertResult, SearchResult
 from vearch.const import SPACE_URI, INDEX_URI, UPSERT_DOC_URI, DELETE_DOC_URI, QUERY_DOC_URI, SEARCH_DOC_URI, \
-    SPACE_NOT_EXIST, AUTH_KEY, SUCCESS
+    CODE_SPACE_NOT_EXIST, AUTH_KEY, CODE_SUCCESS, MSG_NOT_EXIST
 from vearch.exception import SpaceException, DocumentException, VearchException
 from vearch.utils import CodeType, VectorInfo, compute_sign_auth, DataType
 from vearch.filter import Filter
@@ -49,14 +49,14 @@ class Space(object):
             sign = compute_sign_auth(secret=self.client.token)
             resp = requests.request(method="GET", url=url, auth=sign)
             result = get_result(resp)
-            if result.code == 0:
+            if result.code == CODE_SUCCESS:
                 space_schema_dict = result.text
                 space_schema = SpaceSchema.from_dict(space_schema_dict)
                 return True, space_schema
             else:
                 return False, None
         except VearchException as e:
-            if e.code == SPACE_NOT_EXIST and "notexist" in e.message:
+            if e.code == CODE_SPACE_NOT_EXIST and MSG_NOT_EXIST in e.message:
                 return False, None
             else:
                 raise SpaceException(CodeType.CHECK_SPACE_EXIST, e.message)
@@ -85,7 +85,7 @@ class Space(object):
                 if isinstance(data, pd.DataFrame):
                     for index, row in data.iterrows():
                         record = {}
-                        for i, field in enumerate(self._schema._fileds):
+                        for i, field in enumerate(self._schema._fields):
                             record[field.name] = row[field.name]
                         records.append(record)
                 else:
@@ -111,6 +111,7 @@ class Space(object):
                 return r
 
     def _check_data_conforms_schema(self, data: Union[List, pd.DataFrame]) -> bool:
+       
         if data:
             is_dataframe = isinstance(data, pd.DataFrame)
             data_fields_len = len(data.columns) if is_dataframe else len(data[0])
@@ -134,7 +135,7 @@ class Space(object):
         :param filter: through scalar fields filte result to satify the expect
         :param fields: want to return field list
         :param vector: wheather return vector or not
-        :param size:  the result size you want to return
+        :param limit:  the result size you want to return
         :param kwargs:
             "is_brute_search": 0,
             "online_log_level": "debug",
@@ -226,6 +227,6 @@ class Space(object):
         sign = compute_sign_auth(secret=self.client.token)
         resp = requests.request(method="POST", url=url, data=json.dumps(req_body), auth=sign)
         ret = get_result(resp)
-        if ret.code == SUCCESS:
+        if ret.code == CODE_SUCCESS:
             return json.dumps(ret.text)
         return []

@@ -2,7 +2,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from vearch.utils import singleton, compute_sign_auth
 from vearch.config import Config, DefaultConfig
-from vearch.const import DATABASE_URI, LIST_DATABASE_URI, AUTH_KEY, SUCCESS, LIST_SPACE_URI
+from vearch.const import DATABASE_URI, LIST_DATABASE_URI, AUTH_KEY, CODE_SUCCESS, LIST_SPACE_URI
 from vearch.result import Result, get_result
 import logging
 

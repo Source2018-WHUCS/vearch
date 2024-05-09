@@ -2,7 +2,7 @@ from vearch.core.space import Space
 from typing import List
 from vearch.core.client import client
 from vearch.result import Result, ResultStatus, get_result
-from vearch.const import DATABASE_URI, SPACE_URI, AUTH_KEY, DATABASE_NOT_EXIST, DB_EXIST, SUCCESS
+from vearch.const import DATABASE_URI, SPACE_URI, AUTH_KEY, CODE_DATABASE_NOT_EXIST, CODE_DB_EXIST, CODE_SUCCESS, MSG_NOT_EXIST
 from vearch.schema.space import SpaceSchema
 from vearch.exception import DatabaseException, VearchException
 from vearch.utils import CodeType, compute_sign_auth
@@ -27,12 +27,12 @@ class Database(object):
             result = get_result(resp)
             logger.debug("database exist return:" + result.dict_str())
             logger.debug("database exist status_code:" + str(resp.status_code))
-            if result.code == SUCCESS:
+            if result.code == CODE_SUCCESS:
                 return True
             else:
                 return False
         except VearchException  as e:
-            if e._code == DATABASE_NOT_EXIST and "not_exist" in e._msg:
+            if e._code == CODE_DATABASE_NOT_EXIST and MSG_NOT_EXIST in e._msg:
                 return False
             else:
                 raise DatabaseException(code=CodeType.GET_DATABASE, message=e.__str__())
