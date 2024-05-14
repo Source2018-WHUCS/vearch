@@ -142,7 +142,7 @@ class Vearch(object):
                     self._schema = schema
                 else:
                     raise SpaceException(CodeType.CHECK_SPACE_EXIST,
-                                         "space %s not exist,please create it first" % self.name)
+                                         "space %s not exist,please create it first" % space_name)
             url = self.client.host + UPSERT_DOC_URI
             req_body = {"db_name": database_name, "space_name": space_name}
             records = []

@@ -88,7 +88,7 @@ def get_result(resp: requests.Response) -> Result:
     if resp.status_code / 100 == 2:
         if r.code != CODE_SUCCESS:
             logger.error("respone status code:" + str(resp.status_code) + "data:" + resp.text)
-            raise VearchException(r.code, r.err_msg)    
+            raise VearchException(r.code, r.err_msg)  
         return r
     else:
         logger.error("respone status code:" + str(resp.status_code) + "data:" + resp.text)

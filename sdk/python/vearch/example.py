@@ -188,38 +188,46 @@ if __name__ == "__main__":
     if not is_database_exist(vc):
         create_database(vc)
     print("**is_database_exist",is_database_exist(vc))
-    list_databases(vc)
-    space_exist, _ = is_space_exist(vc)
-    print("*****frist is space exist:::",space_exist)
-    if not space_exist:
-        create_space(vc)
-    space_exist2, _ = is_space_exist(vc)
-    print("*****second is space exist:::",space_exist2)
-    list_spaces(vc)
-    # ids = upsert_document(vc)
-    ids=upsert_document_from_vearch(vc)
-    query_documents_from_vearch(vc, ids[:4])
-    query_documents(ids[:3])
+#     list_databases(vc)
+#     space_exist, _ = is_space_exist(vc)
+#     print("*****frist is space exist:::",space_exist)
+#     if not space_exist:
+#         create_space(vc)
+#     space_exist2, _ = is_space_exist(vc)
+#     print("*****second is space exist:::",space_exist2)
+#     list_spaces(vc)
+#     # ids = upsert_document(vc)
+#     ids=upsert_document_from_vearch(vc)
+#     query_documents_from_vearch(vc, ids[:4])
+#     query_documents(ids[:3])
     
-    print("docment_id",ids)
+#     print("docment_id",ids)
 #     ids=['1403897282524252067', '7053771832951552461', '-7593311846212422744', '4341015054671458989', '8011495485036470372', '-4382114873243365470', '9202014046719601583', '7106431176220926172']
     
 #     # query_documents(['1403897282524252067','7471538621046543493',"chjwgvqovhqjvwqj"])
    
-    conditons = [Condition(operator = '>', fv = FieldValue(field = "book_num",value = 18)),
-                 Condition(operator = 'IN', fv = FieldValue(field = "book_name",value = ["bpww57nu","sykboivx","edjn9542"]))
-              ]
-    filters = Filter(operator = "AND",conditions = conditons)
+#     conditons = [Condition(operator = '>', fv = FieldValue(field = "book_num",value = 18)),
+#                  Condition(operator = 'IN', fv = FieldValue(field = "book_name",value = ["bpww57nu","sykboivx","edjn9542"]))
+#               ]
+#     filters = Filter(operator = "AND",conditions = conditons)
     
-    query_documnet_by_filter(filters)
-    query_documnet_by_filter_of_vearch(vc, filters)
+#     query_documnet_by_filter(filters)
+#     query_documnet_by_filter_of_vearch(vc, filters)
     
-    search_documets()
-    search_documets_from_vearch(vc)
-    search_doc_by_filter(filters)
-    search_doc_by_filter_of_vearch(vc, filters)
-    delete_space(vc)
-    drop_database(vc)
+#     search_documets()
+#     search_documets_from_vearch(vc)
+#     search_doc_by_filter(filters)
+#     search_doc_by_filter_of_vearch(vc, filters)
+    # database_name = "database_test_exist"
+    # database_name1 = "database_test_not_exist"
+    # space_name = "book_info"
+    # space = Space(database_name, space_name)
+    # db=Database(database_name)
+    # # space.drop()
+    # db.drop()
+    # db.delete()
+    # delete_space(vc)
+    # drop_database(vc)
 # vc.drop_database("database1")
 # db = Database(name="fjakjfks")
 # db.create()
