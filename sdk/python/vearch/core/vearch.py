@@ -5,7 +5,7 @@ from vearch.core.client import client
 from vearch.result import Result, get_result, ResultStatus, UpsertResult, SearchResult
 from vearch.schema.index import Index
 from vearch.schema.space import SpaceSchema
-from vearch.const import SPACE_URI, INDEX_URI, UPSERT_DOC_URI, SEARCH_DOC_URI, QUERY_DOC_URI, AUTH_KEY, CODE_SPACE_NOT_EXIST, CODE_SUCCESS, MSG_NOT_EXIST
+from vearch.const import SPACE_URI, INDEX_URI, UPSERT_DOC_URI, SEARCH_DOC_URI, QUERY_DOC_URI, LIST_SPACE_URI, AUTH_KEY, CODE_SPACE_NOT_EXIST, CODE_SUCCESS, MSG_NOT_EXIST
 from vearch.exception import DatabaseException, VearchException, SpaceException, DocumentException
 from vearch.utils import CodeType, compute_sign_auth, VectorInfo
 from vearch.filter import Filter
@@ -51,7 +51,10 @@ class Vearch(object):
         return Database(database_name)
 
     def drop_database(self, database_name: str) -> Result:
+        if not self.is_database_exist(database_name):
+            raise DatabaseException(code=CodeType.CHECK_DATABASE_EXIST, message="database not exist,can not drop it:")
         return self.client._drop_db(database_name)
+ 
 
     def create_space(self, database_name: str, space: SpaceSchema) -> Result:
         if not self.database(database_name).exist():
@@ -59,8 +62,7 @@ class Vearch(object):
             if ret.code != 200:
                 raise DatabaseException(code=CodeType.CREATE_DATABASE, message="create database error:" + ret.err_msg)
         url_params = {"database_name": database_name, "space_name": space.name}
-        url = self.client.host + SPACE_URI % url_params
-        url = self.client.host + "/dbs/%(database_name)s/spaces" % url_params
+        url = self.client.host + LIST_SPACE_URI % url_params
         sign = compute_sign_auth(secret=self.client.token)
         logger.debug("create space:" + url)
         logger.debug("schema:" + json.dumps(space.dict()))
@@ -70,16 +72,22 @@ class Vearch(object):
         return result
 
     def drop_space(self, database_name: str, space_name: str) -> Result:
+        if not self.is_space_exist(database_name, space_name):
+            raise SpaceException(CodeType.CHECK_SPACE_EXIST, message="space not exist")
         url_params = {"database_name": database_name, "space_name": space_name}
         url = self.client.host + SPACE_URI % url_params
         logger.debug("delete space url:" + url)
         sign = compute_sign_auth(secret=self.client.token)
         resp = requests.request(method="DELETE", url=url, auth=sign)
         logger.debug("delete space ret" + resp.text)
-        return get_result(resp)
+        return get_result(resp)  
+           
 
+        
     def is_space_exist(self, database_name: str, space_name: str) -> [bool, SpaceSchema]:
         try:
+            if not self.is_database_exist(database_name):
+                raise DatabaseException(code=CodeType.CHECK_DATABASE_EXIST, message="database not exist")
             url_params = {"database_name": database_name, "space_name": space_name}
             url = self.client.host + SPACE_URI % url_params
             sign = compute_sign_auth(secret=self.client.token)
@@ -97,6 +105,7 @@ class Vearch(object):
             else:
                 raise SpaceException(CodeType.CHECK_SPACE_EXIST, e.message)
 
+                
     def create_index(self, database_name: str, space_name: str, field: str, index: Index) -> Result:
         url = self.client.host + INDEX_URI
         req_body = {"field": field, "index": index.dict(), "database": database_name, "space": space_name}
@@ -124,10 +133,11 @@ class Vearch(object):
     
     def upsert_doc(self, database_name: str, space_name: str, data: Union[List, pd.DataFrame]) -> UpsertResult:
         try:
+            if not self.is_space_exist(database_name, space_name):
+                raise SpaceException(CodeType.CHECK_SPACE_EXIST, message="space not exist")
             space = Space(database_name, space_name)
             if not self._schema:
                 has, schema = space.exist()
-                print(has, schema)
                 if has:
                     self._schema = schema
                 else:
@@ -163,7 +173,7 @@ class Vearch(object):
                     raise DocumentException(CodeType.UPSERT_DOC, "data fields not conform space schema")
             else:
                 raise DocumentException(CodeType.UPSERT_DOC, "data is empty")
-    
+
         except VearchException as e:
             raise  e
             if e.code == 0:
@@ -217,6 +227,8 @@ class Vearch(object):
 
         :return:
         """
+        if not self.is_space_exist(database_name, space_name):
+            raise SpaceException(CodeType.CHECK_SPACE_EXIST, message="space not exist")
         if not vector_infos:
             raise SpaceException(CodeType.SEARCH_DOC, "vector_info can not both null")
         url = self.client.host + SEARCH_DOC_URI
@@ -253,6 +265,8 @@ class Vearch(object):
         :param size the output result size you queried out
         :return:
         """
+        if not self.is_space_exist(database_name, space_name):
+            raise SpaceException(CodeType.CHECK_SPACE_EXIST, message="space not exist")
         if (not document_ids) and (not filter):
             raise SpaceException(CodeType.QUERY_DOC, "document_ids and filter can not both null")
         url = self.client.host + QUERY_DOC_URI
