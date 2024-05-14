@@ -82,3 +82,20 @@ func TestSearchtDocWithFilter(t *testing.T) {
 	require.Nil(t, err)
 	fmt.Printf("result %v\n", result.Docs.Data.Documents...)
 }
+
+func TestQuerytDoc(t *testing.T) {
+	ctx := context.Background()
+	dbName := "ts_db"
+	spaceName := "ts_space"
+
+	c := setupClient(t)
+
+	ids := []string{
+		"1",
+		"2",
+	}
+
+	result, err := c.Data().Query().WithDBName(dbName).WithSpaceName(spaceName).WithIDs(ids).Do(ctx)
+	require.Nil(t, err)
+	fmt.Printf("query result %v\n", result.Docs.Data.Documents...)
+}

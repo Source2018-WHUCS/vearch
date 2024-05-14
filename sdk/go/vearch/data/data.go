@@ -21,3 +21,9 @@ func (data *API) Searcher() *Searcher {
 		connection: data.connection,
 	}
 }
+
+func (data *API) Query() *Query {
+	return &Query{
+		connection: data.connection,
+	}
+}
