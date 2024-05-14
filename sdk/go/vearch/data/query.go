@@ -10,7 +10,8 @@ import (
 )
 
 type QueryResultDocs struct {
-	Code int `json:"code"`
+	Code int     `json:"code"`
+	Msg  *string `json:"msg,omitempty"`
 	Data struct {
 		Documents []interface{} `json:"documents"`
 	} `json:"data"`
