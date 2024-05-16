@@ -330,7 +330,7 @@ func (handler *DocumentHandler) handleDocumentQuery(c *gin.Context) {
 	}
 	httphelper.New(c).JsonSuccess(result)
 	if trace {
-		log.Trace("handleDocumentQuery total use :[%.5f] service use :[%.5f]", time.Since(startTime).Seconds()*1000, serviceCost.Seconds()*1000)
+		log.Trace("handleDocumentQuery total use :[%.4f] service use :[%.4f]", time.Since(startTime).Seconds()*1000, serviceCost.Seconds()*1000)
 	}
 }
 
@@ -425,7 +425,7 @@ func (handler *DocumentHandler) handleDocumentSearch(c *gin.Context) {
 	}
 	httphelper.New(c).JsonSuccess(result)
 	if trace {
-		log.Trace("handleDocumentSearch total use :[%.5f] getSpace use :[%.5f] service use :[%.5f] detail use :[%.5f]",
+		log.Trace("handleDocumentSearch total use :[%.4f] getSpace use :[%.4f] service use :[%.4f] detail use :[%v]",
 			time.Since(startTime).Seconds()*1000, getSpaceCost.Seconds()*1000, serviceCost.Seconds()*1000, searchResp.Head.Params)
 	}
 }
@@ -516,7 +516,7 @@ func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 
 	httphelper.New(c).JsonSuccess(result)
 	if trace {
-		log.Trace("handleDocumentDelete total use :[%.5f] service use :[%.5f]",
+		log.Trace("handleDocumentDelete total use :[%.4f] service use :[%.4f]",
 			time.Since(startTime).Seconds()*1000, serviceCost.Seconds()*1000)
 	}
 }
