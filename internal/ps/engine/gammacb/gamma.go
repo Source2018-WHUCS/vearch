@@ -24,7 +24,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/google/uuid"
 	"github.com/spf13/cast"
 	"github.com/vearch/vearch/v3/internal/config"
 	"github.com/vearch/vearch/v3/internal/engine/sdk/go/gamma"
@@ -276,29 +275,20 @@ func (ge *gammaEngine) HasClosed() bool {
 
 func (ge *gammaEngine) Close() {
 	closeEngine := ge.gamma
+	for i := 0; ge.counter.Get() > 0; i++ {
+		log.Info("wait stop gamma engine times:[%d]", i)
+		time.Sleep(1 * time.Second)
+		continue
+	}
 	ge.gamma = nil
 	ge.cancel()
-	go func(closeEngine unsafe.Pointer) {
-		i := 0
-		for {
-			time.Sleep(3 * time.Second)
-			i++
-			if ge.counter.Get() > 0 {
-				log.Info("wait stop gamma engine times:[%d]", i)
-				continue
-			}
-			start, flakeUUID := time.Now(), uuid.NewString()
-			log.Info("to close gamma engine begin token:[%s]", flakeUUID)
-			if resp := gamma.Close(closeEngine); resp != 0 {
-				log.Error("to close gamma engine fail:[%d]", resp)
-			} else {
-				log.Info("to close gamma engine success:[%d]", resp)
-			}
-			ge.hasClosed = true
-			log.Info("to close gamma engine end token:[%s] use time:[%d]", flakeUUID, time.Since(start))
-			break
-		}
-	}(closeEngine)
+
+	if resp := gamma.Close(closeEngine); resp != 0 {
+		log.Error("to close gamma engine fail:[%d]", resp)
+	} else {
+		log.Info("to close gamma engine success:[%d]", resp)
+	}
+	ge.hasClosed = true
 }
 
 func (ge *gammaEngine) SetEngineCfg(config *gamma.Config) error {
