@@ -148,8 +148,8 @@ func (ri *readerImpl) Search(ctx context.Context, request *vearchpb.SearchReques
 	respByte, status := gamma.Search(ri.engine.gamma, reqByte)
 	gammaCostTime := (time.Since(gammaStartTime).Seconds()) * 1000
 	response.FlatBytes = respByte
-	serializeCostTimeStr := strconv.FormatFloat(serializeCostTime, 'f', -1, 64)
-	gammaCostTimeStr := strconv.FormatFloat(gammaCostTime, 'f', -1, 64)
+	serializeCostTimeStr := strconv.FormatFloat(serializeCostTime, 'f', 5, 64)
+	gammaCostTimeStr := strconv.FormatFloat(gammaCostTime, 'f', 5, 64)
 
 	if response.Head == nil {
 		costTimeMap := make(map[string]string)
@@ -194,8 +194,8 @@ func (ri *readerImpl) Query(ctx context.Context, request *vearchpb.QueryRequest,
 	respByte, status := gamma.Search(ri.engine.gamma, reqByte)
 	gammaCostTime := (time.Since(gammaStartTime).Seconds()) * 1000
 	response.FlatBytes = respByte
-	serializeCostTimeStr := strconv.FormatFloat(serializeCostTime, 'f', -1, 64)
-	gammaCostTimeStr := strconv.FormatFloat(gammaCostTime, 'f', -1, 64)
+	serializeCostTimeStr := strconv.FormatFloat(serializeCostTime, 'f', 5, 64)
+	gammaCostTimeStr := strconv.FormatFloat(gammaCostTime, 'f', 5, 64)
 	if response.Head == nil {
 		costTimeMap := make(map[string]string)
 		costTimeMap["serializeCostTime"] = serializeCostTimeStr

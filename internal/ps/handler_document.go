@@ -325,7 +325,7 @@ func query(ctx context.Context, store PartitionStore, request *vearchpb.QueryReq
 		response.Head.Err = vearchpb.NewError(vearchpb.ErrorEnum_INTERNAL_ERROR, err).GetError()
 	}
 	storeQueryCostTime := (time.Since(startTime).Seconds()) * 1000
-	storeQueryCostTimeStr := strconv.FormatFloat(storeQueryCostTime, 'f', -1, 64)
+	storeQueryCostTimeStr := strconv.FormatFloat(storeQueryCostTime, 'f', 5, 64)
 
 	if response.Head != nil && response.Head.Params != nil {
 		response.Head.Params["storeQueryCostTime"] = storeQueryCostTimeStr
@@ -348,7 +348,7 @@ func search(ctx context.Context, store PartitionStore, request *vearchpb.SearchR
 	}
 	partitionIDstr := strconv.FormatUint(uint64(store.GetEngine().GetPartitionID()), 10)
 	storeSearchCostTime := (time.Since(startTime).Seconds()) * 1000
-	storeSearchCostTimeStr := strconv.FormatFloat(storeSearchCostTime, 'f', -1, 64)
+	storeSearchCostTimeStr := strconv.FormatFloat(storeSearchCostTime, 'f', 5, 64)
 
 	if response.Head != nil && response.Head.Params != nil {
 		response.Head.Params["storeSearchCostTime_"+partitionIDstr] = storeSearchCostTimeStr

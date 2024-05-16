@@ -431,7 +431,7 @@ func (r *routerRequest) searchFromPartition(ctx context.Context, partitionID ent
 	pidCacheEnd := time.Now()
 	if trace {
 		pidCacheTime := pidCacheEnd.Sub(pidCacheStart).Seconds() * 1000
-		pidCacheTimeStr := strconv.FormatFloat(pidCacheTime, 'f', -1, 64)
+		pidCacheTimeStr := strconv.FormatFloat(pidCacheTime, 'f', 5, 64)
 		replyPartition.SearchResponse.Head.Params["pidCacheTime_"+partitionIDstr] = pidCacheTimeStr
 	}
 
@@ -450,14 +450,14 @@ func (r *routerRequest) searchFromPartition(ctx context.Context, partitionID ent
 		nodeIdEnd := time.Now()
 		if trace {
 			nodeIdTime := nodeIdEnd.Sub(pidCacheEnd).Seconds() * 1000
-			nodeIdTimeStr := strconv.FormatFloat(nodeIdTime, 'f', -1, 64)
+			nodeIdTimeStr := strconv.FormatFloat(nodeIdTime, 'f', 5, 64)
 			replyPartition.SearchResponse.Head.Params["nodeIdTime_"+partitionIDstr] = nodeIdTimeStr
 		}
 		rpcClient := r.client.PS().GetOrCreateRPCClient(ctx, nodeID)
 		rpcClientEnd := time.Now()
 		if trace {
 			rpcClientTime := rpcClientEnd.Sub(nodeIdEnd).Seconds() * 1000
-			rpcClientTimeStr := strconv.FormatFloat(rpcClientTime, 'f', -1, 64)
+			rpcClientTimeStr := strconv.FormatFloat(rpcClientTime, 'f', 5, 64)
 			replyPartition.SearchResponse.Head.Params["rpcClientTime_"+partitionIDstr] = rpcClientTimeStr
 		}
 		if rpcClient == nil {
@@ -530,9 +530,9 @@ func (r *routerRequest) searchFromPartition(ctx context.Context, partitionID ent
 		rpcStart = time.Now()
 		if trace {
 			normalTime := rpcStart.Sub(rpcClientEnd).Seconds() * 1000
-			normalTimeStr := strconv.FormatFloat(normalTime, 'f', -1, 64)
+			normalTimeStr := strconv.FormatFloat(normalTime, 'f', 5, 64)
 			rpcBeforeTime := rpcStart.Sub(pidCacheStart).Seconds() * 1000
-			rpcBeforeTimeStr := strconv.FormatFloat(rpcBeforeTime, 'f', -1, 64)
+			rpcBeforeTimeStr := strconv.FormatFloat(rpcBeforeTime, 'f', 5, 64)
 			replyPartition.SearchResponse.Head.Params["normalTime_"+partitionIDstr] = normalTimeStr
 			replyPartition.SearchResponse.Head.Params["rpcBeforeTime_"+partitionIDstr] = rpcBeforeTimeStr
 		}
@@ -559,7 +559,7 @@ func (r *routerRequest) searchFromPartition(ctx context.Context, partitionID ent
 	if searchResponse != nil {
 		if trace {
 			rpcCostTime := rpcEnd.Sub(rpcStart).Seconds() * 1000
-			rpcCostTimeStr := strconv.FormatFloat(rpcCostTime, 'f', -1, 64)
+			rpcCostTimeStr := strconv.FormatFloat(rpcCostTime, 'f', 5, 64)
 
 			if searchResponse.Head.Params != nil {
 				searchResponse.Head.Params["rpcCostTime_"+partitionIDstr] = rpcCostTimeStr
@@ -578,7 +578,7 @@ func (r *routerRequest) searchFromPartition(ctx context.Context, partitionID ent
 			deSerializeEndTime := time.Now()
 			if trace {
 				deSerializeCostTime := deSerializeEndTime.Sub(deSerializeStartTime).Seconds() * 1000
-				deSerializeCostTimeStr := strconv.FormatFloat(deSerializeCostTime, 'f', -1, 64)
+				deSerializeCostTimeStr := strconv.FormatFloat(deSerializeCostTime, 'f', 5, 64)
 				searchResponse.Head.Params["deSerializeCostTime_"+partitionIDstr] = deSerializeCostTimeStr
 			}
 			for i, searchResult := range searchResponse.Results {
@@ -596,14 +596,14 @@ func (r *routerRequest) searchFromPartition(ctx context.Context, partitionID ent
 			}
 			if trace {
 				fieldParsingTime := time.Since(deSerializeEndTime).Seconds() * 1000
-				fieldParsingTimeStr := strconv.FormatFloat(fieldParsingTime, 'f', -1, 64)
+				fieldParsingTimeStr := strconv.FormatFloat(fieldParsingTime, 'f', 5, 64)
 				searchResponse.Head.Params["fieldParsingTime_"+partitionIDstr] = fieldParsingTimeStr
 			}
 		}
 	}
 	if trace {
 		rpcTotalTime := time.Since(pidCacheStart).Seconds() * 1000
-		rpcTotalTimeStr := strconv.FormatFloat(rpcTotalTime, 'f', -1, 64)
+		rpcTotalTimeStr := strconv.FormatFloat(rpcTotalTime, 'f', 5, 64)
 		searchResponse.Head.Params["rpcTotalTime_"+partitionIDstr] = rpcTotalTimeStr
 	}
 	responseDoc.PartitionData = replyPartition
@@ -649,7 +649,7 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 	normalCostTimeStr := ""
 	if trace {
 		normalCostTime := normalEndTime.Sub(startTime).Seconds() * 1000
-		normalCostTimeStr = strconv.FormatFloat(normalCostTime, 'f', -1, 64)
+		normalCostTimeStr = strconv.FormatFloat(normalCostTime, 'f', 5, 64)
 	}
 
 	var searchReq *vearchpb.SearchRequest
@@ -669,7 +669,7 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 	partitionCostTimeStr := ""
 	if trace {
 		partitionCostTime := time.Since(normalEndTime).Seconds() * 1000
-		partitionCostTimeStr = strconv.FormatFloat(partitionCostTime, 'f', -1, 64)
+		partitionCostTimeStr = strconv.FormatFloat(partitionCostTime, 'f', 5, 64)
 	}
 
 	var result []*vearchpb.SearchResult
@@ -700,7 +700,7 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 	mergeCostTimeStr := ""
 	if trace {
 		mergeCostTime := time.Since(mergeStartTime).Seconds() * 1000
-		mergeCostTimeStr = strconv.FormatFloat(mergeCostTime, 'f', -1, 64)
+		mergeCostTimeStr = strconv.FormatFloat(mergeCostTime, 'f', 5, 64)
 	}
 
 	if len(result) > 1 {
@@ -749,14 +749,14 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 		searchResponse.Head = responseHead
 	}
 	sortCostTime := time.Since(mergeStartTime).Seconds() * 1000
-	sortCostTimeStr := strconv.FormatFloat(sortCostTime, 'f', -1, 64)
+	sortCostTimeStr := strconv.FormatFloat(sortCostTime, 'f', 5, 64)
 	if trace && searchResponse.Head != nil && searchResponse.Head.Params != nil {
 		searchResponse.Head.Params["mergeCostTime"] = mergeCostTimeStr
 		searchResponse.Head.Params["normalCostTime"] = normalCostTimeStr
 		searchResponse.Head.Params["sortCostTime"] = sortCostTimeStr
 		searchResponse.Head.Params["partitionCostTime"] = partitionCostTimeStr
 		executeCostTime := time.Since(startTime).Seconds() * 1000
-		executeCostTimeStr := strconv.FormatFloat(executeCostTime, 'f', -1, 64)
+		executeCostTimeStr := strconv.FormatFloat(executeCostTime, 'f', 5, 64)
 		searchResponse.Head.Params["executeCostTime"] = executeCostTimeStr
 	}
 	searchResponse.Results = result
