@@ -43,11 +43,11 @@ Vearch引擎python sdk提供了一个轻量级索引引擎，供单机本地使�
 
 ### 大模型记忆后端
 
-- **[Langchain](docs/intergrations/langchain/README.md)**
+- **[Langchain](sdk/integrations/langchain/README.md)**
 
-- **[LlamaIndex](sdk/intergrations/llama-index/README.md)**
+- **[LlamaIndex](sdk/integrations/llama-index/README.md)**
 
-- **[Langchaingo](sdk/intergrations/langchaingo/vearchREADME.md)**
+- **[Langchaingo](sdk/integrations/langchaingo/vearchREADME.md)**
 
 ### 实际场景
 

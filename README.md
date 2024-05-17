@@ -43,11 +43,11 @@ Vearch engine python sdk provides a lightweight index engine for local use on a 
 
 ### Use Vearch as a memory backend
 
-- **[Langchain](docs/intergrations/langchain/README.md)**
+- **[Langchain](sdk/integrations/langchain/README.md)**
 
-- **[LlamaIndex](sdk/intergrations/llama-index/README.md)**
+- **[LlamaIndex](sdk/integrations/llama-index/README.md)**
 
-- **[Langchaingo](sdk/intergrations/langchaingo/vearch/README.md)**
+- **[Langchaingo](sdk/integrations/langchaingo/vearch/README.md)**
 
 ### Real world Demos
 
