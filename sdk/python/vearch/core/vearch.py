@@ -130,7 +130,7 @@ class Vearch(object):
             logger.error(result.dict_str())
             raise SpaceException(code=CodeType.LIST_SPACES, message="list space failed:" + result.err_msg)
             
-    def delete_doc(self, database_name: str, space_name: str,filter: Filter) -> Result:
+    def delete(self, database_name: str, space_name: str,filter: Filter) -> Result:
         url = self.client.host + DELETE_DOC_URI
         req_body = {"db_name": database_name, "space_name": space_name, "filters": filter.dict()}
         logger.debug(req_body)
@@ -139,7 +139,7 @@ class Vearch(object):
         logger.debug(resp.__dict__)
         return get_result(resp)
     
-    def upsert_doc(self, database_name: str, space_name: str, data: Union[List, pd.DataFrame]) -> UpsertResult:
+    def upsert(self, database_name: str, space_name: str, data: Union[List, pd.DataFrame]) -> UpsertResult:
         try:
             if not self.is_space_exist(database_name, space_name):
                 raise SpaceException(CodeType.CHECK_SPACE_EXIST, message="space not exist")
