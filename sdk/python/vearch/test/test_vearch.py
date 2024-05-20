@@ -109,6 +109,14 @@ def test_upsert_doc() -> List:
         logger.debug(book_item)
     ret = vc.upsert_doc(database_name, space_name, data)
     assert len(ret.get_document_ids()) >= 0
+
+def test_delete_doc():
+    conditons = [Condition(operator = '<', fv = FieldValue(field = "book_num",value = 25)),
+                 Condition(operator = '>', fv = FieldValue(field = "book_num",value = 12))
+              ]
+    filters = Filter(operator = "AND",conditions = conditons)
+    ret = vc.delete_doc(database_name, space_name,filters)
+    assert ret.__dict__["code"] == 0  
     
     
 def test_query():
