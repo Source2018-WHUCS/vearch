@@ -79,10 +79,6 @@ func ExportDocumentHandler(httpServer *gin.Engine, client *client.Client) {
 	if err := documentHandler.ExportInterfacesToServer(group); err != nil {
 		panic(err)
 	}
-
-	if err := documentHandler.ExportToServer(group); err != nil {
-		panic(err)
-	}
 }
 
 func (handler *DocumentHandler) proxyMaster(group *gin.RouterGroup) error {
@@ -145,14 +141,14 @@ func (handler *DocumentHandler) ExportInterfacesToServer(group *gin.RouterGroup)
 	group.POST("/index/forcemerge", handler.handleIndexForceMerge)
 	group.POST("/index/rebuild", handler.handleIndexRebuild)
 
-	return nil
-}
+	// config
+	// trace: /config/trace
+	group.POST("/config/trace", handler.handleConfigTrace)
 
-func (handler *DocumentHandler) ExportToServer(group *gin.RouterGroup) error {
-	// update doc: /$dbName/$spaceName/_log_collect
-	group.POST(fmt.Sprintf("/:%s/:%s/_log_print_switch", URLParamDbName, URLParamSpaceName), handler.handleLogPrintSwitch)
-	// cacheInfo /$dbName/$spaceName
-	group.GET(fmt.Sprintf("/:%s/:%s", URLParamDbName, URLParamSpaceName), handler.cacheInfo)
+	// cacheInfo
+	// /cache/$dbName/$spaceName
+	group.GET(fmt.Sprintf("/cache/:%s/:%s", URLParamDbName, URLParamSpaceName), handler.cacheInfo)
+
 	return nil
 }
 
@@ -209,21 +205,21 @@ func setRequestHeadFromGin(c *gin.Context) *vearchpb.RequestHead {
 	return head
 }
 
-// handleLogPrintSwitch log print switch
-func (handler *DocumentHandler) handleLogPrintSwitch(c *gin.Context) {
+// handleConfigTrace config trace switch
+func (handler *DocumentHandler) handleConfigTrace(c *gin.Context) {
 	startTime := time.Now()
-	defer monitor.Profiler("handleLogPrintSwitch", startTime)
+	defer monitor.Profiler("handleConfigTrace", startTime)
 	args := &vearchpb.GetRequest{}
 	args.Head = setRequestHeadFromGin(c)
 
-	printSwitch, err := doLogPrintSwitchParse(c.Request)
+	trace, err := configTraceParse(c.Request)
 	if err != nil {
 		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	}
 
-	config.LogInfoPrintSwitch = printSwitch
-	if resultBytes, err := docPrintLogSwitchResponse(config.LogInfoPrintSwitch); err != nil {
+	config.Trace = trace
+	if resultBytes, err := configTraceResponse(config.Trace); err != nil {
 		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 		return
 	} else {
@@ -278,6 +274,13 @@ func (handler *DocumentHandler) handleDocumentQuery(c *gin.Context) {
 	args := &vearchpb.QueryRequest{}
 	args.Head = setRequestHeadFromGin(c)
 
+	trace := config.Trace
+	if trace_info, ok := args.Head.Params["trace"]; ok {
+		if trace_info == "true" {
+			trace = true
+		}
+	}
+
 	searchDoc, err := documentRequestParse(c.Request)
 	if err != nil {
 		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
@@ -326,7 +329,9 @@ func (handler *DocumentHandler) handleDocumentQuery(c *gin.Context) {
 		return
 	}
 	httphelper.New(c).JsonSuccess(result)
-	log.Debug("handleDocumentQuery total use :[%f] service use :[%f]", time.Since(startTime).Seconds()*1000, serviceCost.Seconds()*1000)
+	if trace {
+		log.Trace("handleDocumentQuery total use :[%.4f] service use :[%.4f] detail use :[%v]", time.Since(startTime).Seconds()*1000, serviceCost.Seconds()*1000, searchResp.Head.Params)
+	}
 }
 
 func (handler *DocumentHandler) handleDocumentGet(c *gin.Context, searchDoc *request.SearchDocumentRequest) {
@@ -379,6 +384,14 @@ func (handler *DocumentHandler) handleDocumentSearch(c *gin.Context) {
 	args.Head.DbName = searchDoc.DbName
 	args.Head.SpaceName = searchDoc.SpaceName
 
+	trace := config.Trace
+	if trace_info, ok := args.Head.Params["trace"]; ok {
+		if trace_info == "true" {
+			trace = true
+		}
+	}
+
+	getSpaceStart := time.Now()
 	space, err := handler.docService.getSpace(c.Request.Context(), args.Head)
 	if err != nil {
 		httphelper.New(c).JsonError(errors.NewErrInternal(err))
@@ -386,6 +399,7 @@ func (handler *DocumentHandler) handleDocumentSearch(c *gin.Context) {
 	}
 	// update space name because maybe is alias name
 	searchDoc.SpaceName = args.Head.SpaceName
+	getSpaceCost := time.Since(getSpaceStart)
 
 	err = requestToPb(searchDoc, space, args)
 	if err != nil {
@@ -410,7 +424,10 @@ func (handler *DocumentHandler) handleDocumentSearch(c *gin.Context) {
 		return
 	}
 	httphelper.New(c).JsonSuccess(result)
-	log.Debug("handleDocumentSearch total use :[%f] service use :[%f]", time.Since(startTime).Seconds()*1000, serviceCost.Seconds()*1000)
+	if trace {
+		log.Trace("handleDocumentSearch total use :[%.4f] getSpace use :[%.4f] service use :[%.4f] detail use :[%v]",
+			time.Since(startTime).Seconds()*1000, getSpaceCost.Seconds()*1000, serviceCost.Seconds()*1000, searchResp.Head.Params)
+	}
 }
 
 func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
@@ -419,6 +436,13 @@ func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 	args := &vearchpb.SearchRequest{}
 	args.Head = setRequestHeadFromGin(c)
 	args.Head.Params["queryOnlyId"] = "true"
+
+	trace := config.Trace
+	if trace_info, ok := args.Head.Params["trace"]; ok {
+		if trace_info == "true" {
+			trace = true
+		}
+	}
 
 	searchDoc, err := documentRequestParse(c.Request)
 	if err != nil {
@@ -484,7 +508,6 @@ func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 	delByQueryResp := handler.docService.deleteByQuery(c.Request.Context(), args)
 	serviceCost := time.Since(serviceStart)
 
-	log.Debug("handleDocumentDelete cost :%f", serviceCost)
 	result, err := deleteByQueryResult(delByQueryResp)
 	if err != nil {
 		httphelper.New(c).JsonError(errors.NewErrUnprocessable(err))
@@ -492,6 +515,10 @@ func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 	}
 
 	httphelper.New(c).JsonSuccess(result)
+	if trace {
+		log.Trace("handleDocumentDelete total use :[%.4f] service use :[%.4f]",
+			time.Since(startTime).Seconds()*1000, serviceCost.Seconds()*1000)
+	}
 }
 
 // handleIndexFlush
