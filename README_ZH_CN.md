@@ -37,7 +37,7 @@ Vearch 是一个云原生分布式向量数据库，用于在 AI 应用程序中
 - **[Java SDK(under development)](sdk/java/README.md)**
 
 - **[Engine Python SDK](internal/engine/sdk/python/docs/APIPythonSDK.md)**:
-Vearch引擎python sdk提供了一个轻量级索引引擎，供单机本地使用。 Vearch Engine python sdk 可以通过 pip install vearch 轻松安装。
+Vearch引擎python sdk提供了一个轻量级向量存储和检索引擎，供单机本地使用。 Vearch Engine python sdk 可以通过 pip install vearch 轻松安装。
 
 ## 使用案例
 

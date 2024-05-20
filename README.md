@@ -37,7 +37,7 @@ Vearch is a cloud-native distributed vector database for efficient similarity se
 - **[Java SDK(under development)](sdk/java/README.md)**
 
 - **[Engine Python SDK](internal/engine/sdk/python/docs/APIPythonSDK.md)**:
-Vearch engine python sdk provides a lightweight index engine for local use on a single machine. Vearch Engine python sdk can be installed easily by pip install vearch.
+Vearch engine python sdk provides a lightweight vector embedding engine for local use on a single machine. Vearch Engine python sdk can be installed easily by pip install vearch.
 
 ## Usage cases
 
