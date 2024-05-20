@@ -1,4 +1,4 @@
-# Vearch Go SDK Usage Examples
+# Vearch Go SDK
 
 This README provides examples on how to use the Vearch Go SDK for interacting with Vearch, a scalable distributed system for embedding-based retrieval. The following examples illustrate how to perform common operations such as creating databases and spaces, inserting, querying, searching, and deleting documents.
 
@@ -15,7 +15,7 @@ Before you begin, ensure you have the following:
 To install the Vearch Go SDK, run the following command:
 
 ```sh
-go get -u github.com/vearch/vearch/v3/sdk/go/vearch
+go get -u github.com/vearch/vearch/sdk/go/v3
 ```
 
 ## Setup Client
@@ -24,8 +24,8 @@ To interact with Vearch, you need to set up a client with the appropriate config
 
 ```go
 import (
-    "github.com/vearch/vearch/v3/sdk/go/vearch"
-    "github.com/vearch/vearch/v3/sdk/go/vearch/auth"
+    "github.com/vearch/vearch/sdk/go/v3"
+    "github.com/vearch/vearch/sdk/go/v3/auth"
 )
 
 func setupClient() (*vearch.Client, error) {
@@ -45,7 +45,7 @@ The following example shows how to create a database and a space within that dat
 ```go
 import (
     "context"
-    "github.com/vearch/vearch/v3/sdk/go/vearch/entities/models"
+    "github.com/vearch/vearch/sdk/go/v3/entities/models"
 )
 
 func createDBAndSpace(client *vearch.Client) error {

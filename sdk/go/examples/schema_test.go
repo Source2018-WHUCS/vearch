@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	client "github.com/vearch/vearch/v3/sdk/go/vearch"
-	"github.com/vearch/vearch/v3/sdk/go/vearch/auth"
-	"github.com/vearch/vearch/v3/sdk/go/vearch/entities/models"
+	client "github.com/vearch/vearch/sdk/go/v3"
+	"github.com/vearch/vearch/sdk/go/v3/auth"
+	"github.com/vearch/vearch/sdk/go/v3/entities/models"
 )
 
 func setupClient(t *testing.T) *client.Client {
-	host := "http://127.0.0.1:9001"
+	host := "http://testinsert-router.vectorbase.svc.sq02.n.jd.local"
 	user := "root"
 	secret := "secret"
 
