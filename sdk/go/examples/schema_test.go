@@ -11,7 +11,7 @@ import (
 )
 
 func setupClient(t *testing.T) *client.Client {
-	host := "http://testinsert-router.vectorbase.svc.sq02.n.jd.local"
+	host := "http://127.0.0.1:9001"
 	user := "root"
 	secret := "secret"
 
