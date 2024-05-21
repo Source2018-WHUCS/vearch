@@ -10,7 +10,7 @@ import (
 	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/tmc/langchaingo/schema"
 	"github.com/tmc/langchaingo/vectorstores"
-    "github.com/vearch/vearch/sdk/integrations/langchaingo/vearch"
+    "github.com/tmc/langchaingo/vectorstores/vearch"
 )
 
 func main() {
