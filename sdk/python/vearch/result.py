@@ -14,13 +14,13 @@ class ResultStatus:
 
 
 class Result(object):
-    def __init__(self, code: str = "", err_msg: str = "", text: str = ""):
+    def __init__(self, code: str = "", msg: str = "", text: str = ""):
         self.code = code
-        self.err_msg = err_msg
+        self.msg = msg
         self.text = text
 
     def dict_str(self):
-        ret = {"code": self.code, "err_msg": self.err_msg, "content": self.text}
+        ret = {"code": self.code, "msg": self.msg, "data": self.text}
         ret_str = json.dumps(ret)
         return ret_str
 
@@ -80,7 +80,6 @@ class SearchResult(object):
 
 def get_result(resp: requests.Response) -> Result:
     r = Result()
-    logger.debug(resp.text)
     ret = json.loads(resp.text)
     r.code = ret.get("code", -1)
     r.text = ret.get("data", "")

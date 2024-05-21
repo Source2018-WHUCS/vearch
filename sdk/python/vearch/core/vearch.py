@@ -32,15 +32,13 @@ class Vearch(object):
         l = []
         logger.debug(result.dict_str())
         if result.code == CODE_SUCCESS:
-            logger.debug(result.text)
             database_names = result.text
             for database_name in database_names:
                 db = Database(database_name)
                 l.append(db)
             return l
         else:
-            logger.error(result.dict_str())
-            raise DatabaseException(code=CodeType.LIST_DATABASES, message="list database failed:" + result.err_msg)
+            raise DatabaseException(code=CodeType.LIST_DATABASES, message="list database failed:" + result.msg)
 
     def is_database_exist(self, database_name: str) -> bool:
         db = Database(database_name)
@@ -60,12 +58,10 @@ class Vearch(object):
         if not self.database(database_name).exist():
             ret = self.database(database_name).create()
             if ret.code != 200:
-                raise DatabaseException(code=CodeType.CREATE_DATABASE, message="create database error:" + ret.err_msg)
+                raise DatabaseException(code=CodeType.CREATE_DATABASE, message="create database error:" + ret.msg)
         url_params = {"database_name": database_name, "space_name": space.name}
         url = self.client.host + LIST_SPACE_URI % url_params
         sign = compute_sign_auth(secret=self.client.token)
-        logger.debug("create space:" + url)
-        logger.debug("schema:" + json.dumps(space.dict()))
         resp = requests.request(method="POST", url=url, data=json.dumps(space.dict()), auth=sign)
         logger.debug("create space status_code and text:"+ str(resp.status_code) + resp.text)
         result = get_result(resp)
@@ -76,10 +72,8 @@ class Vearch(object):
             raise SpaceException(CodeType.CHECK_SPACE_EXIST, message="space not exist")
         url_params = {"database_name": database_name, "space_name": space_name}
         url = self.client.host + SPACE_URI % url_params
-        logger.debug("delete space url:" + url)
         sign = compute_sign_auth(secret=self.client.token)
         resp = requests.request(method="DELETE", url=url, auth=sign)
-        logger.debug("delete space ret" + resp.text)
         return get_result(resp)  
            
 
@@ -92,7 +86,6 @@ class Vearch(object):
             url = self.client.host + SPACE_URI % url_params
             sign = compute_sign_auth(secret=self.client.token)
             resp = requests.request(method="GET", url=url, auth=sign)
-            logger.debug("get space exist result:" + resp.text)
             ret = get_result(resp)
             if ret.code == CODE_SUCCESS:
                 space_schema = json.dumps(ret.text)
@@ -120,7 +113,6 @@ class Vearch(object):
         l = []
         logger.debug(result.dict_str())
         if result.code == CODE_SUCCESS:
-            logger.debug(result.text)
             space_names = result.text
             for space_name in space_names:
                 space = Space(database_name, space_name)
@@ -128,16 +120,8 @@ class Vearch(object):
             return l
         else:
             logger.error(result.dict_str())
-            raise SpaceException(code=CodeType.LIST_SPACES, message="list space failed:" + result.err_msg)
-            
-    def delete(self, database_name: str, space_name: str,filter: Filter) -> Result:
-        url = self.client.host + DELETE_DOC_URI
-        req_body = {"db_name": database_name, "space_name": space_name, "filters": filter.dict()}
-        logger.debug(req_body)
-        sign = compute_sign_auth()
-        resp = requests.request(method="POST", url=url, data=json.dumps(req_body), auth=sign)
-        logger.debug(resp.__dict__)
-        return get_result(resp)
+            raise SpaceException(code=CodeType.LIST_SPACES, message="list space failed:" + result.msg)
+
     
     def upsert(self, database_name: str, space_name: str, data: Union[List, pd.DataFrame]) -> UpsertResult:
         try:
@@ -172,7 +156,6 @@ class Vearch(object):
                                 record[field.name] = em[i]
                             records.append(record)
                     req_body.update({"documents": records})
-                    logger.debug(req_body)
                     sign = compute_sign_auth(secret=self.client.token)
                     resp = requests.request(method="POST", url=url, data=json.dumps(req_body),
                                             auth=sign)
@@ -185,8 +168,6 @@ class Vearch(object):
         except VearchException as e:
             raise  e
             if e.code == 0:
-                logger.error(e.code)
-                logger.error(e.message)
                 r = UpsertResult(code="200", msg=e.message)
                 return r
     
@@ -252,7 +233,6 @@ class Vearch(object):
         if kwargs:
             req_body.update(kwargs)
 
-        logger.debug(json.dumps(req_body))
         sign = compute_sign_auth(secret=self.client.token)
         resp = requests.request(method="POST", url=url, data=json.dumps(req_body),
                                 auth=sign)
@@ -287,11 +267,20 @@ class Vearch(object):
             req_body["fields"] = fields
         if filter:
             req_body["filters"] = filter.dict()
-        logger.debug(url)
-        logger.debug(json.dumps(req_body))
         sign = compute_sign_auth(secret=self.client.token)
         resp = requests.request(method="POST", url=url, data=json.dumps(req_body), auth=sign)
         ret = get_result(resp)
         if ret.code == CODE_SUCCESS:
             return json.dumps(ret.text)
         return []
+        
+    def delete(self, database_name: str, space_name: str, document_ids: Optional[List] = [], filter: Filter= None) -> Result:
+        url = self.client.host + DELETE_DOC_URI
+        req_body = {"db_name": database_name, "space_name": space_name}
+        if document_ids:
+            req_body["document_ids"] = document_ids
+        if filter:
+            req_body["filters"] = filter.dict()
+        sign = compute_sign_auth()
+        resp = requests.request(method="POST", url=url, data=json.dumps(req_body), auth=sign)
+        return get_result(resp)

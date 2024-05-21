@@ -23,7 +23,6 @@ class Database(object):
             url_params = {"database_name": self.name}
             url = self.client.host + DATABASE_URI % url_params
             sign = compute_sign_auth(secret=self.client.token)
-            print(url,sign)
             resp = requests.request(method="GET", url=url, auth=sign)
             result = get_result(resp)
             logger.debug("database exist return:" + result.dict_str())
