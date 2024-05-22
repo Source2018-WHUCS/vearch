@@ -30,7 +30,6 @@ class Vearch(object):
     def list_databases(self) -> List[Database]:
         result = self.client._list_db()
         l = []
-        logger.debug(result.dict_str())
         if result.code == CODE_SUCCESS:
             database_names = result.text
             for database_name in database_names:
@@ -63,7 +62,6 @@ class Vearch(object):
         url = self.client.host + LIST_SPACE_URI % url_params
         sign = compute_sign_auth(secret=self.client.token)
         resp = requests.request(method="POST", url=url, data=json.dumps(space.dict()), auth=sign)
-        logger.debug("create space status_code and text:"+ str(resp.status_code) + resp.text)
         result = get_result(resp)
         return result
 
@@ -111,7 +109,6 @@ class Vearch(object):
     def list_spaces(self, database_name: str) -> List[Space]:
         result = self.client._list_space(database_name)
         l = []
-        logger.debug(result.dict_str())
         if result.code == CODE_SUCCESS:
             space_names = result.text
             for space_name in space_names:
@@ -119,7 +116,6 @@ class Vearch(object):
                 l.append(space)
             return l
         else:
-            logger.error(result.dict_str())
             raise SpaceException(code=CodeType.LIST_SPACES, message="list space failed:" + result.msg)
 
     

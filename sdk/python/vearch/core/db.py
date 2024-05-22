@@ -25,8 +25,6 @@ class Database(object):
             sign = compute_sign_auth(secret=self.client.token)
             resp = requests.request(method="GET", url=url, auth=sign)
             result = get_result(resp)
-            logger.debug("database exist return:" + result.dict_str())
-            logger.debug("database exist status_code:" + str(resp.status_code))
             if result.code == CODE_SUCCESS:
                 return True
             else:

@@ -41,7 +41,6 @@ class UpsertResult(object):
         :param resp:
         :return:
         """
-        logger.debug(resp.text)
         ret = json.loads(resp.text)
         code = ret.get("code", -1)
         msg = ret.get("msg", "")
@@ -68,7 +67,6 @@ class SearchResult(object):
 
     @classmethod
     def parse_search_result_from_response(cls, resp: requests.Response):
-        logger.debug(resp.text)
         ret = json.loads(resp.text)
         code = ret.get("code", -1)
         msg = ret.get("msg", "")
@@ -86,10 +84,8 @@ def get_result(resp: requests.Response) -> Result:
     r.err_msg = ret.get("msg", "")
     if resp.status_code / 100 == 2:
         if r.code != CODE_SUCCESS:
-            logger.error("respone status code:" + str(resp.status_code) + "data:" + resp.text)
             raise VearchException(r.code, r.err_msg)  
         return r
     else:
-        logger.error("respone status code:" + str(resp.status_code) + "data:" + resp.text)
         if r.code != -1:
             raise VearchException(r.code, r.err_msg)

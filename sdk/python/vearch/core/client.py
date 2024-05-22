@@ -34,10 +34,6 @@ class RestClient(object):
         url = self.host + DATABASE_URI % url_params
         sign = compute_sign_auth(secret=self.token)
         resp = requests.request(method="POST", url=url, auth=sign)
-        if resp.status_code != 200:
-            logger.error("resp:" + str(resp.text))
-        else:
-            logger.debug("resp:" + str(resp.text))
         return get_result(resp)
 
     def _drop_db(self, database_name: str) -> Result:

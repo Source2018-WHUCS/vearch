@@ -120,7 +120,6 @@ class Space(object):
         url = self.client.host + DELETE_DOC_URI
         req_body = {"db_name": self.db_name, "space_name": self.name, "filters": filter.dict()}
 
-        logger.debug(req_body)
         sign = compute_sign_auth()
         resp = requests.request(method="POST", url=url, data=json.dumps(req_body), auth=sign)
         return get_result(resp)
@@ -186,7 +185,6 @@ class Space(object):
         if kwargs:
             req_body.update(kwargs)
 
-        logger.debug(json.dumps(req_body))
         sign = compute_sign_auth(secret=self.client.token)
         resp = requests.request(method="POST", url=url, data=json.dumps(req_body),
                                 auth=sign)

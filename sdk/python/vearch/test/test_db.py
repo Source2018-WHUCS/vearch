@@ -29,7 +29,7 @@ def test_is_database_not_exist():
 def test_create_database():
     ret = db.create()
     logger.debug(ret)
-    assert ret.__dict__["code"] in [0,1]
+    assert ret.__dict__["code"] == 0
 
     
 def test_is_database_exist():

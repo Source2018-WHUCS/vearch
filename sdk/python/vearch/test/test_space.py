@@ -15,9 +15,10 @@ import pytest
 logger = logging.getLogger("vearch_test")
 
 database_name = "database_test"
-database_name1 = "database_test_space"
 space_name = "book_info"
 space_name1 = "book_info1"
+
+db = Database(database_name)
 
 space_not = Space(database_name, space_name1)
 space = Space(database_name, space_name)
@@ -31,6 +32,11 @@ def create_space_schema(space_name) -> SpaceSchema:
     ractor_address = Field("ractor_address", DataType.STRING, desc="the place of the book put")
     space_schema = SpaceSchema(space_name, fields=[book_name,book_num, book_vector, ractor_address])
     return space_schema
+
+def test_create_database():
+    ret = db.create()
+    logger.debug(ret)
+    assert ret.__dict__["code"] == 0
 
 def test_is_space_not_exist():    
     ret = space_not.exist()
