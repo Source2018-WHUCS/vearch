@@ -138,37 +138,35 @@ class Vearch(object):
         :param limit:  the result size you want to return
         :param kwargs:
             "is_brute_search": 0,
-            "online_log_level": "debug",
-            "quick": false,
             "vector_value": false,
             "load_balance": "leader",
             "l2_sqrt": false,
-            "size": 10
-            retrieval_param: the retrieval parameter which control the search action,user can asign it to precisely
+            "limit": 10
+            index_params: the retrieval parameter which control the search action,user can asign it to precisely
              control search result,different index type different parameters
              For IVFPQ:
-                    "retrieval_param": {
+                    "index_params": {
                     "parallel_on_queries": 1,
                     "recall_num" : 100,
                     "nprobe": 80,
                     "metric_type": "L2" }
                 GPU:
-                    "retrieval_param": {
+                    "index_params": {
                     "recall_num" : 100,
                     "nprobe": 80,
                     "metric_type": "L2"}
                HNSW:
-                   "retrieval_param": {
+                   "index_params": {
                         "efSearch": 64,
                         "metric_type": "L2"
                     }
                 IVFFLAT:
-                    "retrieval_param": {
+                    "index_params": {
                     "parallel_on_queries": 1,
                     "nprobe": 80,
                     "metric_type": "L2" }
                FLAT:
-                   "retrieval_param": {
+                   "index_params": {
                    "metric_type": "L2"}
 
         :return:

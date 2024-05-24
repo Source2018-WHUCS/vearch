@@ -171,12 +171,10 @@ class Space(object):
         :param limit:  the result size you want to return
         :param kwargs:
             "is_brute_search": 0,
-            "online_log_level": "debug",
-            "quick": false,
             "vector_value": false,
             "load_balance": "leader",
             "l2_sqrt": false,
-            "size": 10
+            "limit": 10
 
             retrieval_param: the retrieval parameter which control the search action,user can asign it to precisely
              control search result,different index type different parameters
