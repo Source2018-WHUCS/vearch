@@ -112,7 +112,11 @@ class Space(object):
 
 
     def _check_data_type(self, data: Union[List, pd.DataFrame]) -> (str, str):
+        if data == None or len(data) == 0:
+            return UpsertDataType.ERROR, "data is null"
+
         is_dataframe = isinstance(data, pd.DataFrame)
+
         data_fields_len = len(data.columns) if is_dataframe else len(data[0])
         item_num = len(data)
         item_dict_num = 0

@@ -48,13 +48,13 @@ class Vearch(object):
 
     def drop_database(self, database_name: str) -> Result:
         if not self.is_database_exist(database_name):
-            return Result(code=CodeType.CHECK_DATABASE_EXIST, message="database not exist, can not drop it")
+            return Result(code=CodeType.CHECK_DATABASE_EXIST, msg="database not exist, can not drop it")
         return self.client._drop_db(database_name)
  
 
     def create_space(self, database_name: str, space: SpaceSchema) -> Result:
         if not self.database(database_name).exist():
-            return Result(code=CodeType.CREATE_DATABASE, message="database not exist")
+            return Result(code=CodeType.CREATE_DATABASE, msg="database not exist")
 
         url_params = {"database_name": database_name, "space_name": space.name}
         url = self.client.host + LIST_SPACE_URI % url_params
@@ -65,8 +65,6 @@ class Vearch(object):
 
 
     def drop_space(self, database_name: str, space_name: str) -> Result:
-        if not self.is_space_exist(database_name, space_name):
-            raise SpaceException(CodeType.CHECK_SPACE_EXIST, message="space not exist")
         url_params = {"database_name": database_name, "space_name": space_name}
         url = self.client.host + SPACE_URI % url_params
         sign = compute_sign_auth(secret=self.client.token)
@@ -74,10 +72,10 @@ class Vearch(object):
         return get_result(resp)  
 
         
-    def is_space_exist(self, database_name: str, space_name: str) -> [bool, SpaceSchema]:
+    def is_space_exist(self, database_name: str, space_name: str) -> [bool, Result, SpaceSchema]:
         try:
             if not self.is_database_exist(database_name):
-                raise DatabaseException(code=CodeType.CHECK_DATABASE_EXIST, message="database not exist")
+                return False, Result(code=CodeType.CHECK_DATABASE_EXIST, msg="database %s not exist" % (database_name)), None
             url_params = {"database_name": database_name, "space_name": space_name}
             url = self.client.host + SPACE_URI % url_params
             sign = compute_sign_auth(secret=self.client.token)
@@ -85,12 +83,12 @@ class Vearch(object):
             ret = get_result(resp)
             if ret.code == CODE_SUCCESS:
                 space_schema = json.dumps(ret.data)
-                return True, space_schema
+                return True, None, space_schema
             else:
-                return False, None
+                return False, ret, None
         except VearchException as e:
             if e.code == CODE_SPACE_NOT_EXIST and MSG_NOT_EXIST in e.message:
-                return False, None
+                return False, Result(code=e.code, msg=e.message), None
             else:
                 raise SpaceException(CodeType.CHECK_SPACE_EXIST, e.message)
 
@@ -122,7 +120,7 @@ class Vearch(object):
     def upsert(self, database_name: str, space_name: str, data: Union[List, pd.DataFrame]) -> UpsertResult:
         try:
             if not self.is_space_exist(database_name, space_name):
-                return UpsertResult(CodeType.CHECK_SPACE_EXIST, message="space %s not exist, please create it first" % space_name)
+                return UpsertResult(code=CodeType.CHECK_SPACE_EXIST, msg="space %s not exist, please create it first" % space_name)
             space = Space(database_name, space_name)
             return space.upsert(data)
         except VearchException as e:
@@ -172,7 +170,7 @@ class Vearch(object):
         :return:
         """
         if not vector_infos:
-            return SearchResult(CodeType.SEARCH_DOC, "vector_info can not both null")
+            return SearchResult(code=CodeType.SEARCH_DOC, msg="vector_info can not both null")
         url = self.client.host + SEARCH_DOC_URI
         req_body = {"db_name": database_name, "space_name": space_name, "vector_value": vector, "limit": limit}
         if fields:
@@ -206,7 +204,7 @@ class Vearch(object):
         :return:
         """
         if (not document_ids) and (not filter):
-            return SearchResult(CodeType.QUERY_DOC, "document_ids and filter can not both null")
+            return SearchResult(code=CodeType.QUERY_DOC, msg="document_ids and filter can not both null")
         url = self.client.host + QUERY_DOC_URI
         req_body = {"db_name": database_name, "space_name": space_name, "vector_value": vector}
         if document_ids:
@@ -223,6 +221,8 @@ class Vearch(object):
         
     def delete(self, database_name: str, space_name: str, document_ids: Optional[List] = [], filter: Optional[Filter] = None,
                 limit: int = 50) -> Result:
+        if (not document_ids) and (not filter):
+            return DeleteResult(code=CodeType.DELETE_DOC, msg="document_ids and filter can not both null")
         url = self.client.host + DELETE_DOC_URI
         req_body = {"db_name": database_name, "space_name": space_name, "limit": limit}
         if document_ids:
