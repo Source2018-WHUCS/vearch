@@ -24,7 +24,7 @@ Upsert:
             example:
               db_name: "db"
               space_name: "ts_space"
-              documents: {"field_int": 1.2, "field_str": "test", "field_vec": [0.1, 0.2, 0.3]}
+              documents: [{"field_int": 1.2, "field_str": "test", "field_vec": [0.1, 0.2, 0.3]}]
     responses:
       '200':
         $ref: 'components/responses.yaml#/SuccessResponse'
