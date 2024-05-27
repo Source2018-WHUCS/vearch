@@ -37,7 +37,8 @@ class Vearch(object):
                 l.append(db)
             return l
         else:
-            raise DatabaseException(code=CodeType.LIST_DATABASES, message="list database failed:" + result.msg)
+            raise DatabaseException(
+                code=CodeType.LIST_DATABASES, message="list database failed:" + result.msg)
 
     def is_database_exist(self, database_name: str) -> bool:
         db = Database(database_name)
@@ -50,7 +51,6 @@ class Vearch(object):
         if not self.is_database_exist(database_name):
             return Result(code=CodeType.CHECK_DATABASE_EXIST, msg="database not exist, can not drop it")
         return self.client._drop_db(database_name)
- 
 
     def create_space(self, database_name: str, space: SpaceSchema) -> Result:
         if not self.database(database_name).exist():
@@ -59,24 +59,24 @@ class Vearch(object):
         url_params = {"database_name": database_name, "space_name": space.name}
         url = self.client.host + LIST_SPACE_URI % url_params
         sign = compute_sign_auth(secret=self.client.token)
-        resp = requests.request(method="POST", url=url, data=json.dumps(space.dict()), auth=sign)
+        resp = requests.request(method="POST", url=url,
+                                data=json.dumps(space.dict()), auth=sign)
         result = get_result(resp)
         return result
-
 
     def drop_space(self, database_name: str, space_name: str) -> Result:
         url_params = {"database_name": database_name, "space_name": space_name}
         url = self.client.host + SPACE_URI % url_params
         sign = compute_sign_auth(secret=self.client.token)
         resp = requests.request(method="DELETE", url=url, auth=sign)
-        return get_result(resp)  
+        return get_result(resp)
 
-        
     def is_space_exist(self, database_name: str, space_name: str) -> [bool, Result, SpaceSchema]:
         try:
             if not self.is_database_exist(database_name):
                 return False, Result(code=CodeType.CHECK_DATABASE_EXIST, msg="database %s not exist" % (database_name)), None
-            url_params = {"database_name": database_name, "space_name": space_name}
+            url_params = {"database_name": database_name,
+                          "space_name": space_name}
             url = self.client.host + SPACE_URI % url_params
             sign = compute_sign_auth(secret=self.client.token)
             resp = requests.request(method="GET", url=url, auth=sign)
@@ -92,10 +92,10 @@ class Vearch(object):
             else:
                 raise SpaceException(CodeType.CHECK_SPACE_EXIST, e.message)
 
-                
     def create_index(self, database_name: str, space_name: str, field: str, index: Index) -> Result:
         url = self.client.host + INDEX_URI
-        req_body = {"field": field, "index": index.dict(), "database": database_name, "space": space_name}
+        req_body = {"field": field, "index": index.dict(
+        ), "database": database_name, "space": space_name}
         sign = compute_sign_auth()
         req = requests.request(method="POST", url=url, data=json.dumps(req_body),
                                auth=sign)
@@ -114,8 +114,8 @@ class Vearch(object):
         elif MSG_NOT_EXIST in result.msg:
             return l
         else:
-            raise SpaceException(code=CodeType.LIST_SPACES, message="list space failed:" + result.msg)
-
+            raise SpaceException(code=CodeType.LIST_SPACES,
+                                 message="list space failed:" + result.msg)
 
     def upsert(self, database_name: str, space_name: str, data: Union[List, pd.DataFrame]) -> UpsertResult:
         try:
@@ -124,8 +124,8 @@ class Vearch(object):
             space = Space(database_name, space_name)
             return space.upsert(data)
         except VearchException as e:
-            raise  e
-    
+            raise e
+
     def search(self, database_name: str, space_name: str, vector_infos: Optional[List[VectorInfo]], filter: Optional[Filter] = None,
                fields: Optional[List] = None, vector: bool = False, limit: int = 50, **kwargs) -> List[Dict]:
         """
@@ -172,12 +172,14 @@ class Vearch(object):
         if not vector_infos:
             return SearchResult(code=CodeType.SEARCH_DOC, msg="vector_info can not both null")
         url = self.client.host + SEARCH_DOC_URI
-        req_body = {"db_name": database_name, "space_name": space_name, "vector_value": vector, "limit": limit}
+        req_body = {"db_name": database_name, "space_name": space_name,
+                    "vector_value": vector, "limit": limit}
         if fields:
             req_body["fields"] = fields
         req_body["vectors"] = []
         if vector_infos:
-            vector_info_dict = [vector_info.dict() for vector_info in vector_infos]
+            vector_info_dict = [vector_info.dict()
+                                for vector_info in vector_infos]
             req_body["vectors"] = vector_info_dict
         if filter:
             req_body["filters"] = filter.dict()
@@ -190,7 +192,7 @@ class Vearch(object):
         return SearchResult.parse_search_result_from_response(resp)
 
     def query(self, database_name: str, space_name: str, document_ids: Optional[List] = [], filter: Optional[Filter] = None,
-              partition_id: Optional[str] = "",
+              partition_id: Optional[int] = None,
               fields: Optional[List] = [], vector: bool = False, limit: int = 50) -> List[Dict]:
         """
         you can asign  the document_ids in [xxx,xxx,xxx,xxx,xxx],or give the other filter condition.
@@ -200,13 +202,14 @@ class Vearch(object):
         :param partition_id assign which partition you want to query,default query all partitions
         :param fields the scalar fields you want to output
         :param vector return vector or not
-        :param size the output result size you queried out
+        :param limit the output result size you queried out
         :return:
         """
         if (not document_ids) and (not filter):
             return SearchResult(code=CodeType.QUERY_DOC, msg="document_ids and filter can not both null")
         url = self.client.host + QUERY_DOC_URI
-        req_body = {"db_name": database_name, "space_name": space_name, "vector_value": vector}
+        req_body = {"db_name": database_name,
+                    "space_name": space_name, "vector_value": vector}
         if document_ids:
             req_body["document_ids"] = document_ids
         if partition_id:
@@ -216,19 +219,22 @@ class Vearch(object):
         if filter:
             req_body["filters"] = filter.dict()
         sign = compute_sign_auth(secret=self.client.token)
-        resp = requests.request(method="POST", url=url, data=json.dumps(req_body), auth=sign)
+        resp = requests.request(method="POST", url=url,
+                                data=json.dumps(req_body), auth=sign)
         return SearchResult.parse_search_result_from_response(resp)
-        
+
     def delete(self, database_name: str, space_name: str, document_ids: Optional[List] = [], filter: Optional[Filter] = None,
-                limit: int = 50) -> Result:
+               limit: int = 50) -> Result:
         if (not document_ids) and (not filter):
             return DeleteResult(code=CodeType.DELETE_DOC, msg="document_ids and filter can not both null")
         url = self.client.host + DELETE_DOC_URI
-        req_body = {"db_name": database_name, "space_name": space_name, "limit": limit}
+        req_body = {"db_name": database_name,
+                    "space_name": space_name, "limit": limit}
         if document_ids:
             req_body["document_ids"] = document_ids
         if filter:
             req_body["filters"] = filter.dict()
         sign = compute_sign_auth()
-        resp = requests.request(method="POST", url=url, data=json.dumps(req_body), auth=sign)
+        resp = requests.request(method="POST", url=url,
+                                data=json.dumps(req_body), auth=sign)
         return DeleteResult.parse_delete_result_from_response(resp)
