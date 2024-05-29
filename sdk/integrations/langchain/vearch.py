@@ -192,7 +192,6 @@ class VearchDb(VectorStore):
                     )
                     docid.append(retry_insert.document_ids[0]["_id"])
                     continue
-        print(docid)
         return docid
 
     def _get_field_list_from_c(self):
