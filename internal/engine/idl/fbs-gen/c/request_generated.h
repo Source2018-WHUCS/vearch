@@ -309,7 +309,8 @@ struct Request FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_MULTI_VECTOR_RANK = 20,
     VT_L2_SQRT = 22,
     VT_RANKER = 24,
-    VT_TRACE = 26
+    VT_TRACE = 26,
+    VT_DOCUMENT_IDS = 28
   };
   int32_t req_num() const {
     return GetField<int32_t>(VT_REQ_NUM, 0);
@@ -347,6 +348,9 @@ struct Request FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool trace() const {
     return GetField<uint8_t>(VT_TRACE, 0) != 0;
   }
+  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *document_ids() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENT_IDS);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<int32_t>(verifier, VT_REQ_NUM) &&
@@ -371,6 +375,9 @@ struct Request FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_RANKER) &&
            verifier.VerifyString(ranker()) &&
            VerifyField<uint8_t>(verifier, VT_TRACE) &&
+           VerifyOffset(verifier, VT_DOCUMENT_IDS) &&
+           verifier.VerifyVector(document_ids()) &&
+           verifier.VerifyVectorOfStrings(document_ids()) &&
            verifier.EndTable();
   }
 };
@@ -414,6 +421,9 @@ struct RequestBuilder {
   void add_trace(bool trace) {
     fbb_.AddElement<uint8_t>(Request::VT_TRACE, static_cast<uint8_t>(trace), 0);
   }
+  void add_document_ids(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> document_ids) {
+    fbb_.AddOffset(Request::VT_DOCUMENT_IDS, document_ids);
+  }
   explicit RequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -439,8 +449,10 @@ inline flatbuffers::Offset<Request> CreateRequest(
     int32_t multi_vector_rank = 0,
     bool l2_sqrt = false,
     flatbuffers::Offset<flatbuffers::String> ranker = 0,
-    bool trace = false) {
+    bool trace = false,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> document_ids = 0) {
   RequestBuilder builder_(_fbb);
+  builder_.add_document_ids(document_ids);
   builder_.add_ranker(ranker);
   builder_.add_multi_vector_rank(multi_vector_rank);
   builder_.add_index_params(index_params);
@@ -469,13 +481,15 @@ inline flatbuffers::Offset<Request> CreateRequestDirect(
     int32_t multi_vector_rank = 0,
     bool l2_sqrt = false,
     const char *ranker = nullptr,
-    bool trace = false) {
+    bool trace = false,
+    const std::vector<flatbuffers::Offset<flatbuffers::String>> *document_ids = nullptr) {
   auto vec_fields__ = vec_fields ? _fbb.CreateVector<flatbuffers::Offset<VectorQuery>>(*vec_fields) : 0;
   auto fields__ = fields ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*fields) : 0;
   auto range_filters__ = range_filters ? _fbb.CreateVector<flatbuffers::Offset<RangeFilter>>(*range_filters) : 0;
   auto term_filters__ = term_filters ? _fbb.CreateVector<flatbuffers::Offset<TermFilter>>(*term_filters) : 0;
   auto index_params__ = index_params ? _fbb.CreateString(index_params) : 0;
   auto ranker__ = ranker ? _fbb.CreateString(ranker) : 0;
+  auto document_ids__ = document_ids ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*document_ids) : 0;
   return gamma_api::CreateRequest(
       _fbb,
       req_num,
@@ -489,7 +503,8 @@ inline flatbuffers::Offset<Request> CreateRequestDirect(
       multi_vector_rank,
       l2_sqrt,
       ranker__,
-      trace);
+      trace,
+      document_ids__);
 }
 
 inline const gamma_api::Request *GetRequest(const void *buf) {

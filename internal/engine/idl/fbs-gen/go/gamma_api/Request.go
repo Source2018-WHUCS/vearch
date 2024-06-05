@@ -191,8 +191,25 @@ func (rcv *Request) MutateTrace(n bool) bool {
 	return rcv._tab.MutateBoolSlot(26, n)
 }
 
+func (rcv *Request) DocumentIds(j int) []byte {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(28))
+	if o != 0 {
+		a := rcv._tab.Vector(o)
+		return rcv._tab.ByteVector(a + flatbuffers.UOffsetT(j*4))
+	}
+	return nil
+}
+
+func (rcv *Request) DocumentIdsLength() int {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(28))
+	if o != 0 {
+		return rcv._tab.VectorLen(o)
+	}
+	return 0
+}
+
 func RequestStart(builder *flatbuffers.Builder) {
-	builder.StartObject(12)
+	builder.StartObject(13)
 }
 func RequestAddReqNum(builder *flatbuffers.Builder, reqNum int32) {
 	builder.PrependInt32Slot(0, reqNum, 0)
@@ -241,6 +258,12 @@ func RequestAddRanker(builder *flatbuffers.Builder, ranker flatbuffers.UOffsetT)
 }
 func RequestAddTrace(builder *flatbuffers.Builder, trace bool) {
 	builder.PrependBoolSlot(11, trace, false)
+}
+func RequestAddDocumentIds(builder *flatbuffers.Builder, documentIds flatbuffers.UOffsetT) {
+	builder.PrependUOffsetTSlot(12, flatbuffers.UOffsetT(documentIds), 0)
+}
+func RequestStartDocumentIdsVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
+	return builder.StartVector(4, numElems, 4)
 }
 func RequestEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()

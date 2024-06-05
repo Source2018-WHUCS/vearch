@@ -253,6 +253,26 @@ Status Engine::Search(Request &request, Response &response_results) {
     return status;
   }
 
+  if (request.DocumentIds().size() > 0) {
+    std::vector<std::string> document_ids = request.DocumentIds();
+    GammaResult *gamma_result = new GammaResult[1];
+    gamma_result->init(document_ids.size(), nullptr, 0);
+
+    for(size_t i = 0; i < document_ids.size(); i++) {
+      int docid = -1, ret = 0;
+      ret = table_->GetDocIDByKey(document_ids[i], docid);
+      if (ret != 0 || docid < 0) {
+        continue;
+      }
+      if (!docids_bitmap_->Test(docid)) {
+        ++(gamma_result->total);
+          gamma_result->docs[(gamma_result->results_count)++]->docid = docid;
+      }
+    }
+    response_results.SetEngineInfo(table_, vec_manager_, gamma_result, 1);
+    return status;
+  }
+
   int topn = request.TopN();
   bool brute_force_search = request.BruteForceSearch();
   std::vector<struct VectorQuery> &vec_fields = request.VecFields();
