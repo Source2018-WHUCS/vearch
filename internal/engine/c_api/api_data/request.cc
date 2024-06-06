@@ -79,7 +79,7 @@ int Request::Serialize(char **out, int *out_len) {
       builder.CreateVector(term_filter_vector),
       builder.CreateString(index_params_), multi_vector_rank_, l2_sqrt_,
       builder.CreateString(ranker_->raw_str), trace_,
-      builder.CreateVector(document_ids_vector)
+      builder.CreateVector(document_ids_vector), partition_id_
 );
 
   builder.Finish(res);
@@ -157,6 +157,8 @@ void Request::Deserialize(const char *data, int len) {
     auto fbs_document_id = request_->document_ids()->Get(i);
     document_ids_.emplace_back(fbs_document_id->str());
   }
+
+  partition_id_ = request_->partition_id();
 }
 
 int Request::ReqNum() {
@@ -268,5 +270,14 @@ void Request::AddDocumentId(const std::string &document_id) {
 }
 
 std::vector<std::string> &Request::DocumentIds() { return document_ids_; }
+
+int Request::PartitionId() {
+  if (request_)
+    return request_->partition_id();
+  else
+    return partition_id_;
+}
+
+void Request::SetPartitionId(int partition_id) { partition_id_ = partition_id; }
 
 }  // namespace vearch

@@ -208,8 +208,20 @@ func (rcv *Request) DocumentIdsLength() int {
 	return 0
 }
 
+func (rcv *Request) PartitionId() int32 {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(30))
+	if o != 0 {
+		return rcv._tab.GetInt32(o + rcv._tab.Pos)
+	}
+	return 0
+}
+
+func (rcv *Request) MutatePartitionId(n int32) bool {
+	return rcv._tab.MutateInt32Slot(30, n)
+}
+
 func RequestStart(builder *flatbuffers.Builder) {
-	builder.StartObject(13)
+	builder.StartObject(14)
 }
 func RequestAddReqNum(builder *flatbuffers.Builder, reqNum int32) {
 	builder.PrependInt32Slot(0, reqNum, 0)
@@ -264,6 +276,9 @@ func RequestAddDocumentIds(builder *flatbuffers.Builder, documentIds flatbuffers
 }
 func RequestStartDocumentIdsVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
 	return builder.StartVector(4, numElems, 4)
+}
+func RequestAddPartitionId(builder *flatbuffers.Builder, partitionId int32) {
+	builder.PrependInt32Slot(13, partitionId, 0)
 }
 func RequestEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()

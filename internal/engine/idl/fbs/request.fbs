@@ -36,6 +36,7 @@ table Request {
   ranker:string;
   trace:bool;
   document_ids:[string];          // can also translate to term_filter, but filter is asynchronous
+  partition_id:int;
 }
 
 root_type Request;

@@ -700,12 +700,16 @@ func queryRequestToPb(searchDoc *request.SearchDocumentRequest, space *entity.Sp
 			queryReq.TermFilters = tfs
 		}
 	}
-	if searchDoc.DocumentIds != nil {
+	if searchDoc.DocumentIds != nil && len(*searchDoc.DocumentIds) > 0 {
 		queryReq.DocumentIds = *searchDoc.DocumentIds
 		queryReq.Limit = int32(len(queryReq.DocumentIds))
 	}
 	if searchDoc.PartitionId != nil {
 		queryReq.PartitionId = int32(*searchDoc.PartitionId)
+	}
+
+	if queryReq.Limit <= 0 {
+		return vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("query limit[topN] is zero"))
 	}
 
 	queryReq.Head.ClientType = searchDoc.LoadBalance

@@ -418,7 +418,7 @@ func (handler *DocumentHandler) handleDocumentSearch(c *gin.Context) {
 func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 	startTime := time.Now()
 	defer monitor.Profiler("handleDocumentDelete", startTime)
-	args := &vearchpb.SearchRequest{}
+	args := &vearchpb.QueryRequest{}
 	args.Head = setRequestHeadFromGin(c)
 	args.Head.Params["queryOnlyId"] = "true"
 
@@ -445,14 +445,8 @@ func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 	// update space name because maybe is alias name
 	searchDoc.SpaceName = args.Head.SpaceName
 
-	err = requestToPb(searchDoc, space, args)
+	err = queryRequestToPb(searchDoc, space, args)
 	if err != nil {
-		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
-		return
-	}
-
-	if args.VecFields != nil {
-		err := vearchpb.NewError(vearchpb.ErrorEnum_DELETE_INVALID_PARAMS_SHOULD_NOT_HAVE_VECTOR_FIELD, nil)
 		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
@@ -466,20 +460,6 @@ func (handler *DocumentHandler) handleDocumentDelete(c *gin.Context) {
 		if len(*searchDoc.DocumentIds) >= 500 {
 			err := vearchpb.NewError(vearchpb.ErrorEnum_DELETE_INVALID_PARAMS_LENGTH_OF_DOCUMENT_IDS_BEYOND_500, nil)
 			httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
-			return
-		}
-		args := &vearchpb.DeleteRequest{}
-		args.Head = setRequestHeadFromGin(c)
-		args.Head.DbName = searchDoc.DbName
-		args.Head.SpaceName = searchDoc.SpaceName
-		args.PrimaryKeys = *searchDoc.DocumentIds
-		var resultIds []string
-		reply := handler.docService.deleteDocs(c.Request.Context(), args)
-		if result, err := documentDeleteResponse(reply.Items, reply.Head, resultIds); err != nil {
-			httphelper.New(c).JsonError(errors.NewErrInternal(err))
-			return
-		} else {
-			httphelper.New(c).JsonSuccess(result)
 			return
 		}
 	} else {

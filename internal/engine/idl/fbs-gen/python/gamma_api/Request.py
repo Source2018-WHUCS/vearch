@@ -164,7 +164,14 @@ class Request(object):
             return self._tab.VectorLen(o)
         return 0
 
-def RequestStart(builder): builder.StartObject(13)
+    # Request
+    def PartitionId(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(30))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
+        return 0
+
+def RequestStart(builder): builder.StartObject(14)
 def RequestAddReqNum(builder, reqNum): builder.PrependInt32Slot(0, reqNum, 0)
 def RequestAddTopn(builder, topn): builder.PrependInt32Slot(1, topn, 0)
 def RequestAddBruteForceSearch(builder, bruteForceSearch): builder.PrependInt32Slot(2, bruteForceSearch, 0)
@@ -183,4 +190,5 @@ def RequestAddRanker(builder, ranker): builder.PrependUOffsetTRelativeSlot(10, f
 def RequestAddTrace(builder, trace): builder.PrependBoolSlot(11, trace, 0)
 def RequestAddDocumentIds(builder, documentIds): builder.PrependUOffsetTRelativeSlot(12, flatbuffers.number_types.UOffsetTFlags.py_type(documentIds), 0)
 def RequestStartDocumentIdsVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def RequestAddPartitionId(builder, partitionId): builder.PrependInt32Slot(13, partitionId, 0)
 def RequestEnd(builder): return builder.EndObject()

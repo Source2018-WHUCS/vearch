@@ -310,7 +310,8 @@ struct Request FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_L2_SQRT = 22,
     VT_RANKER = 24,
     VT_TRACE = 26,
-    VT_DOCUMENT_IDS = 28
+    VT_DOCUMENT_IDS = 28,
+    VT_PARTITION_ID = 30
   };
   int32_t req_num() const {
     return GetField<int32_t>(VT_REQ_NUM, 0);
@@ -351,6 +352,9 @@ struct Request FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *document_ids() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_DOCUMENT_IDS);
   }
+  int32_t partition_id() const {
+    return GetField<int32_t>(VT_PARTITION_ID, 0);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<int32_t>(verifier, VT_REQ_NUM) &&
@@ -378,6 +382,7 @@ struct Request FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_DOCUMENT_IDS) &&
            verifier.VerifyVector(document_ids()) &&
            verifier.VerifyVectorOfStrings(document_ids()) &&
+           VerifyField<int32_t>(verifier, VT_PARTITION_ID) &&
            verifier.EndTable();
   }
 };
@@ -424,6 +429,9 @@ struct RequestBuilder {
   void add_document_ids(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> document_ids) {
     fbb_.AddOffset(Request::VT_DOCUMENT_IDS, document_ids);
   }
+  void add_partition_id(int32_t partition_id) {
+    fbb_.AddElement<int32_t>(Request::VT_PARTITION_ID, partition_id, 0);
+  }
   explicit RequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -450,8 +458,10 @@ inline flatbuffers::Offset<Request> CreateRequest(
     bool l2_sqrt = false,
     flatbuffers::Offset<flatbuffers::String> ranker = 0,
     bool trace = false,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> document_ids = 0) {
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> document_ids = 0,
+    int32_t partition_id = 0) {
   RequestBuilder builder_(_fbb);
+  builder_.add_partition_id(partition_id);
   builder_.add_document_ids(document_ids);
   builder_.add_ranker(ranker);
   builder_.add_multi_vector_rank(multi_vector_rank);
@@ -482,7 +492,8 @@ inline flatbuffers::Offset<Request> CreateRequestDirect(
     bool l2_sqrt = false,
     const char *ranker = nullptr,
     bool trace = false,
-    const std::vector<flatbuffers::Offset<flatbuffers::String>> *document_ids = nullptr) {
+    const std::vector<flatbuffers::Offset<flatbuffers::String>> *document_ids = nullptr,
+    int32_t partition_id = 0) {
   auto vec_fields__ = vec_fields ? _fbb.CreateVector<flatbuffers::Offset<VectorQuery>>(*vec_fields) : 0;
   auto fields__ = fields ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*fields) : 0;
   auto range_filters__ = range_filters ? _fbb.CreateVector<flatbuffers::Offset<RangeFilter>>(*range_filters) : 0;
@@ -504,7 +515,8 @@ inline flatbuffers::Offset<Request> CreateRequestDirect(
       l2_sqrt,
       ranker__,
       trace,
-      document_ids__);
+      document_ids__,
+      partition_id);
 }
 
 inline const gamma_api::Request *GetRequest(const void *buf) {

@@ -145,11 +145,16 @@ func SearchRequestSerialize(request *vearchpb.SearchRequest) []byte {
 
 	ranker := builder.CreateString(request.Ranker)
 
+	// will check in engine to decide is search or query, so set it
+	gamma_api.RequestStartDocumentIdsVector(builder, 0)
+	d := builder.EndVector(0)
+
 	gamma_api.RequestStart(builder)
 	gamma_api.RequestAddReqNum(builder, request.ReqNum)
 	gamma_api.RequestAddTopn(builder, request.TopN)
 	gamma_api.RequestAddBruteForceSearch(builder, request.IsBruteSearch)
 	gamma_api.RequestAddFields(builder, f)
+	gamma_api.RequestAddDocumentIds(builder, d)
 	gamma_api.RequestAddVecFields(builder, v)
 	gamma_api.RequestAddRangeFilters(builder, r)
 	gamma_api.RequestAddTermFilters(builder, t)
@@ -263,6 +268,7 @@ func QueryRequestSerialize(request *vearchpb.QueryRequest) []byte {
 	gamma_api.RequestAddL2Sqrt(builder, false)
 	gamma_api.RequestAddRanker(builder, ranker)
 	gamma_api.RequestAddTrace(builder, request.Trace)
+	gamma_api.RequestAddPartitionId(builder, request.PartitionId)
 
 	builder.Finish(builder.EndObject())
 	return builder.FinishedBytes()
