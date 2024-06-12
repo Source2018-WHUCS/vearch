@@ -228,6 +228,7 @@ def process_add_error_data(items):
     wrong_vector_feature_length = items[4][10]
     wrong_vector_feature_type = items[4][11]
     mismatch_field_type = items[4][12]
+    wrong_partition_id = items[4][13]
     max_index_str_length = 1025
     max_str_length = 65536
 
@@ -281,6 +282,9 @@ def process_add_error_data(items):
 
         if not empty_documents:
             data["documents"].append(param_dict)
+
+        if wrong_partition_id:
+            data["partitions"] = [111]
 
     json_str = json.dumps(data)
     rs = requests.post(url, auth=(username, password), data=json_str)

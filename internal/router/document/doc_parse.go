@@ -557,6 +557,19 @@ func documentParse(ctx context.Context, handler *DocumentHandler, r *http.Reques
 		}
 	}
 	if docRequest.Partitions != nil && len(*docRequest.Partitions) != 0 {
+		// check partition
+		for _, pid := range *docRequest.Partitions {
+			found := false
+			for _, partition := range space.Partitions {
+				if pid == partition.Id {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("partition id %d not belong to space[%s]", pid, space.Name))
+			}
+		}
 		args.Partitions = *docRequest.Partitions
 	}
 	docs := make([]*vearchpb.Document, 0)
