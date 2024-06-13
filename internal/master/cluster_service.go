@@ -1105,6 +1105,31 @@ func (ms *masterService) BackupSpace(ctx context.Context, dbName, spaceName stri
 	return nil
 }
 
+func (ms *masterService) ResourceLimitService(ctx context.Context, resourceLimit *entity.ResourceLimit) (err error) {
+	servers, err := ms.Master().QueryServers(ctx)
+	if err != nil {
+		return err
+	}
+
+	check := false
+	for _, server := range servers {
+		if len(server.PartitionIds) == 0 {
+			log.Debug("len(server.PartitionIds)=%d", len(server.PartitionIds))
+		} else {
+			for _, pid := range server.PartitionIds {
+				check = true
+				err = client.ResourceLimit(server.RpcAddr(), resourceLimit, pid)
+				return err
+			}
+		}
+	}
+	if !check {
+		return vearchpb.NewError(vearchpb.ErrorEnum_INTERNAL_ERROR, fmt.Errorf("cluster is empty, no need to check resource limit"))
+	}
+
+	return nil
+}
+
 func (ms *masterService) updateSpaceResourceService(ctx context.Context, spaceResource *entity.SpaceResource) (*entity.Space, error) {
 	// it will lock cluster, to create space
 	mutex := ms.Master().NewLock(ctx, entity.LockSpaceKey(spaceResource.DbName, spaceResource.SpaceName), time.Second*300)
