@@ -39,6 +39,8 @@ class TestResourceLimit:
         self.logger = logger
 
     def test_empty_cluster_update_limit(self):
+        # wait for etcd recode take effect
+        time.sleep(5)
         response = server_resource_limit(router_url, resource_exhausted=True)
         logger.info(response.json())
         assert response.json()["code"] != 0
@@ -114,6 +116,8 @@ class TestResourceLimit:
         assert response.json()["data"]["total"] == 0
 
     def test_resource_limit(self):
+        # wait for etcd recode take effect
+        time.sleep(5)
         response = server_resource_limit(router_url)
         logger.info(response.json())
         assert response.json()["code"] == 0

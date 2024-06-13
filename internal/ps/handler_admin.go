@@ -525,7 +525,7 @@ func (rlh *ResourceLimitHandler) Execute(ctx context.Context, req *vearchpb.Part
 	partitonStore := rlh.server.GetPartition(req.PartitionID)
 	if partitonStore == nil {
 		log.Debug("partitonStore is nil, pid %d not found", req.PartitionID)
-		return vearchpb.NewError(vearchpb.ErrorEnum_PARTITION_NOT_EXIST, fmt.Errorf("partition id %d not exist", req.PartitionID))
+		return nil
 	}
 
 	resourceLimit := new(entity.ResourceLimit)
