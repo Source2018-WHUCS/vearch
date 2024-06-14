@@ -94,4 +94,6 @@ type PartitionInfo struct {
 type ResourceLimit struct {
 	Rate              *float64 `json:"rate,omitempty"`
 	ResourceExhausted *bool    `json:"resource_exhausted,omitempty"`
+	SpaceName         *string  `json:"space_name,omitempty"`
+	DbName            *string  `json:"db_name,omitempty"`
 }

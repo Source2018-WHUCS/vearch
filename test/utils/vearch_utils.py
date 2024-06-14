@@ -1369,7 +1369,7 @@ def server_resource_limit(
     rate: float = None,
     logger=None,
 ):
-    url = f"{router_url}/servers/resource_limit"
+    url = f"{router_url}/partitions/resource_limit"
     data = {}
     if resource_exhausted != None:
         data["resource_exhausted"] = resource_exhausted

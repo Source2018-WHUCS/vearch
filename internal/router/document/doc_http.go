@@ -83,11 +83,11 @@ func ExportDocumentHandler(httpServer *gin.Engine, client *client.Client) {
 func (handler *DocumentHandler) proxyMaster(group *gin.RouterGroup) error {
 	// server handler
 	group.GET("/servers", handler.handleMasterRequest)
-	group.POST("/servers/resource_limit", handler.handleMasterRequest)
 
 	// partition handler
 	group.GET("/partitions", handler.handleMasterRequest)
 	group.POST("/partitions/change_member", handler.handleMasterRequest)
+	group.POST("/partitions/resource_limit", handler.handleMasterRequest)
 
 	group.GET("/routers", handler.handleMasterRequest)
 	// db handler

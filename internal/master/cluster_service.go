@@ -1106,20 +1106,58 @@ func (ms *masterService) BackupSpace(ctx context.Context, dbName, spaceName stri
 }
 
 func (ms *masterService) ResourceLimitService(ctx context.Context, resourceLimit *entity.ResourceLimit) (err error) {
-	servers, err := ms.Master().QueryServers(ctx)
-	if err != nil {
-		return err
+	spaces := make([]*entity.Space, 0)
+	dbNames := make([]string, 0)
+	if resourceLimit.DbName == nil && resourceLimit.SpaceName != nil {
+		return vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("if space_name is set, db_name must be set"))
+	}
+	if resourceLimit.DbName != nil {
+		dbNames = append(dbNames, *resourceLimit.DbName)
 	}
 
-	check := false
-	for _, server := range servers {
-		if len(server.PartitionIds) == 0 {
-			log.Debug("len(server.PartitionIds)=%d", len(server.PartitionIds))
-		} else {
-			for _, pid := range server.PartitionIds {
-				check = true
-				err = client.ResourceLimit(server.RpcAddr(), resourceLimit, pid)
+	if len(dbNames) == 0 {
+		dbs, err := ms.queryDBs(ctx)
+		if err != nil {
+			return err
+		}
+		dbNames = make([]string, len(dbs))
+		for i, db := range dbs {
+			dbNames[i] = db.Name
+		}
+	}
+
+	for _, dbName := range dbNames {
+		dbID, err := ms.Master().QueryDBName2Id(ctx, dbName)
+		if err != nil {
+			return err
+		}
+		if resourceLimit.SpaceName != nil {
+			if space, err := ms.Master().QuerySpaceByName(ctx, dbID, *resourceLimit.SpaceName); err != nil {
 				return err
+			} else {
+				spaces = append(spaces, space)
+			}
+		} else {
+			if dbSpaces, err := ms.Master().QuerySpaces(ctx, dbID); err != nil {
+				return err
+			} else {
+				spaces = append(spaces, dbSpaces...)
+			}
+		}
+	}
+
+	log.Debug("dbNames: %v, len(spaces): %d", dbNames, len(spaces))
+	check := false
+	for _, space := range spaces {
+		for _, partition := range space.Partitions {
+			for _, nodeID := range partition.Replicas {
+				if server, err := ms.Master().QueryServer(ctx, nodeID); err != nil {
+					return err
+				} else {
+					check = true
+					err = client.ResourceLimit(server.RpcAddr(), resourceLimit, partition.Id)
+					return err
+				}
 			}
 		}
 	}

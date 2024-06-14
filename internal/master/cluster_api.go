@@ -76,7 +76,6 @@ func ExportToClusterHandler(router *gin.Engine, masterService *masterService, se
 
 	// servers handler
 	group.GET("/servers", c.serverList, dh.TimeOutEndHandler)
-	group.POST("/servers/resource_limit", c.ResourceLimit, dh.TimeOutEndHandler)
 
 	// router  handler
 	group.GET("/routers", c.routerList, dh.TimeOutEndHandler)
@@ -109,6 +108,7 @@ func ExportToClusterHandler(router *gin.Engine, masterService *masterService, se
 	// partition handler
 	group.GET("/partitions", c.partitionList, dh.TimeOutEndHandler)
 	group.POST("/partitions/change_member", c.changeMember, dh.TimeOutEndHandler)
+	group.POST("/partitions/resource_limit", c.ResourceLimit, dh.TimeOutEndHandler)
 
 	// schedule
 	group.POST("/schedule/recover_server", c.RecoverFailServer, dh.TimeOutEndHandler)
