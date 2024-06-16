@@ -28,7 +28,7 @@ from vearch.schema.space import SpaceSchema
 from vearch.utils import DataType, MetricType, VectorInfo
 from vearch.schema.index import FlatIndex, ScalarIndex
 
-from utils import parse_arguments
+from utils import parse_arguments, get_dataset_by_name
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -100,15 +100,13 @@ def create_db_and_space(args):
 
 
 def process_upsert_data(items):
-    args, index = items
+    args, index, features = items
     data = []
     for j in range(args.batch):
         param_dict = {}
         param_dict["_id"] = str(index * args.batch + j)
         param_dict["field_int"] = index * args.batch + j
-        param_dict["field_vector"] = [
-            random.uniform(0, 1) for _ in range(args.dimension)
-        ]
+        param_dict["field_vector"] = features[j]
         param_dict["field_long"] = param_dict["field_int"]
         param_dict["field_float"] = float(param_dict["field_int"])
         param_dict["field_double"] = float(param_dict["field_int"])
@@ -119,12 +117,12 @@ def process_upsert_data(items):
     assert len(ret.get_document_ids()) != 0
 
 
-def upsert(args):
+def upsert(args, xb):
     pool = Pool(args.pool)
     total_data = []
     total_batch = int(args.nb / args.batch)
     for i in range(total_batch):
-        total_data.append((args, i))
+        total_data.append((args, i, xb[i * args.batch : (i + 1) * args.batch].tolist()))
 
     start = time.time()
     results = pool.map(process_upsert_data, total_data)
@@ -151,7 +149,9 @@ def upsert(args):
 
 def process_query_data(items):
     args, unique_keys = items
-    rs = vc.query(args.db, args.space, unique_keys)
+    rs = vc.query(
+        args.db, args.space, document_ids=unique_keys, vector=args.vector_value
+    )
 
     if len(rs.documents) != args.batch:
         logger.debug(rs.documents)
@@ -226,16 +226,74 @@ def delete(args):
         )
 
 
+def process_search_data(items):
+    args, features = items
+    vector_info = VectorInfo("field_vector", features)
+    rs = vc.search(
+        args.db,
+        args.space,
+        vector_infos=[vector_info],
+        vector=args.vector_value,
+        limit=args.limit,
+    )
+    if rs.code != 0:
+        logger.error(rs.msg)
+    if len(rs.documents) != args.batch:
+        logger.debug(rs.documents)
+    assert len(rs.documents) == args.batch
+
+
+def search(args, xq):
+    pool = Pool(args.pool)
+    total_data = []
+    total_batch = int(args.nq / args.batch)
+    for i in range(total_batch):
+        total_data.append(
+            (args, xq[i * args.batch : (i + 1) * args.batch].flatten().tolist())
+        )
+
+    start = time.time()
+    results = pool.map(process_search_data, total_data)
+    pool.close()
+    pool.join()
+    end = time.time()
+
+    if args.verbose:
+        logger.info(
+            "nq: %d, batch size:%d, search cost: %.4f seconds, QPS: %.4f, pool size: %d, partition num: %d, replica num: %d"
+            % (
+                args.nq,
+                args.batch,
+                end - start,
+                args.nq / (end - start),
+                args.pool,
+                args.partition,
+                args.replica,
+            )
+        )
+
+
 if __name__ == "__main__":
     args = parse_arguments()
-    logger.setLevel(args.log)
+    logger.setLevel(args.log_level)
+
+    xb, xq, gt = get_dataset_by_name(logger, args)
+
+    args.dimension = xb.shape[1]
+    args.nb = xb.shape[0]
+    args.nq = xq.shape[0]
 
     vc = create_db_and_space(args)
 
-    upsert(args)
+    upsert(args, xb)
 
     query(args)
 
+    batch = args.batch
+    args.batch = 1
+    search(args, xq)
+
+    args.batch = batch
     delete(args)
 
     vc.drop_space(args.db, args.space)
