@@ -7,6 +7,7 @@ from ftplib import FTP
 from urllib.parse import urlparse
 import socket
 import numpy as np
+import sys
 
 
 def get_cpu_count():
@@ -61,26 +62,26 @@ def parse_arguments() -> argparse.Namespace:
         default=512,
     )
     parser.add_argument(
-        "--batch",
+        "--batch-size",
         help="the batch size",
         type=int,
         default=100,
     )
     parser.add_argument(
-        "--partition",
+        "--partition-num",
         help="the partition num",
         type=int,
         default=3,
     )
     parser.add_argument(
-        "--replica",
+        "--replica-num",
         help="the replica num",
         type=int,
         default=1,
     )
     parser.add_argument(
-        "--pool",
-        help="the thread pool size",
+        "--pool-size",
+        help="the process pool size",
         type=int,
         default=get_cpu_count(),
     )
@@ -114,17 +115,26 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         help="the vearch router url",
     )
+    # NOT NOW: GPU, BINARYIVF
     parser.add_argument(
-        "--index",
+        "--index-type",
         default="FLAT",
         type=str,
+        choices=["IVFPQ", "HNSW", "IVFFLAT", "FLAT"],
         help="the vector index type",
     )
     parser.add_argument(
-        "--verbose",
-        default=True,
+        "--picture",
+        default=False,
         type=bool,
-        help="show detail infomation",
+        help="draw picture or not",
+    )
+    parser.add_argument(
+        "--runs",
+        metavar="COUNT",
+        default=1,
+        type=int,
+        help="run each task %(metavar)s times and use only the best result",
     )
     parser.add_argument(
         "--dataset",
@@ -138,6 +148,13 @@ def parse_arguments() -> argparse.Namespace:
         default=100,
         type=int,
         help="the number of near neighbours to search for",
+    )
+    parser.add_argument(
+        "--recall",
+        default=False,
+        type=str2bool,
+        help="calculate recall or not",
+        choices=[True, False],
     )
     parser.add_argument(
         "--nb",
@@ -164,6 +181,12 @@ def parse_arguments() -> argparse.Namespace:
         type=str2bool,
         help="whether return vector value of query",
         choices=[True, False],
+    )
+    parser.add_argument(
+        "--output", help="the path to the output file", type=str, default=""
+    )
+    parser.add_argument(
+        "--index-params", help="the path of index params", type=str, default=""
     )
     args = parser.parse_args()
 
@@ -533,21 +556,24 @@ class DatasetRandom(Dataset):
 
 
 def get_dataset_by_name(logger, args):
+    dataset = None
     if args.dataset == "sift":
         dataset = DatasetSift1M(logger)
-        return dataset.get_database(), dataset.get_queries(), dataset.get_groundtruth()
     elif args.dataset == "siftsmall":
         dataset = DatasetSift10K(logger)
-        return dataset.get_database(), dataset.get_queries(), dataset.get_groundtruth()
     elif args.dataset == "glove":
         dataset = DatasetGlove(logger)
-        return dataset.get_database(), dataset.get_queries(), dataset.get_groundtruth()
     elif args.dataset == "nytimes":
         dataset = DatasetNytimes(logger)
-        return dataset.get_database(), dataset.get_queries(), dataset.get_groundtruth()
     elif args.dataset == "gist":
         dataset = DatasetGist1M(logger)
-        return dataset.get_database(), dataset.get_queries(), dataset.get_groundtruth()
     elif args.dataset == "random":
         dataset = DatasetRandom(logger, args)
-        return dataset.get_database(), dataset.get_queries(), dataset.get_groundtruth()
+    else:
+        raise Exception("Not supported dataset")
+
+    # reset
+    args.nb, args.dimension = dataset.get_database().shape
+    args.nq = dataset.get_queries().shape[0]
+
+    return dataset.get_database(), dataset.get_queries(), dataset.get_groundtruth()
