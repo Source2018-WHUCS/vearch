@@ -21,49 +21,51 @@ from multiprocessing import Pool
 import logging
 import time
 import sys
+import argparse
+import numpy as np
 
-from utils import parse_arguments, get_dataset_by_name
+from utils import parse_arguments, get_dataset_by_name, evaluate, load_config
 
 
 __description__ = """ benchmark for restful api"""
 
 
-def create_db(args):
+def create_db(args: argparse.Namespace):
     url = f"{args.url}/dbs/" + args.db
     resp = requests.post(url, auth=(args.user, args.password))
     return resp
 
 
-def create_space(args, space_config: dict):
+def create_space(args: argparse.Namespace, space_config: dict):
     url = f"{args.url}/dbs/{args.db}/spaces"
     resp = requests.post(url, auth=(args.user, args.password), json=space_config)
     return resp
 
 
-def get_space(args):
+def get_space(args: argparse.Namespace):
     url = f"{args.url}/dbs/{args.db}/spaces/{args.space}"
     resp = requests.get(url, auth=(args.user, args.password))
     return resp
 
 
-def drop_db(args):
+def drop_db(args: argparse.Namespace):
     url = f"{args.url}/dbs/{args.db}"
     resp = requests.delete(url, auth=(args.user, args.password))
     assert resp.json()["code"] == 0
 
 
-def drop_space(args):
+def drop_space(args: argparse.Namespace):
     url = f"{args.url}/dbs/{args.db}/spaces/{args.space}"
     resp = requests.delete(url, auth=(args.user, args.password))
     assert resp.json()["code"] == 0
 
 
-def destroy(args):
+def destroy(args: argparse.Namespace):
     drop_space(args)
     drop_db(args)
 
 
-def create_db_and_space(args):
+def create_db_and_space(args: argparse.Namespace):
     properties = {}
     properties["fields"] = [
         {"name": "field_int", "type": "integer"},
@@ -81,9 +83,7 @@ def create_db_and_space(args):
             "index": {
                 "name": "gamma",
                 "type": args.index_type,
-                "params": {
-                    "metric_type": "L2",
-                },
+                "params": args.index_params,
             },
             "dimension": args.dimension,
         },
@@ -101,7 +101,7 @@ def create_db_and_space(args):
     assert response.json()["code"] == 0
 
 
-def waiting_train_finish(logger, args, timewait=5):
+def waiting_train_finish(args: argparse.Namespace, timewait: int = 5):
     if args.index_type == "FLAT" or args.index_type == "HNSW":
         return
     url = args.url + "/dbs/" + args.db + "/spaces/" + args.space
@@ -117,7 +117,7 @@ def waiting_train_finish(logger, args, timewait=5):
         time.sleep(timewait)
 
 
-def waiting_index_finish(logger, args, timewait=5):
+def waiting_index_finish(args: argparse.Namespace, timewait: int = 5):
     if args.index_type == "FLAT":
         return
     url = args.url + "/dbs/" + args.db + "/spaces/" + args.space
@@ -132,7 +132,7 @@ def waiting_index_finish(logger, args, timewait=5):
         time.sleep(timewait)
 
 
-def process_upsert_data(items):
+def process_upsert_data(items: tuple):
     args, index, size, features = items
     url = args.url + "/document/upsert"
     data = {}
@@ -158,7 +158,7 @@ def process_upsert_data(items):
     assert rs.json()["data"]["total"] == size
 
 
-def upsert(args, xb):
+def upsert(args: argparse.Namespace, xb: np.ndarray):
     pool = Pool(args.pool_size)
     total_data = []
     total_batch = int(args.nb / args.batch_size)
@@ -198,23 +198,19 @@ def upsert(args, xb):
     )
 
 
-def get_timewait(args):
-    if args.nb <= 10000:
+def get_timewait(args: argparse.Namespace):
+    if args.nb <= 100 * 10000:
         return 1
-    elif args.nb <= 10 * 10000:
-        return 2
-    elif args.nb <= 100 * 10000:
-        return 5
     elif args.nb <= 1000 * 10000:
-        return 10
+        return 5
     else:
-        return 50
+        return 10
 
 
-def train_and_build_index(args):
+def train_and_build_index(args: argparse.Namespace):
     timewait = get_timewait(args)
     start = time.time()
-    waiting_train_finish(logger, args, timewait)
+    waiting_train_finish(args, timewait)
     end = time.time()
 
     logger.info(
@@ -228,7 +224,7 @@ def train_and_build_index(args):
     )
 
     start = time.time()
-    waiting_index_finish(logger, args, timewait)
+    waiting_index_finish(args, timewait)
     end = time.time()
 
     logger.info(
@@ -242,7 +238,7 @@ def train_and_build_index(args):
     )
 
 
-def process_query_data(items):
+def process_query_data(items: tuple):
     args, unique_keys = items
     url = args.url + "/document/query"
     data = {}
@@ -257,7 +253,7 @@ def process_query_data(items):
     assert len(rs.json()["data"]["documents"]) == args.batch_size
 
 
-def query(args):
+def query(args: argparse.Namespace):
     pool = Pool(args.pool_size)
     total_data = []
     # There may be some left, but won't deal with it
@@ -287,7 +283,7 @@ def query(args):
     )
 
 
-def process_delete_data(items):
+def process_delete_data(items: tuple):
     args, unique_keys = items
     url = args.url + "/document/delete"
     data = {}
@@ -301,7 +297,7 @@ def process_delete_data(items):
     assert rs.json()["data"]["total"] == args.batch_size
 
 
-def delete(args):
+def delete(args: argparse.Namespace):
     pool = Pool(args.pool_size)
     total_data = []
     # There may be some left, but won't deal with it
@@ -331,8 +327,8 @@ def delete(args):
     )
 
 
-def process_search_data(items):
-    args, features = items
+def process_search_data(items: tuple):
+    args, index, features = items
     url = args.url + "/document/search"
     data = {}
     data["db_name"] = args.db
@@ -347,8 +343,10 @@ def process_search_data(items):
         logger.debug(rs.json())
     assert len(rs.json()["data"]["documents"]) == args.batch_size
 
+    return index, rs.json()["data"]["documents"]
 
-def search(args, xq):
+
+def search(args: argparse.Namespace, xq: np.ndarray, gt: np.ndarray):
     pool = Pool(args.pool_size)
     total_data = []
     total_batch = int(args.nq / args.batch_size)
@@ -356,6 +354,7 @@ def search(args, xq):
         total_data.append(
             (
                 args,
+                i,
                 xq[i * args.batch_size : (i + 1) * args.batch_size].flatten().tolist(),
             )
         )
@@ -366,16 +365,49 @@ def search(args, xq):
     pool.join()
     end = time.time()
 
+    recall_str = ""
+    if args.recall:
+        search_results = np.empty(gt.shape)
+        for result in results:
+            i, documents = result
+            for document in documents:
+                for j in range(len(document)):
+                    search_results[i][j] = document[j]["_id"]
+
+        recalls = evaluate(search_results, gt, args.limit)
+        for recall in recalls:
+            recall_str += "Recall@" + str(recall) + "=" + str(recalls[recall]) + ", "
+
     logger.info(
-        "nq: %d, batch size:%d, search cost: %.4f seconds, QPS: %.4f, pool size: %d"
+        "nq: %d, batch size:%d, search cost: %.4f seconds, QPS: %.4f, %spool size: %d"
         % (
             args.nq,
             args.batch_size,
             end - start,
             args.nq / (end - start),
+            recall_str,
             args.pool_size,
         )
     )
+
+
+def benchmark(args):
+    create_db_and_space(args)
+
+    upsert(args, xb)
+
+    train_and_build_index(args)
+
+    query(args)
+
+    batch_size = args.batch_size
+    args.batch_size = 1
+    search(args, xq, gt)
+
+    args.batch_size = batch_size
+    delete(args)
+
+    destroy(args)
 
 
 if __name__ == "__main__":
@@ -400,19 +432,10 @@ if __name__ == "__main__":
     args_str = ", ".join(f"{key}={value}" for key, value in vars(args).items())
     logger.info(f"args: {args_str}")
 
-    create_db_and_space(args)
-
-    upsert(args, xb)
-
-    train_and_build_index(args)
-
-    query(args)
-
-    batch_size = args.batch_size
-    args.batch_size = 1
-    search(args, xq)
-
-    args.batch_size = batch_size
-    delete(args)
-
-    destroy(args)
+    if args.index_params_config != "":
+        configs = load_config(args.index_params_config)
+        for indexs in configs[args.index_params["metric_type"]]:
+            for index in indexs:
+                benchmark(args)
+    else:
+        benchmark(args)

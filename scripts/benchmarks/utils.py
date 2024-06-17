@@ -7,7 +7,9 @@ from ftplib import FTP
 from urllib.parse import urlparse
 import socket
 import numpy as np
-import sys
+import yaml
+import math
+from typing import Any, Dict
 
 
 def get_cpu_count():
@@ -37,7 +39,7 @@ log_levels = {
 }
 
 
-def str2bool(v):
+def str2bool(v: str):
     if isinstance(v, bool):
         return v
     if v.lower() in ("yes", "true", "t", "y", "1"):
@@ -151,7 +153,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--recall",
-        default=False,
+        default=True,
         type=str2bool,
         help="calculate recall or not",
         choices=[True, False],
@@ -185,15 +187,19 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--output", help="the path to the output file", type=str, default=""
     )
+    parser.add_argument("--index-params", help="the index params", type=str, default="")
     parser.add_argument(
-        "--index-params", help="the path of index params", type=str, default=""
+        "--index-params-config",
+        help="the config file of index params",
+        type=str,
+        default="",
     )
     args = parser.parse_args()
 
     return args
 
 
-def get_ftp_ip(url):
+def get_ftp_ip(url: str):
     parsed_url = urlparse(url)
     ftp_host = parsed_url.hostname
     ip_address = socket.gethostbyname(ftp_host)
@@ -201,17 +207,30 @@ def get_ftp_ip(url):
     return ip_address
 
 
-def ivecs_read(fname):
+def ivecs_read(fname: str):
     a = np.fromfile(fname, dtype="int32")
     d = a[0]
     return a.reshape(-1, d + 1)[:, 1:].copy()
 
 
-def fvecs_read(fname):
+def fvecs_read(fname: str):
     return ivecs_read(fname).view("float32")
 
 
-def download_from_irisa(logger, host, dirname, local_dir, filename):
+def evaluate(search: np.ndarray, gt: np.ndarray, k: int):
+    nq = gt.shape[0]
+    recalls = {}
+    i = 1
+    while i <= k:
+        recalls[i] = (search[:, :i] == gt[:, :1]).sum() / float(nq)
+        i *= 10
+
+    return recalls
+
+
+def download_from_irisa(
+    logger: logging, host: str, dirname: str, local_dir: str, filename: str
+):
     if not os.path.exists(local_dir):
         os.makedirs(local_dir)
     if os.path.isfile(local_dir + filename):
@@ -234,7 +253,7 @@ def download_from_irisa(logger, host, dirname, local_dir, filename):
         return False
 
 
-def untar(logger, fname, dirs, untar_result_dirs):
+def untar(logger: logging, fname: str, dirs: str, untar_result_dirs: str):
     if not os.path.exists(dirs):
         os.makedirs(dirs)
     if not os.path.isfile(dirs + fname):
@@ -247,14 +266,14 @@ def untar(logger, fname, dirs, untar_result_dirs):
     t.extractall(path=dirs)
 
 
-def normalization(data):
+def normalization(data: np.ndarray):
     data[np.linalg.norm(data, axis=1) == 0] = 1.0 / np.sqrt(data.shape[1])
     data /= np.linalg.norm(data, axis=1)[:, np.newaxis]
     return data
 
 
 class Dataset:
-    def __init__(self, logger=None):
+    def __init__(self, logger: logging = None):
         self.d = -1
         self.metric = "L2"  # or InnerProduct
         self.nq = -1
@@ -284,7 +303,7 @@ class DatasetSift10K(Dataset):
     Data from ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz
     """
 
-    def __init__(self, logger=None):
+    def __init__(self, logger: logging = None):
         self.d = 128
         self.metric = "L2"
         self.nq = 100
@@ -322,7 +341,7 @@ class DatasetSift1M(Dataset):
     Data from ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz
     """
 
-    def __init__(self, logger=None):
+    def __init__(self, logger: logging = None):
         self.d = 128
         self.metric = "L2"
         self.nq = 10000
@@ -360,10 +379,10 @@ class DatasetGlove(Dataset):
     Data from http://ann-benchmarks.com/glove-100-angular.hdf5
     """
 
-    def __init__(self, logger=None):
+    def __init__(self, logger: logging = None):
         import h5py
 
-        self.metric = "IP"
+        self.metric = "InnerProduct"
         self.d, self.nt = 100, 0
 
         self.url = "http://ann-benchmarks.com/glove-100-angular.hdf5"
@@ -410,10 +429,10 @@ class DatasetNytimes(Dataset):
     Data from http://ann-benchmarks.com/nytimes-256-angular.hdf5
     """
 
-    def __init__(self, logger=None):
+    def __init__(self, logger: logging = None):
         import h5py
 
-        self.metric = "IP"
+        self.metric = "InnerProduct"
         self.d, self.nt = 100, 0
 
         self.url = "http://ann-benchmarks.com/nytimes-256-angular.hdf5"
@@ -465,7 +484,7 @@ class DatasetMusic1M(Dataset):
     def __init__(self):
         Dataset.__init__(self)
         self.d, self.nt, self.nb, self.nq = 100, 0, 10**6, 10000
-        self.metric = "IP"
+        self.metric = "InnerProduct"
         self.basedir = "datasets/music/"
 
     def download(self):
@@ -491,7 +510,7 @@ class DatasetGist1M(Dataset):
     Data from ftp://ftp.irisa.fr/local/texmex/corpus/gist.tar.gz
     """
 
-    def __init__(self, logger=None):
+    def __init__(self, logger: logging = None):
         self.d = 960
         self.metric = "L2"
         self.nq = 1000
@@ -529,7 +548,7 @@ class DatasetRandom(Dataset):
     Data from random
     """
 
-    def __init__(self, logger=None, args=None):
+    def __init__(self, logger: logging = None, args: argparse.Namespace = None):
         self.d = args.dimension
         self.metric = "L2"
         self.nq = args.nq
@@ -555,7 +574,7 @@ class DatasetRandom(Dataset):
         return np.random.rand(self.nq, self.k)
 
 
-def get_dataset_by_name(logger, args):
+def get_dataset_by_name(logger: logging, args: argparse.Namespace):
     dataset = None
     if args.dataset == "sift":
         dataset = DatasetSift1M(logger)
@@ -569,11 +588,38 @@ def get_dataset_by_name(logger, args):
         dataset = DatasetGist1M(logger)
     elif args.dataset == "random":
         dataset = DatasetRandom(logger, args)
+        args.recall = False
     else:
         raise Exception("Not supported dataset")
 
     # reset
     args.nb, args.dimension = dataset.get_database().shape
-    args.nq = dataset.get_queries().shape[0]
+    ncentroids = int(4 * math.sqrt(args.nb))
+    if ncentroids * 39 > args.nb:
+        if args.nb <= 10000:
+            ncentroids = int(args.nb / 39 / args.partition_num / 2)
+        else:
+            ncentroids = int(args.nb / 39 / args.partition_num)
 
+    args.nq = dataset.get_queries().shape[0]
+    params = {
+        "metric_type": dataset.metric,
+        "ncentroids": ncentroids,
+        "nsubvector": int(args.dimension / 4),
+        "nlinks": 32,
+        "efConstruction": 80,
+    }
+
+    if len(args.index_params) == 0:
+        args.index_params = params
     return dataset.get_database(), dataset.get_queries(), dataset.get_groundtruth()
+
+
+def load_config(config_file: str) -> Dict[str, Any]:
+    configs = {}
+    with open(config_file, "r") as stream:
+        try:
+            configs = yaml.safe_load(stream)
+        except yaml.YAMLError as e:
+            print(f"Error loading YAML from {config_file}: {e}")
+    return configs

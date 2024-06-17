@@ -21,20 +21,65 @@ import logging
 import time
 import random
 import json
+import sys
+import numpy as np
+import argparse
 from vearch.core.vearch import Vearch
 from vearch.config import Config
 from vearch.schema.field import Field
 from vearch.schema.space import SpaceSchema
 from vearch.utils import DataType, MetricType, VectorInfo
-from vearch.schema.index import FlatIndex, ScalarIndex
+from vearch.schema.index import (
+    FlatIndex,
+    ScalarIndex,
+    HNSWIndex,
+    IvfFlatIndex,
+    IvfPQIndex,
+)
 
-from utils import parse_arguments, get_dataset_by_name
+from utils import parse_arguments, get_dataset_by_name, evaluate
 
 
 __description__ = """ benchmark for pysdk"""
 
 
-def create_db_and_space(args):
+def str2MetricType(metric_type: str):
+    if metric_type == "L2":
+        return MetricType.L2
+    else:
+        return MetricType.Inner_product
+
+
+def parseParams(args: argparse.Namespace):
+    if args.index_type == "FLAT":
+        return FlatIndex(
+            "field_vector", str2MetricType(args.index_params["metric_type"])
+        )
+
+    elif args.index_type == "IVFFLAT":
+        return IvfFlatIndex(
+            "field_vector",
+            str2MetricType(args.index_params["metric_type"]),
+            args.index_params["ncentroids"],
+        )
+    elif args.index_type == "IVFPQ":
+        return IvfPQIndex(
+            "field_vector",
+            int(args.index_params["ncentroids"] * 39),
+            str2MetricType(args.index_params["metric_type"]),
+            args.index_params["ncentroids"],
+            args.index_params["nsubvector"],
+        )
+    elif args.index_type == "HNSW":
+        return HNSWIndex(
+            "field_vector",
+            str2MetricType(args.index_params["metric_type"]),
+            args.index_params["nlinks"],
+            args.index_params["efConstruction"],
+        )
+
+
+def create_db_and_space(args: argparse.Namespace):
     config = Config(host=args.url, token=args.password)
     vc = Vearch(config)
 
@@ -74,7 +119,7 @@ def create_db_and_space(args):
     field_vector = Field(
         "field_vector",
         DataType.VECTOR,
-        FlatIndex("field_vector", MetricType.L2),
+        parseParams(args),
         dimension=args.dimension,
     )
     space_schema = SpaceSchema(
@@ -96,7 +141,7 @@ def create_db_and_space(args):
     return vc
 
 
-def waiting_train_finish(logger, args, timewait=5):
+def waiting_train_finish(args: argparse.Namespace, timewait: int = 5):
     if args.index_type == "FLAT" or args.index_type == "HNSW":
         return
     num = 0
@@ -112,7 +157,7 @@ def waiting_train_finish(logger, args, timewait=5):
         time.sleep(timewait)
 
 
-def waiting_index_finish(logger, args, timewait=5):
+def waiting_index_finish(args: argparse.Namespace, timewait: int = 5):
     if args.index_type == "FLAT":
         return
     num = 0
@@ -127,7 +172,7 @@ def waiting_index_finish(logger, args, timewait=5):
         time.sleep(timewait)
 
 
-def process_upsert_data(items):
+def process_upsert_data(items: tuple):
     args, index, size, features = items
     data = []
     for j in range(size):
@@ -149,7 +194,7 @@ def process_upsert_data(items):
     assert len(rs.get_document_ids()) == size
 
 
-def upsert(args, xb):
+def upsert(args: argparse.Namespace, xb: np.ndarray):
     pool = Pool(args.pool_size)
     total_data = []
     total_batch = int(args.nb / args.batch_size)
@@ -189,23 +234,19 @@ def upsert(args, xb):
     )
 
 
-def get_timewait(args):
-    if args.nb <= 10000:
+def get_timewait(args: argparse.Namespace):
+    if args.nb <= 100 * 10000:
         return 1
-    elif args.nb <= 10 * 10000:
-        return 2
-    elif args.nb <= 100 * 10000:
-        return 5
     elif args.nb <= 1000 * 10000:
-        return 10
+        return 5
     else:
-        return 50
+        return 10
 
 
-def train_and_build_index(args):
+def train_and_build_index(args: argparse.Namespace):
     timewait = get_timewait(args)
     start = time.time()
-    waiting_train_finish(logger, args, timewait)
+    waiting_train_finish(args, timewait)
     end = time.time()
 
     logger.info(
@@ -219,7 +260,7 @@ def train_and_build_index(args):
     )
 
     start = time.time()
-    waiting_index_finish(logger, args, timewait)
+    waiting_index_finish(args, timewait)
     end = time.time()
 
     logger.info(
@@ -233,7 +274,7 @@ def train_and_build_index(args):
     )
 
 
-def process_query_data(items):
+def process_query_data(items: tuple):
     args, unique_keys = items
     rs = vc.query(
         args.db, args.space, document_ids=unique_keys, vector=args.vector_value
@@ -244,7 +285,7 @@ def process_query_data(items):
     assert len(rs.documents) == args.batch_size
 
 
-def query(args):
+def query(args: argparse.Namespace):
     pool = Pool(args.pool_size)
     total_data = []
     # There may be some left, but won't deal with it
@@ -274,7 +315,7 @@ def query(args):
     )
 
 
-def process_delete_data(items):
+def process_delete_data(items: tuple):
     args, unique_keys = items
     rs = vc.delete(args.db, args.space, unique_keys)
 
@@ -283,7 +324,7 @@ def process_delete_data(items):
     assert len(rs.document_ids) == args.batch_size
 
 
-def delete(args):
+def delete(args: argparse.Namespace):
     pool = Pool(args.pool_size)
     total_data = []
     # There may be some left, but won't deal with it
@@ -313,8 +354,8 @@ def delete(args):
     )
 
 
-def process_search_data(items):
-    args, features = items
+def process_search_data(items: tuple):
+    args, index, features = items
     vector_info = VectorInfo("field_vector", features)
     rs = vc.search(
         args.db,
@@ -329,8 +370,10 @@ def process_search_data(items):
         logger.debug(rs.documents)
     assert len(rs.documents) == args.batch_size
 
+    return index, rs.documents
 
-def search(args, xq):
+
+def search(args: argparse.Namespace, xq: np.ndarray, gt: np.ndarray):
     pool = Pool(args.pool_size)
     total_data = []
     total_batch = int(args.nq / args.batch_size)
@@ -338,6 +381,7 @@ def search(args, xq):
         total_data.append(
             (
                 args,
+                i,
                 xq[i * args.batch_size : (i + 1) * args.batch_size].flatten().tolist(),
             )
         )
@@ -348,13 +392,27 @@ def search(args, xq):
     pool.join()
     end = time.time()
 
+    recall_str = ""
+    if args.recall:
+        search_results = np.empty(gt.shape)
+        for result in results:
+            i, documents = result
+            for document in documents:
+                for j in range(len(document)):
+                    search_results[i][j] = document[j]["_id"]
+
+        recalls = evaluate(search_results, gt, args.limit)
+        for recall in recalls:
+            recall_str += "Recall@" + str(recall) + "=" + str(recalls[recall]) + ", "
+
     logger.info(
-        "nq: %d, batch size:%d, search cost: %.4f seconds, QPS: %.4f, pool size: %d"
+        "nq: %d, batch size:%d, search cost: %.4f seconds, QPS: %.4f, %spool size: %d"
         % (
             args.nq,
             args.batch_size,
             end - start,
             args.nq / (end - start),
+            recall_str,
             args.pool_size,
         )
     )
@@ -392,7 +450,7 @@ if __name__ == "__main__":
 
     batch_size = args.batch_size
     args.batch_size = 1
-    search(args, xq)
+    search(args, xq, gt)
 
     args.batch_size = batch_size
     delete(args)
