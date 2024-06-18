@@ -16,7 +16,10 @@ package gamma
 */
 import "C"
 import (
+	"fmt"
 	"unsafe"
+
+	"github.com/vearch/vearch/v3/internal/pkg/vjson"
 )
 
 type Status struct {
@@ -62,8 +65,8 @@ func DeleteDoc(engine unsafe.Pointer, docID []byte) int {
 	return int(C.DeleteDoc(engine, (*C.char)(unsafe.Pointer(&docID[0])), C.int(len(docID))))
 }
 
-func GetEngineStatus(engine unsafe.Pointer, status *EngineStatus) {
-	if engine == nil || status == nil {
+func GetEngineStatus(engine unsafe.Pointer) (status string) {
+	if engine == nil {
 		return
 	}
 	var CBuffer *C.char
@@ -72,12 +75,20 @@ func GetEngineStatus(engine unsafe.Pointer, status *EngineStatus) {
 	C.GetEngineStatus(engine, (**C.char)(unsafe.Pointer(&CBuffer)), (*C.int)(unsafe.Pointer(length)))
 	defer C.free(unsafe.Pointer(CBuffer))
 	buffer := C.GoBytes(unsafe.Pointer(CBuffer), C.int(*length))
-	status.DeSerialize(buffer)
+	return string(buffer)
 }
 
-func GetEngineMemoryInfo(engine unsafe.Pointer, status *MemoryInfo) {
-	if engine == nil || status == nil {
-		return
+type MemoryInfo struct {
+	TableMem      int64 `json:"table_mem,omitempty"`
+	IndexMem      int64 `json:"index_mem,omitempty"`
+	VectorMem     int64 `json:"vector_mem,omitempty"`
+	FieldRangeMem int64 `json:"field_range_mem,omitempty"`
+	BitmapMem     int64 `json:"bitmap_mem,omitempty"`
+}
+
+func GetEngineMemoryInfo(engine unsafe.Pointer, status *MemoryInfo) error {
+	if engine == nil {
+		return fmt.Errorf("engine is null")
 	}
 	var CBuffer *C.char
 	zero := 0
@@ -85,7 +96,11 @@ func GetEngineMemoryInfo(engine unsafe.Pointer, status *MemoryInfo) {
 	C.GetMemoryInfo(engine, (**C.char)(unsafe.Pointer(&CBuffer)), (*C.int)(unsafe.Pointer(length)))
 	defer C.free(unsafe.Pointer(CBuffer))
 	buffer := C.GoBytes(unsafe.Pointer(CBuffer), C.int(*length))
-	status.DeSerialize(buffer)
+
+	if err := vjson.Unmarshal(buffer, status); err != nil {
+		return err
+	}
+	return nil
 }
 
 func GetDocByID(engine unsafe.Pointer, docID []byte, doc *Doc) int {
@@ -177,10 +192,21 @@ func GetEngineCfg(engine unsafe.Pointer, config *Config) {
 	config.DeSerialize(buffer)
 }
 
-func BackupSpace(engine unsafe.Pointer, command string) {
+func BackupSpace(engine unsafe.Pointer, command string) *Status {
+	var c int
 	if command == "create" {
-		C.Backup(engine, C.int(0))
+		c = 0
 	} else if command == "restore" {
-		C.Backup(engine, C.int(1))
+		c = 1
 	}
+	cstatus := C.Backup(engine, C.int(c))
+
+	status := &Status{
+		Code: int32(cstatus.code),
+		Msg:  C.GoString(cstatus.msg),
+	}
+	if status.Code != 0 {
+		C.free(unsafe.Pointer(cstatus.msg))
+	}
+	return status
 }

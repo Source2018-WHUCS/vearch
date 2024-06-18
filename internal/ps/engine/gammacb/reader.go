@@ -99,8 +99,8 @@ func (ri *readerImpl) DocCount(ctx context.Context) (uint64, error) {
 		return 0, vearchlog.LogErrAndReturn(vearchpb.NewError(vearchpb.ErrorEnum_PARTITION_IS_CLOSED, nil))
 	}
 
-	var status gamma.EngineStatus
-	gamma.GetEngineStatus(gammaEngine, &status)
+	status := &engine.EngineStatus{}
+	ri.engine.GetEngineStatus(status)
 	docNum := status.DocNum
 	return uint64(docNum), nil
 }
@@ -115,7 +115,10 @@ func (ri *readerImpl) Capacity(ctx context.Context) (int64, error) {
 	}
 
 	var status gamma.MemoryInfo
-	gamma.GetEngineMemoryInfo(gammaEngine, &status)
+	err := gamma.GetEngineMemoryInfo(gammaEngine, &status)
+	if err != nil {
+		return 0, err
+	}
 	vectorMem := status.VectorMem
 	tableMem := status.TableMem
 	fieldRangeMem := status.FieldRangeMem

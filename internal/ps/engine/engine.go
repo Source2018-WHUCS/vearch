@@ -56,6 +56,7 @@ type Writer interface {
 
 type EngineStatus struct {
 	IndexStatus   int32
+	BackupStatus  int32
 	DocNum        int32
 	MaxDocid      int32
 	MinIndexedNum int32
@@ -72,7 +73,7 @@ type Engine interface {
 	RebuildIndex(int, int, int) error
 	Rebuild(int, int, int) error
 	IndexInfo() (int, int, int)
-	EngineStatus(status *EngineStatus) error
+	GetEngineStatus(status *EngineStatus) error
 	Close()
 	HasClosed() bool
 

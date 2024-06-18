@@ -7,12 +7,11 @@
 
 #pragma once
 
+#include <atomic>
 #include <condition_variable>
 #include <string>
 
 #include "c_api/api_data/doc.h"
-#include "c_api/api_data/engine_status.h"
-#include "c_api/api_data/memory_info.h"
 #include "c_api/api_data/request.h"
 #include "c_api/api_data/response.h"
 #include "c_api/api_data/table.h"
@@ -58,8 +57,8 @@ class Engine {
 
   int RebuildIndex(int drop_before_rebuild, int limit_cpu, int describe);
 
-  void GetIndexStatus(EngineStatus &engine_status);
-  void GetMemoryInfo(MemoryInfo &memory_info);
+  std::string EngineStatus();
+  std::string GetMemoryInfo();
 
   IndexStatus GetIndexStatus() { return index_status_; }
 
@@ -67,7 +66,7 @@ class Engine {
   int Load();
   int LoadFromFaiss();
 
-  int Backup(int command);
+  Status Backup(int command);
 
   int GetDocsNum();
 
@@ -104,6 +103,8 @@ class Engine {
                       Response &response_results,
                       MultiRangeQueryResults *range_query_result);
 
+  void BacupThread(int command);
+
  private:
   std::string index_root_path_;
   std::string dump_path_;
@@ -129,6 +130,8 @@ class Engine {
 
   const std::string date_time_format_;
   std::string last_dump_dir_;  // it should be delete after next dump
+  std::atomic<int> backup_status_;
+  std::thread backup_thread_;
 
   bool created_table_;
 

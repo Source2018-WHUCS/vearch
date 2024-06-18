@@ -17,8 +17,6 @@
 
 #include "api_data/config.h"
 #include "api_data/doc.h"
-#include "api_data/engine_status.h"
-#include "api_data/memory_info.h"
 #include "api_data/response.h"
 #include "api_data/table.h"
 #include "search/engine.h"
@@ -215,15 +213,18 @@ int RebuildIndex(void *engine, int drop_before_rebuild, int limit_cpu,
 }
 
 void GetEngineStatus(void *engine, char **status_str, int *len) {
-  vearch::EngineStatus engine_status;
-  static_cast<vearch::Engine *>(engine)->GetIndexStatus(engine_status);
-  engine_status.Serialize(status_str, len);
+  std::string status = static_cast<vearch::Engine *>(engine)->EngineStatus();
+  *len = status.length();
+  *status_str = (char *)malloc(*len * sizeof(char));
+  memcpy(*status_str, status.c_str(), *len);
 }
 
 void GetMemoryInfo(void *engine, char **memory_info_str, int *len) {
-  vearch::MemoryInfo memory_info;
-  static_cast<vearch::Engine *>(engine)->GetMemoryInfo(memory_info);
-  memory_info.Serialize(memory_info_str, len);
+  std::string memory_info =
+      static_cast<vearch::Engine *>(engine)->GetMemoryInfo();
+  *len = memory_info.length();
+  *memory_info_str = (char *)malloc(*len * sizeof(char));
+  memcpy(*memory_info_str, memory_info.c_str(), *len);
 }
 
 int Dump(void *engine) {
@@ -252,8 +253,11 @@ int GetConfig(void *engine, char **config_str, int *len) {
   return res;
 }
 
-int Backup(void *engine, int command) {
+struct CStatus Backup(void *engine, int command) {
   LOG(INFO) << "Backup command: " << command;
-  int ret = static_cast<vearch::Engine *>(engine)->Backup(command);
-  return ret;
+  vearch::Status status;
+  status = static_cast<vearch::Engine *>(engine)->Backup(command);
+  struct CStatus cstatus;
+  Status2CStatus(status, cstatus);
+  return cstatus;
 }
