@@ -125,19 +125,19 @@ def parse_arguments() -> argparse.Namespace:
         choices=["IVFPQ", "HNSW", "IVFFLAT", "FLAT"],
         help="the vector index type",
     )
-    parser.add_argument(
-        "--picture",
-        default=False,
-        type=bool,
-        help="draw picture or not",
-    )
-    parser.add_argument(
-        "--runs",
-        metavar="COUNT",
-        default=1,
-        type=int,
-        help="run each task %(metavar)s times and use only the best result",
-    )
+    # parser.add_argument(
+    #     "--picture",
+    #     default=False,
+    #     type=bool,
+    #     help="draw picture or not",
+    # )
+    # parser.add_argument(
+    #     "--runs",
+    #     metavar="COUNT",
+    #     default=1,
+    #     type=int,
+    #     help="run each task %(metavar)s times and use only the best result",
+    # )
     parser.add_argument(
         "--dataset",
         default="random",
@@ -185,14 +185,25 @@ def parse_arguments() -> argparse.Namespace:
         choices=[True, False],
     )
     parser.add_argument(
-        "--output", help="the path to the output file", type=str, default=""
+        "--output",
+        help="the path of the output file, if not set it will be stdout",
+        type=str,
+        default="",
     )
     parser.add_argument("--index-params", help="the index params", type=str, default="")
     parser.add_argument(
-        "--index-params-config",
-        help="the config file of index params",
+        "--task",
+        help="the task type",
         type=str,
-        default="",
+        default="NORMAL",
+        choices=["CRUD", "SEARCH", "NORMAL"],
+    )
+    parser.add_argument(
+        "--trace",
+        default=True,
+        type=str2bool,
+        help="the trace option for search or query",
+        choices=[True, False],
     )
     args = parser.parse_args()
 
@@ -609,6 +620,7 @@ def get_dataset_by_name(logger: logging, args: argparse.Namespace):
         "nlinks": 32,
         "efConstruction": 80,
     }
+    # TODO data type
 
     if len(args.index_params) == 0:
         args.index_params = params

@@ -23,6 +23,7 @@ import time
 import sys
 import argparse
 import numpy as np
+import math
 
 from utils import parse_arguments, get_dataset_by_name, evaluate, load_config
 
@@ -67,27 +68,50 @@ def destroy(args: argparse.Namespace):
 
 def create_db_and_space(args: argparse.Namespace):
     properties = {}
-    properties["fields"] = [
-        {"name": "field_int", "type": "integer"},
-        {"name": "field_long", "type": "long"},
-        {"name": "field_float", "type": "float"},
-        {"name": "field_double", "type": "double"},
-        {
-            "name": "field_string",
-            "type": "string",
-            "index": {"name": "field_string", "type": "SCALAR"},
-        },
-        {
-            "name": "field_vector",
-            "type": "vector",
-            "index": {
-                "name": "gamma",
-                "type": args.index_type,
-                "params": args.index_params,
+    if args.index_params != "":
+        properties["fields"] = [
+            {"name": "field_int", "type": "integer"},
+            {"name": "field_long", "type": "long"},
+            {"name": "field_float", "type": "float"},
+            {"name": "field_double", "type": "double"},
+            {
+                "name": "field_string",
+                "type": "string",
+                "index": {"name": "field_string", "type": "SCALAR"},
             },
-            "dimension": args.dimension,
-        },
-    ]
+            {
+                "name": "field_vector",
+                "type": "vector",
+                "index": {
+                    "name": "gamma",
+                    "type": args.index_type,
+                    "params": args.index_params,
+                },
+                "dimension": args.dimension,
+            },
+        ]
+    else:
+        properties["fields"] = [
+            {"name": "field_int", "type": "integer"},
+            {"name": "field_long", "type": "long"},
+            {"name": "field_float", "type": "float"},
+            {"name": "field_double", "type": "double"},
+            {
+                "name": "field_string",
+                "type": "string",
+                "index": {"name": "field_string", "type": "SCALAR"},
+            },
+            {
+                "name": "field_vector",
+                "type": "vector",
+                "index": {
+                    "name": "gamma",
+                    "type": args.index_type,
+                },
+                "dimension": args.dimension,
+            },
+        ]
+
     space_config = {
         "name": args.space,
         "partition_num": args.partition_num,
@@ -95,9 +119,13 @@ def create_db_and_space(args: argparse.Namespace):
         "fields": properties["fields"],
     }
     response = create_db(args)
+    if response.json()["code"] != 0:
+        logger.error(response.text)
     assert response.json()["code"] == 0
 
     response = create_space(args, space_config)
+    if response.json()["code"] != 0:
+        logger.error(response.text)
     assert response.json()["code"] == 0
 
 
@@ -143,7 +171,12 @@ def process_upsert_data(items: tuple):
         param_dict = {}
         param_dict["_id"] = str(index * args.batch_size + j)
         param_dict["field_int"] = index * args.batch_size + j
-        param_dict["field_vector"] = features[j]
+        if features is not None:
+            param_dict["field_vector"] = features[j]
+        else:
+            param_dict["field_vector"] = [
+                random.uniform(0, 1) for _ in range(args.dimension)
+            ]
         param_dict["field_long"] = param_dict["field_int"]
         param_dict["field_float"] = float(param_dict["field_int"])
         param_dict["field_double"] = float(param_dict["field_int"])
@@ -158,26 +191,39 @@ def process_upsert_data(items: tuple):
     assert rs.json()["data"]["total"] == size
 
 
-def upsert(args: argparse.Namespace, xb: np.ndarray):
+def upsert(args: argparse.Namespace, xb: np.ndarray = None):
     pool = Pool(args.pool_size)
     total_data = []
     total_batch = int(args.nb / args.batch_size)
 
-    for i in range(total_batch):
-        total_data.append(
-            (
-                args,
-                i,
-                args.batch_size,
-                xb[i * args.batch_size : (i + 1) * args.batch_size].tolist(),
+    if xb is not None:
+        for i in range(total_batch):
+            total_data.append(
+                (
+                    args,
+                    i,
+                    args.batch_size,
+                    xb[i * args.batch_size : (i + 1) * args.batch_size].tolist(),
+                )
             )
-        )
 
-    remain = args.nb % args.batch_size
-    if remain != 0:
-        total_data.append(
-            (args, total_batch, remain, xb[total_batch * args.batch_size :].tolist())
-        )
+        remain = args.nb % args.batch_size
+        if remain != 0:
+            total_data.append(
+                (
+                    args,
+                    total_batch,
+                    remain,
+                    xb[total_batch * args.batch_size :].tolist(),
+                )
+            )
+    else:
+        for i in range(total_batch):
+            total_data.append((args, i, args.batch_size, None))
+
+        remain = args.nb % args.batch_size
+        if remain != 0:
+            total_data.append((args, total_batch, remain, None))
 
     start = time.time()
     results = pool.map(process_upsert_data, total_data)
@@ -219,7 +265,7 @@ def train_and_build_index(args: argparse.Namespace):
             args.nb,
             args.batch_size,
             end - start,
-            args.nb / (end - start),
+            args.nb / (end - start) if (end - start) >= 0.001 else 0,
         )
     )
 
@@ -233,7 +279,7 @@ def train_and_build_index(args: argparse.Namespace):
             args.nb,
             args.batch_size,
             end - start,
-            args.nb / (end - start),
+            args.nb / (end - start) if (end - start) >= 0.001 else 0,
         )
     )
 
@@ -248,6 +294,8 @@ def process_query_data(items: tuple):
     data["vector_value"] = args.vector_value
 
     rs = requests.post(url, auth=(args.user, args.password), json=data)
+    if rs.json()["code"] != 0:
+        logger.error(rs.json())
     if len(rs.json()["data"]["documents"]) != args.batch_size:
         logger.debug(rs.json())
     assert len(rs.json()["data"]["documents"]) == args.batch_size
@@ -272,13 +320,14 @@ def query(args: argparse.Namespace):
     end = time.time()
 
     logger.info(
-        "nq: %d, batch size:%d, query cost: %.4f seconds, QPS: %.4f, pool size: %d"
+        "nq: %d, batch size:%d, query cost: %.4f seconds, QPS: %.4f, pool size: %d, vector value: %d"
         % (
             args.nq,
             args.batch_size,
             end - start,
             args.nq / (end - start),
             args.pool_size,
+            args.vector_value,
         )
     )
 
@@ -292,8 +341,10 @@ def process_delete_data(items: tuple):
     data["document_ids"] = unique_keys
 
     rs = requests.post(url, auth=(args.user, args.password), json=data)
+    if rs.json()["code"] != 0:
+        logger.error(rs.json())
     if rs.json()["data"]["total"] != args.batch_size:
-        logger.debug(rs.json())
+        logger.error(rs.json())
     assert rs.json()["data"]["total"] == args.batch_size
 
 
@@ -329,7 +380,9 @@ def delete(args: argparse.Namespace):
 
 def process_search_data(items: tuple):
     args, index, features = items
-    url = args.url + "/document/search"
+    url = args.url + "/document/search?timeout=1000000"
+    if args.trace:
+        url = args.url + "/document/search?timeout=1000000&trace=true"
     data = {}
     data["db_name"] = args.db
     data["space_name"] = args.space
@@ -340,7 +393,10 @@ def process_search_data(items: tuple):
     if rs.json()["code"] != 0:
         logger.error(rs.json())
     if len(rs.json()["data"]["documents"]) != args.batch_size:
-        logger.debug(rs.json())
+        logger.error(
+            "search result length should be %d, but is %d"
+            % (args.batch_size, len(rs.json()["data"]["documents"]))
+        )
     assert len(rs.json()["data"]["documents"]) == args.batch_size
 
     return index, rs.json()["data"]["documents"]
@@ -369,10 +425,12 @@ def search(args: argparse.Namespace, xq: np.ndarray, gt: np.ndarray):
     if args.recall:
         search_results = np.empty(gt.shape)
         for result in results:
-            i, documents = result
-            for document in documents:
-                for j in range(len(document)):
-                    search_results[i][j] = document[j]["_id"]
+            batch_index, documents = result
+            for i in range(len(documents)):
+                for j in range(len(documents[i])):
+                    search_results[i + batch_index * args.batch_size][j] = documents[i][
+                        j
+                    ]["_id"]
 
         recalls = evaluate(search_results, gt, args.limit)
         for recall in recalls:
@@ -391,7 +449,14 @@ def search(args: argparse.Namespace, xq: np.ndarray, gt: np.ndarray):
     )
 
 
-def benchmark(args):
+def run_normal(args: argparse.Namespace):
+    """crud and search for specify dataset"""
+
+    xb, xq, gt = get_dataset_by_name(logger, args)
+
+    args_str = ", ".join(f"{key}={value}" for key, value in vars(args).items())
+    logger.info(f"args: {args_str}")
+
     create_db_and_space(args)
 
     upsert(args, xb)
@@ -408,6 +473,97 @@ def benchmark(args):
     delete(args)
 
     destroy(args)
+
+
+def run_similar_search(
+    args: argparse.Namespace, xb: np.ndarray, xq: np.ndarray, gt: np.ndarray
+):
+    """vector search"""
+
+    args_str = ", ".join(f"{key}={value}" for key, value in vars(args).items())
+    logger.info(f"args: {args_str}")
+
+    create_db_and_space(args)
+
+    upsert(args, xb)
+
+    train_and_build_index(args)
+
+    query(args)
+
+    batch_size = args.batch_size
+    pool_size = args.pool_size
+    args.batch_size = 1
+    search(args, xq, gt)
+
+    args.batch_size = args.nq
+    args.trace = True
+    args.pool_size = 1
+    search(args, xq, gt)
+
+    args.batch_size = batch_size
+    args.pool_size = pool_size
+    args.trace = False
+    delete(args)
+
+    destroy(args)
+
+
+def run_crud(args: argparse.Namespace):
+    """crud means create read update delete"""
+
+    args_str = ", ".join(f"{key}={value}" for key, value in vars(args).items())
+    logger.info(f"args: {args_str}")
+
+    create_db_and_space(args)
+
+    upsert(args)
+
+    query(args)
+
+    batch_size = args.batch_size
+    args.batch_size = 1
+    query(args)
+    args.batch_size = batch_size
+
+    args.vector_value = False
+    query(args)
+
+    batch_size = args.batch_size
+    args.batch_size = 1
+    query(args)
+    args.batch_size = batch_size
+
+    delete(args)
+
+    destroy(args)
+
+
+def run_task(args: argparse.Namespace):
+    if args.task == "CRUD":
+        args.dataset = "random"
+        dimensions = [128, 756, 1536]
+        args.index_type = "IVFPQ"
+        ncentroids = int(4 * math.sqrt(args.nb))
+        args.index_params = {
+            "metric_type": "L2",
+            "training_threshold": args.nb + 1,
+            "ncentroids": ncentroids,
+        }
+        for dimension in dimensions:
+            args.dimension = dimension
+            run_crud(args)
+
+    if args.task == "SEARCH":
+        index_types = ["IVFFLAT", "IVFPQ", "HNSW"]
+        xb, xq, gt = get_dataset_by_name(logger, args)
+
+        for index_type in index_types:
+            args.index_type = index_type
+            run_similar_search(args, xb, xq, gt)
+
+    if args.task == "NORMAL":
+        run_normal(args)
 
 
 if __name__ == "__main__":
@@ -427,15 +583,4 @@ if __name__ == "__main__":
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    xb, xq, gt = get_dataset_by_name(logger, args)
-
-    args_str = ", ".join(f"{key}={value}" for key, value in vars(args).items())
-    logger.info(f"args: {args_str}")
-
-    if args.index_params_config != "":
-        configs = load_config(args.index_params_config)
-        for indexs in configs[args.index_params["metric_type"]]:
-            for index in indexs:
-                benchmark(args)
-    else:
-        benchmark(args)
+    run_task(args)
