@@ -132,7 +132,7 @@ def waiting_backup_finish(timewait=5):
         time.sleep(timewait)
 
 def remove_oss_file(object_name):
-    endpoint = os.getenv("S3_ENDPOINT", "minio:9000")
+    endpoint = os.getenv("S3_ENDPOINT", "127.0.0.1:10000")
     access_key = os.getenv("S3_ACCESS_KEY", "minioadmin")
     secret_key = os.getenv("S3_SECRET_KEY", "minioadmin")
     use_ssl_str = os.getenv("S3_USE_SSL", "False")
@@ -187,6 +187,7 @@ def benchmark(store_type: str, with_schema: bool, corrupted: bool, xb, xq, gt):
     backup(router_url, db_name, space_name, "restore", with_schema, corrupted)
 
     if corrupted:
+        destroy(router_url, db_name, space_name)
         return
     waiting_index_finish(logger, total)
 
