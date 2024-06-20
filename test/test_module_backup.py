@@ -20,6 +20,8 @@ import json
 import os
 import pytest
 import logging
+from minio import Minio
+from minio.error import S3Error
 from utils.vearch_utils import *
 from utils.data_utils import *
 
@@ -29,12 +31,13 @@ logger = logging.getLogger(__name__)
 __description__ = """ test case for index flat """
 
 
-def backup(router_url, db_name, space_name, command):
+def backup(router_url, db_name, space_name, command, with_schema, corrupted = False):
     url = router_url + "/backup/dbs/" + db_name + "/spaces/" + space_name
     use_ssl_str = os.getenv("S3_USE_SSL", "False")
 
     data = {
         "command": command,
+        "with_schema": with_schema,
         "s3_param": {
             "access_key": os.getenv("S3_ACCESS_KEY", "minioadmin"),
             "secret_key": os.getenv("S3_SECRET_KEY", "minioadmin"),
@@ -44,7 +47,10 @@ def backup(router_url, db_name, space_name, command):
         },
     }
     response = requests.post(url, auth=(username, password), json=data)
-    assert response.json()["code"] == 0
+    if not corrupted:
+        assert response.json()["code"] == 0
+    else:
+        assert response.json()["code"] != 0
 
 
 def create(router_url, embedding_size, store_type="MemoryOnly"):
@@ -125,7 +131,32 @@ def waiting_backup_finish(timewait=5):
     if backup_status != 0:
         time.sleep(timewait)
 
-def benchmark(store_type, xb, xq, gt):
+def remove_oss_file(object_name):
+    endpoint = os.getenv("S3_ENDPOINT", "127.0.0.1:10000")
+    access_key = os.getenv("S3_ACCESS_KEY", "minioadmin")
+    secret_key = os.getenv("S3_SECRET_KEY", "minioadmin")
+    use_ssl_str = os.getenv("S3_USE_SSL", "False")
+    secure = use_ssl_str.lower() in ['true', '1']
+    region = os.getenv("S3_REGION", "")
+
+    bucket_name = os.getenv("S3_BUCKET_NAME", "test")
+    client = Minio(
+        endpoint,
+        access_key=access_key,
+        secret_key=secret_key,
+        secure=secure,
+        region=region,
+    )
+
+    try:
+        found = client.bucket_exists(bucket_name)
+        logger.info(f"{bucket_name} {found}")
+        client.remove_object(bucket_name, object_name)
+        logger.info(f"Object '{object_name}' in bucket '{bucket_name}' deleted successfully")
+    except S3Error as err:
+        logger.error(f"Error occurred: {err} bucket_name {bucket_name} secure {secure} endpoint {endpoint}")
+
+def benchmark(store_type: str, with_schema: bool, corrupted: bool, xb, xq, gt):
     embedding_size = xb.shape[1]
     batch_size = 100
     k = 100
@@ -141,13 +172,23 @@ def benchmark(store_type, xb, xq, gt):
 
     waiting_index_finish(logger, total)
 
-    backup(router_url, db_name, space_name, "create")
+    backup(router_url, db_name, space_name, "create", with_schema)
     waiting_backup_finish()
 
-    destroy(router_url, db_name, space_name)
+    if with_schema:
+        drop_space(router_url, db_name, space_name)
+    else:
+        destroy(router_url, db_name, space_name)
+        create(router_url, embedding_size, store_type)
 
-    create(router_url, embedding_size, store_type)
-    backup(router_url, db_name, space_name, "restore")
+    if corrupted:
+        remove_oss_file(db_name + "/" + space_name + "/" +"0.json.zst")
+
+    backup(router_url, db_name, space_name, "restore", with_schema, corrupted)
+
+    if corrupted:
+        destroy(router_url, db_name, space_name)
+        return
     waiting_index_finish(logger, total)
 
     for parallel_on_queries in [0, 1]:
@@ -182,8 +223,16 @@ xq = sift10k.get_queries()
 gt = sift10k.get_groundtruth()
 
 
-@ pytest.mark.parametrize(["store_type"], [
-    ["MemoryOnly"],
+@ pytest.mark.parametrize(["store_type", "with_schema"], [
+    ["MemoryOnly", False],
+    ["MemoryOnly", True],
 ])
-def test_vearch_index_flat(store_type: str):
-    benchmark(store_type, xb, xq, gt)
+def test_vearch_backup(store_type: str, with_schema: bool):
+    benchmark(store_type, with_schema, False, xb, xq, gt)
+
+@ pytest.mark.parametrize(["store_type", "with_schema"], [
+    ["MemoryOnly", False],
+    ["MemoryOnly", True],
+])
+def test_vearch_backup_with_corrupted_data(store_type: str, with_schema: bool):
+    benchmark(store_type, with_schema, True, xb, xq, gt)
