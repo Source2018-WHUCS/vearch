@@ -84,7 +84,7 @@ class Engine {
 
   int GetConfig(Config &config);
 
-  int SetConfig(Config &config);
+  int SetConfig(std::string conf_str);
 
   const std::string SpaceName() { return space_name_; }
 

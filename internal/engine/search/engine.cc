@@ -489,7 +489,7 @@ Status Engine::CreateTable(TableInfo &table) {
   Status status;
 
   storage_mgr_ = new StorageManager(index_root_path_ + "/data");
-  int cache_size = 512;  // unit : M
+  int cache_size = 512 * 1024 * 1024;  // unit : byte
 
   std::vector<int> vector_cf_ids;
 
@@ -1393,17 +1393,25 @@ int Engine::GetConfig(Config &conf) {
   return 0;
 }
 
-int Engine::SetConfig(Config &conf) {
+int Engine::SetConfig(std::string conf_str) {
+  nlohmann::json j = nlohmann::json::parse(conf_str);
+  auto cache_models = j["cache_models"];
+  if (!cache_models.is_array()) {
+    return -1;
+  }
+
   int table_cache_size = 0;
-  for (auto &c : conf.CacheInfos()) {
-    if (c.field_name == "table") {
-      table_cache_size = c.cache_size;
+  for (auto c : cache_models) {
+    if (c["name"] == "table") {
+      table_cache_size = c["cache_size"];
     } else {
-      vec_manager_->AlterCacheSize(c);
+      struct CacheInfo ci;
+      ci.field_name = c["name"];
+      ci.cache_size = c["cache_size"];
+      vec_manager_->AlterCacheSize(ci);
     }
   }
   table_->AlterCacheSize(table_cache_size);
-  GetConfig(conf);
   return 0;
 }
 

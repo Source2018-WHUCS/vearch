@@ -428,9 +428,8 @@ int Table::GetAttrIdx(const std::string &field) const {
   return (iter != attr_idx_map_.end()) ? iter->second : -1;
 }
 
-bool Table::AlterCacheSize(int cache_size) {
-  // return storage_mgr_->AlterCacheSize(cache_size);
-  return 0;
+void Table::AlterCacheSize(int cache_size) {
+  storage_mgr_->AlterCacheSize(cache_size);
 }
 
 void Table::GetCacheSize(int &cache_size) {

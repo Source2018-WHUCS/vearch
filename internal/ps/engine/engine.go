@@ -83,7 +83,7 @@ type Engine interface {
 	GetSpace() *entity.Space
 	GetPartitionID() entity.PartitionID
 
-	SetEngineCfg(config *gamma.Config) error
+	SetEngineCfg(configJson []byte) error
 	GetEngineCfg(config *gamma.Config) error
 
 	BackupSpace(command string) error

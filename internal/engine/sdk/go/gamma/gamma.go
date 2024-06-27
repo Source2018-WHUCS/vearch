@@ -27,10 +27,8 @@ type Status struct {
 	Msg  string
 }
 
-func Init(config *Config) unsafe.Pointer {
-	var buffer []byte
-	config.Serialize(&buffer)
-	return C.Init((*C.char)(unsafe.Pointer(&buffer[0])), C.int(len(buffer)))
+func Init(config []byte) unsafe.Pointer {
+	return C.Init((*C.char)(unsafe.Pointer(&config[0])), C.int(len(config)))
 }
 
 func Close(engine unsafe.Pointer) int {
@@ -175,10 +173,8 @@ func Search(engine unsafe.Pointer, reqByte []byte) ([]byte, *Status) {
 	return respByte, status
 }
 
-func SetEngineCfg(engine unsafe.Pointer, config *Config) int {
-	var buffer []byte
-	config.Serialize(&buffer)
-	ret := int(C.SetConfig(engine, (*C.char)(unsafe.Pointer(&buffer[0])), C.int(len(buffer))))
+func SetEngineCfg(engine unsafe.Pointer, configJson []byte) int {
+	ret := int(C.SetConfig(engine, (*C.char)(unsafe.Pointer(&configJson[0])), C.int(len(configJson))))
 	return ret
 }
 

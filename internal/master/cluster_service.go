@@ -876,8 +876,7 @@ func (ms *masterService) GetEngineCfg(ctx context.Context, dbName, spaceName str
 	return nil, nil
 }
 
-func (ms *masterService) ModifyEngineCfg(ctx context.Context, dbName,
-	spaceName string, cacheCfg *entity.EngineCfg) (err error) {
+func (ms *masterService) ModifyEngineCfg(ctx context.Context, dbName, spaceName string, cacheCfg *entity.EngineCfg) (err error) {
 	defer errutil.CatchError(&err)
 	// get space info
 	dbId, err := ms.Master().QueryDBName2Id(ctx, dbName)

@@ -46,6 +46,8 @@ class StorageManager {
 
   void GetCacheSize(int &cache_size);
 
+  void AlterCacheSize(int cache_size);
+
   void Close();
 
   int CreateColumnFamily(std::string name) {

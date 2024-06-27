@@ -386,23 +386,7 @@ func (ch *EngineCfgHandler) Execute(ctx context.Context, req *vearchpb.Partition
 		return vearchpb.NewError(vearchpb.ErrorEnum_PARTITION_IS_INVALID, fmt.Errorf("partition (%v), engine is nil ", req.PartitionID))
 	}
 	if req.Type == vearchpb.OpType_CREATE {
-		cacheCfg := new(entity.EngineCfg)
-		if err := vjson.Unmarshal(req.Data, cacheCfg); err != nil {
-			errutil.ThrowError(err)
-			return err
-		}
-		// invoke c interface
-		log.Debug("cache cfg info is [%+v]", cacheCfg)
-		cfg := &gamma.Config{}
-		var CacheInfos []*gamma.CacheInfo
-		if cacheCfg.CacheModels != nil {
-			for _, model := range cacheCfg.CacheModels {
-				cf := &gamma.CacheInfo{Name: model.Name, CacheSize: model.CacheSize}
-				CacheInfos = append(CacheInfos, cf)
-			}
-		}
-		cfg.CacheInfos = CacheInfos
-		err := engine.SetEngineCfg(cfg)
+		err := engine.SetEngineCfg(req.Data)
 		if err != nil {
 			log.Debug("cache info set error [%+v]", err)
 		}
