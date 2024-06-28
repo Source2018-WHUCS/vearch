@@ -743,17 +743,13 @@ func (ca *clusterAPI) modifyEngineCfg(c *gin.Context) {
 	defer errutil.CatchError(&err)
 	dbName := c.Param(dbName)
 	spaceName := c.Param(spaceName)
-	cacheCfg := &entity.EngineCfg{}
+	cacheCfg := &entity.EngineConfig{}
 
 	if err := c.ShouldBindJSON(cacheCfg); err != nil {
 		httphelper.New(c).JsonError(errors.NewErrBadRequest(err))
 		return
 	}
 
-	if cacheCfg.CacheModels == nil {
-		httphelper.New(c).JsonError(errors.NewErrBadRequest(fmt.Errorf("engine config cache_models is null")))
-		return
-	}
 	if err := ca.masterService.ModifyEngineCfg(c, dbName, spaceName, cacheCfg); err != nil {
 		httphelper.New(c).JsonError(errors.NewErrInternal(err))
 	} else {

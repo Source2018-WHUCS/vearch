@@ -178,14 +178,13 @@ func SetEngineCfg(engine unsafe.Pointer, configJson []byte) int {
 	return ret
 }
 
-func GetEngineCfg(engine unsafe.Pointer, config *Config) {
+func GetEngineCfg(engine unsafe.Pointer) (configJson []byte) {
 	var CBuffer *C.char
 	zero := 0
 	length := &zero
 	C.GetConfig(engine, (**C.char)(unsafe.Pointer(&CBuffer)), (*C.int)(unsafe.Pointer(length)))
 	defer C.free(unsafe.Pointer(CBuffer))
-	buffer := C.GoBytes(unsafe.Pointer(CBuffer), C.int(*length))
-	config.DeSerialize(buffer)
+	return C.GoBytes(unsafe.Pointer(CBuffer), C.int(*length))
 }
 
 func BackupSpace(engine unsafe.Pointer, command string) *Status {

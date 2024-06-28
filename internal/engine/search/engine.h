@@ -82,7 +82,7 @@ class Engine {
 
   bitmap::BitmapManager *GetBitmap() { return docids_bitmap_; }
 
-  int GetConfig(Config &config);
+  int GetConfig(std::string &conf_str);
 
   int SetConfig(std::string conf_str);
 

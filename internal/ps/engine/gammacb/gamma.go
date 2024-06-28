@@ -327,9 +327,9 @@ func (ge *gammaEngine) SetEngineCfg(configJson []byte) error {
 	return nil
 }
 
-func (ge *gammaEngine) GetEngineCfg(config *gamma.Config) error {
-	gamma.GetEngineCfg(ge.gamma, config)
-	return nil
+func (ge *gammaEngine) GetEngineCfg(config *entity.EngineConfig) error {
+	configJson := gamma.GetEngineCfg(ge.gamma)
+	return vjson.Unmarshal(configJson, config)
 }
 
 func (ge *gammaEngine) BackupSpace(command string) error {

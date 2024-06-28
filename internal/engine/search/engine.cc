@@ -1383,35 +1383,21 @@ int Engine::AddNumIndexFields() {
   return retvals;
 }
 
-int Engine::GetConfig(Config &conf) {
-  conf.ClearCacheInfos();
-  vec_manager_->GetAllCacheSize(conf);
-  int table_cache_size = 0;
-  table_->GetCacheSize(table_cache_size);
-  conf.AddCacheInfo("table", table_cache_size);
-  conf.SetPath(index_root_path_);
+int Engine::GetConfig(std::string &conf_str) {
+  size_t table_cache_size = 0;
+  storage_mgr_->GetCacheSize(table_cache_size);
+  nlohmann::json j;
+  j["engine_cache_size"] = table_cache_size;
+  j["path"] = index_root_path_;
+  conf_str = j.dump();
   return 0;
 }
 
 int Engine::SetConfig(std::string conf_str) {
   nlohmann::json j = nlohmann::json::parse(conf_str);
-  auto cache_models = j["cache_models"];
-  if (!cache_models.is_array()) {
-    return -1;
-  }
 
-  int table_cache_size = 0;
-  for (auto c : cache_models) {
-    if (c["name"] == "table") {
-      table_cache_size = c["cache_size"];
-    } else {
-      struct CacheInfo ci;
-      ci.field_name = c["name"];
-      ci.cache_size = c["cache_size"];
-      vec_manager_->AlterCacheSize(ci);
-    }
-  }
-  table_->AlterCacheSize(table_cache_size);
+  size_t table_cache_size = j["engine_cache_size"];
+  storage_mgr_->AlterCacheSize(table_cache_size);
   return 0;
 }
 

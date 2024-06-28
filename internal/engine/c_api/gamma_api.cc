@@ -15,7 +15,6 @@
 #include <sstream>
 #include <string>
 
-#include "api_data/config.h"
 #include "api_data/doc.h"
 #include "api_data/response.h"
 #include "api_data/table.h"
@@ -237,16 +236,17 @@ int Load(void *engine) {
 }
 
 int SetConfig(void *engine, const char *config_str, int len) {
-  int ret = static_cast<vearch::Engine *>(engine)->SetConfig(std::string(config_str, len));
+  int ret = static_cast<vearch::Engine *>(engine)->SetConfig(
+      std::string(config_str, len));
   return ret;
 }
 
 int GetConfig(void *engine, char **config_str, int *len) {
-  vearch::Config config;
+  std::string config;
   int res = static_cast<vearch::Engine *>(engine)->GetConfig(config);
-  if (res == 0) {
-    res = config.Serialize(config_str, len);
-  }
+  *len = config.length();
+  *config_str = (char *)malloc(*len * sizeof(char));
+  memcpy(*config_str, config.c_str(), *len);
   return res;
 }
 

@@ -98,22 +98,17 @@ class TestConfig:
 
         for i in range(100):
             cache_dict = {
-                "cache_models":[
-                    {
-                        "name": "table",
-                        "cache_size": cache_size + i,
-                    },
-                ],
+                "engine_cache_size": cache_size + i,
             }
             url = router_url + "/config/" + db_name + "/" + space_name 
             json_str = json.dumps(cache_dict)
             rs = requests.post(url, auth=(username, password), data=json_str)
             assert rs.status_code == 200
-            assert rs.json()["data"]["cache_models"][0]["cache_size"] == cache_size + i
+            assert rs.json()["data"]["engine_cache_size"] == cache_size + i
 
             rs = requests.get(url, auth=(username, password))
             assert rs.status_code == 200
-            assert rs.json()["data"]["cache_models"][0]["cache_size"] == cache_size + i
+            assert rs.json()["data"]["engine_cache_size"] == cache_size + i
 
     # destroy
     def test_destroy_cluster(self):

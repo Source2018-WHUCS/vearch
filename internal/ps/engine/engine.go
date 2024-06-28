@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/cubefs/cubefs/depends/tiglabs/raft/proto"
-	"github.com/vearch/vearch/v3/internal/engine/sdk/go/gamma"
 	"github.com/vearch/vearch/v3/internal/entity"
 	"github.com/vearch/vearch/v3/internal/proto/vearchpb"
 	"github.com/vearch/vearch/v3/internal/ps/engine/mapping"
@@ -84,7 +83,7 @@ type Engine interface {
 	GetPartitionID() entity.PartitionID
 
 	SetEngineCfg(configJson []byte) error
-	GetEngineCfg(config *gamma.Config) error
+	GetEngineCfg(config *entity.EngineConfig) error
 
 	BackupSpace(command string) error
 }
