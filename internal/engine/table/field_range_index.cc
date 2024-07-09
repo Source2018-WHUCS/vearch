@@ -513,10 +513,17 @@ int FieldRangeIndex::Delete(std::string &key, int value) {
     }
 
     p_node->Delete(value);
-    if (p_node->Size() == 0) {
-      bt_deletekey(bt, key_to_add, key_len, 0);
-      delete p_node;
-    }
+    // if (p_node->Size() == 0) {
+    //   BTERR err1 = bt_deletekey(bt, key_to_add, key_len, 1);
+    //   if (err1 != BTERR_ok) {
+    //     LOG(ERROR) << "Error deleting key at level 1: %d\n" << err1;
+    //   }
+    //   BTERR err2 = bt_deletekey(bt, key_to_add, key_len, 0);
+    //   if (err2 != BTERR_ok) {
+    //     LOG(ERROR) << "Error deleting key at level 0: %d\n" << err2;
+    //   }
+    //   delete p_node;
+    // }
   };
 
   if (is_numeric_) {
