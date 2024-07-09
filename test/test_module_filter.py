@@ -304,6 +304,16 @@ def check(total, full_field, xb, mode: str):
     delete_interface(logger, total_batch, batch_size, full_field, 1, "by_filter")
 
     assert get_space_num() == 0
+    for i in range(total):
+        process_add_data((i, batch_size, xb[i * batch_size : (i + 1) * batch_size], with_id, full_field, 1, "", None, []))
+        process_get_data_by_filter((logger, i, full_field, "[)", total))
+        assert get_space_num() == i + 1
+
+    for i in range(total):
+        process_delete_data(
+            (logger, i, batch_size, full_field, 1, "by_filter", "")
+        )
+        assert get_space_num() == total - i - 1
 
     with ThreadPoolExecutor(max_workers=10, thread_name_prefix="non_daemon_thread") as executor:
         partial_parallel_filter = functools.partial(parallel_filter, total_batch=total_batch, full_field=full_field, mode=mode)
