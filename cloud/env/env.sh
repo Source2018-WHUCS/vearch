@@ -27,9 +27,9 @@ bash ${CMAKE_FILE}.sh --skip-license --prefix=/usr/local
 cp -r -p /usr/local/${CMAKE_FILE}/bin/* /bin/
 rm -rf ${CMAKE_FILE}.sh
 
-wget https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protobuf-cpp-3.21.12.tar.gz
-tar xf protobuf-cpp-3.21.12.tar.gz
-cd protobuf-3.21.12
+wget https://github.com/protocolbuffers/protobuf/releases/download/v21.0/protobuf-cpp-3.21.0.tar.gz
+tar xf protobuf-cpp-3.21.0.tar.gz
+cd protobuf-3.21.0
 ./configure && make -j4 && make install
 
 cd /env/app

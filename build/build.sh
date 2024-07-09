@@ -74,9 +74,9 @@ function build_thirdparty() {
   fi
 
   if [[ ! -f "/usr/local/lib/libprotobuf.so" ]]; then
-    wget https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protobuf-cpp-3.21.12.tar.gz
-    tar xf protobuf-cpp-3.21.12.tar.gz
-    pushd protobuf-3.21.12
+    wget https://github.com/protocolbuffers/protobuf/releases/download/v21.0/protobuf-cpp-3.21.0.tar.gz
+    tar xf protobuf-cpp-3.21.0.tar.gz
+    pushd protobuf-3.21.0
     ./configure && make -j4 && make install
     popd
   fi
