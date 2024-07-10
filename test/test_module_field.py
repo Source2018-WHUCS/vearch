@@ -91,9 +91,6 @@ class TestStringArrayField:
         assert get_space_num() == int(total_batch * batch_size)
 
     def test_query_string_array(self):
-        # wait for scalar index finished
-        time.sleep(5)
-
         for i in range(100):
             query_dict = {
                 "document_ids": [str(i)],
