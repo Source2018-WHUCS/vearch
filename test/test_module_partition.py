@@ -141,3 +141,75 @@ class TestPartitionSmallDataMemorySize:
             response = drop_space(router_url, db_name, space["space_name"])
             logger.info(response)
         drop_db(router_url, db_name)
+
+
+class TestPartitionRule:
+    def setup_class(self):
+        self.logger = logger
+
+    def test_prepare_db(self):
+        logger.info(create_db(router_url, db_name))
+
+    @pytest.mark.parametrize(
+        ["embedding_size", "index_type"],
+        [[128, "FLAT"]],
+    )
+    def test_vearch_space_create(self, embedding_size, index_type):
+        space_config = {
+            "name": space_name,
+            "partition_num": 1,
+            "replica_num": 1,
+            "fields": [
+               {"name": "field_int", "type": "integer"},
+               {"name": "field_long", "type": "long"},
+               {"name": "field_float", "type": "float"},
+               {"name": "field_double", "type": "double"},
+               {"name": "field_string", "type": "string", "index": {"name": "field_string","type": "SCALAR"}},
+               {"name": "field_date", "type": "string"},
+               {
+                    "name": "field_vector", 
+                    "type": "vector",
+                    "dimension": embedding_size,
+                    "index": {
+                        "name": "gamma",
+                        "type": index_type,
+                        "params": {
+                            "metric_type": "InnerProduct",
+                            "ncentroids": 2048,
+                            "nsubvector": int(embedding_size / 4),
+                            "nlinks": 32,
+                            "efConstruction": 100,
+                        },
+                    },
+                    # "format": "normalization"
+                },
+            ],
+            "partition_rule": {
+                "type": "RANGE",
+                "field": "field_date",
+                "ranges":[
+                    {"name": "p0", "value": "2024-07-10"},
+                    {"name": "p1", "value": "2024-07-11"},
+                    {"name": "p2", "value": "2024-07-12"},
+                ]
+            }
+        }
+
+        response = create_space(router_url, db_name, space_config)
+        logger.info(response.json())
+        assert response.json()["code"] == 0
+        add_date(db_name, space_name, 0, 100, 100, embedding_size, logger)
+
+        waiting_index_finish(logger, 100 * 100, 1)
+
+        response = describe_space(logger, router_url, db_name, space_name)
+        logger.info(response.json())
+        assert response.json()["code"] == 0
+
+    def test_destroy_db(self):
+        response = list_spaces(router_url, db_name)
+        logger.info(response.json())
+        for space in response.json()["data"]:
+            response = drop_space(router_url, db_name, space["space_name"])
+            logger.info(response)
+        drop_db(router_url, db_name)

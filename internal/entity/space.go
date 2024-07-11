@@ -17,6 +17,7 @@ package entity
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 	"unicode"
 
 	"github.com/vearch/vearch/v3/internal/pkg/log"
@@ -77,6 +78,7 @@ type Space struct {
 	ReplicaNum      uint8                       `json:"replica_num"`
 	Fields          json.RawMessage             `json:"fields"`
 	Index           *Index                      `json:"index,omitempty"`
+	PartitionRule   *PartitionRule              `json:"partition_rule,omitempty"`
 	SpaceProperties map[string]*SpaceProperties `json:"space_properties"`
 }
 
@@ -86,15 +88,16 @@ type SpaceSchema struct {
 }
 
 type SpaceInfo struct {
-	SpaceName    string           `json:"space_name"`
-	DbName       string           `json:"db_name"`
-	DocNum       uint64           `json:"doc_num"`
-	PartitionNum int              `json:"partition_num"`
-	ReplicaNum   uint8            `json:"replica_num"`
-	Schema       *SpaceSchema     `json:"schema"`
-	Status       string           `json:"status,omitempty"`
-	Partitions   []*PartitionInfo `json:"partitions"`
-	Errors       *[]string        `json:"errors,omitempty"`
+	SpaceName     string           `json:"space_name"`
+	DbName        string           `json:"db_name"`
+	DocNum        uint64           `json:"doc_num"`
+	PartitionNum  int              `json:"partition_num"`
+	ReplicaNum    uint8            `json:"replica_num"`
+	Schema        *SpaceSchema     `json:"schema"`
+	PartitionRule *PartitionRule   `json:"partition_rule,omitempty"`
+	Status        string           `json:"status,omitempty"`
+	Partitions    []*PartitionInfo `json:"partitions"`
+	Errors        *[]string        `json:"errors,omitempty"`
 }
 
 type SpaceResource struct {
@@ -174,6 +177,38 @@ func (s *Space) PartitionId(slotID SlotID) PartitionID {
 	}
 
 	return arr[low-1].Id
+}
+
+func isDate(s string) bool {
+	_, err := time.Parse("2006-01-02", s)
+	return err == nil
+}
+
+func (s *Space) PartitionIdsByRangeField(value string, field_type vearchpb.FieldType) ([]PartitionID, error) {
+	pids := make([]PartitionID, 0)
+	if len(s.Partitions) == 1 {
+		pids = append(pids, s.Partitions[0].Id)
+		return pids, nil
+	}
+
+	arr := s.Partitions
+	index := 0
+
+	if !isDate(value) {
+		return pids, vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("space partition field value is not date type"))
+	}
+	for i, range_rule := range s.PartitionRule.Ranges {
+		value, _ := time.Parse("2006-01-02", value)
+		value_range, _ := time.Parse("2006-01-02", range_rule.Value)
+		if value.Day() <= value_range.Day() {
+			index = i
+			break
+		}
+	}
+	for i := 0; i < s.PartitionNum; i++ {
+		pids = append(pids, arr[index+i].Id)
+	}
+	return pids, nil
 }
 
 func (index *Index) UnmarshalJSON(bs []byte) error {

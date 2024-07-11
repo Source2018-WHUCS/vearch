@@ -324,20 +324,84 @@ func (ms *masterService) createSpaceService(ctx context.Context, dbName string, 
 	}
 	space.Id = spaceID
 
-	width := math.MaxUint32 / space.PartitionNum
-	for i := 0; i < space.PartitionNum; i++ {
-		partitionID, err := ms.Master().NewIDGenerate(ctx, entity.PartitionIdSequence, 1, 5*time.Second)
+	spaceProperties, err := entity.UnmarshalPropertyJSON(space.Fields)
+	if err != nil {
+		return err
+	}
 
-		if err != nil {
-			return err
+	space.SpaceProperties = spaceProperties
+	for _, f := range spaceProperties {
+		if f.FieldType == vearchpb.FieldType_VECTOR && f.Index != nil {
+			space.Index = f.Index
 		}
+	}
 
-		space.Partitions = append(space.Partitions, &entity.Partition{
-			Id:      entity.PartitionID(partitionID),
-			SpaceId: space.Id,
-			DBId:    space.DBId,
-			Slot:    entity.SlotID(i * width),
-		})
+	if space.PartitionRule != nil {
+		if space.PartitionRule.Field == "" {
+			return vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("space partition rule field is empty"))
+		}
+		if _, exist := space.SpaceProperties[space.PartitionRule.Field]; !exist {
+			return vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("%s not in space fields", space.PartitionRule.Field))
+		}
+		space.PartitionRule.Partitions = len(space.PartitionRule.Ranges)
+		if space.PartitionRule.Partitions == 0 {
+			return vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("empty space partition rule"))
+		}
+		if space.PartitionRule.Partitions > entity.MaxPartitions {
+			return vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("space partitions[%d] beyond MaxPartitions[%d]",
+				space.PartitionRule.Partitions, entity.MaxPartitions))
+		}
+		if space.PartitionRule.Partitions*space.PartitionNum > entity.MaxTotalPartitions {
+			return vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("space total partitions[%d] beyond MaxTotalPartitions[%d]",
+				space.PartitionRule.Partitions*space.PartitionNum, entity.MaxTotalPartitions))
+		}
+		for i := 0; i < space.PartitionRule.Partitions; i++ {
+			nameMap := make(map[string]bool)
+			valueMap := make(map[string]bool)
+
+			for _, r := range space.PartitionRule.Ranges {
+				if _, nameExists := nameMap[r.Name]; nameExists {
+					return vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("space partition rule range name has same one"))
+				}
+				if _, valueExists := valueMap[r.Value]; valueExists {
+					return vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("space partition rule range value has same one"))
+				}
+				nameMap[r.Name] = true
+				valueMap[r.Value] = true
+			}
+		}
+		width := math.MaxUint32 / (space.PartitionNum * space.PartitionRule.Partitions)
+		for i := 0; i < space.PartitionNum*space.PartitionRule.Partitions; i++ {
+			partitionID, err := ms.Master().NewIDGenerate(ctx, entity.PartitionIdSequence, 1, 5*time.Second)
+
+			if err != nil {
+				return err
+			}
+
+			space.Partitions = append(space.Partitions, &entity.Partition{
+				Id:      entity.PartitionID(partitionID),
+				Name:    space.PartitionRule.Ranges[i/space.PartitionNum].Name,
+				SpaceId: space.Id,
+				DBId:    space.DBId,
+				Slot:    entity.SlotID(i * width),
+			})
+		}
+	} else {
+		width := math.MaxUint32 / space.PartitionNum
+		for i := 0; i < space.PartitionNum; i++ {
+			partitionID, err := ms.Master().NewIDGenerate(ctx, entity.PartitionIdSequence, 1, 5*time.Second)
+
+			if err != nil {
+				return err
+			}
+
+			space.Partitions = append(space.Partitions, &entity.Partition{
+				Id:      entity.PartitionID(partitionID),
+				SpaceId: space.Id,
+				DBId:    space.DBId,
+				Slot:    entity.SlotID(i * width),
+			})
+		}
 	}
 
 	serverPartitions, err := ms.filterAndSortServer(ctx, space, servers)
@@ -359,18 +423,6 @@ func (ms *masterService) createSpaceService(ctx context.Context, dbName string, 
 			}
 		}
 	}()
-
-	spaceProperties, err := entity.UnmarshalPropertyJSON(space.Fields)
-	if err != nil {
-		return err
-	}
-
-	space.SpaceProperties = spaceProperties
-	for _, f := range spaceProperties {
-		if f.FieldType == vearchpb.FieldType_VECTOR && f.Index != nil {
-			space.Index = f.Index
-		}
-	}
 
 	marshal, err := vjson.Marshal(space)
 	if err != nil {
@@ -1442,7 +1494,9 @@ func (ms *masterService) updateSpaceService(ctx context.Context, dbName, spaceNa
 
 func (ms *masterService) updateSpace(ctx context.Context, space *entity.Space) error {
 	space.Version++
-	space.PartitionNum = len(space.Partitions)
+	if space.PartitionRule == nil {
+		space.PartitionNum = len(space.Partitions)
+	}
 	marshal, err := vjson.Marshal(space)
 	if err != nil {
 		return err

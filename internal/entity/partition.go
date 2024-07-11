@@ -43,6 +43,7 @@ type PartitionForSearch struct {
 // partition/[id]:[body]
 type Partition struct {
 	Id                PartitionID `json:"id,omitempty"`
+	Name              string      `json:"name,omitempty"`
 	SpaceId           SpaceID     `json:"space_id,omitempty"`
 	DBId              DBID        `json:"db_id,omitempty"`
 	Slot              SlotID      `json:"partition_slot"` // Slot stores the lower limit of the slot range
@@ -74,6 +75,7 @@ func (p *Partition) GetStatus() PartitionStatus {
 // get partition from every partitions
 type PartitionInfo struct {
 	PartitionID  PartitionID       `json:"pid,omitempty"`
+	Name         string            `json:"name,omitempty"`
 	DocNum       uint64            `json:"doc_num,omitempty"`
 	Size         int64             `json:"size,omitempty"`
 	ReplicaNum   int               `json:"replica_num,omitempty"`
@@ -97,4 +99,33 @@ type ResourceLimit struct {
 	ResourceExhausted *bool    `json:"resource_exhausted,omitempty"`
 	SpaceName         *string  `json:"space_name,omitempty"`
 	DbName            *string  `json:"db_name,omitempty"`
+}
+
+type PartitionType string
+
+const (
+	RangePartition     PartitionType = "RANGE"
+	HashPartition      PartitionType = "HASH"
+	ListPartition      PartitionType = "LIST"
+	KeyPartition       PartitionType = "KEY"
+	CompositePartition PartitionType = "COMPOSITE"
+)
+
+type PartitionRule struct {
+	Type         PartitionType  `json:"type"`
+	Field        string         `json:"field,omitempty"`
+	Partitions   int            `json:"partitions,omitempty"`
+	Ranges       []Range        `json:"ranges,omitempty"`
+	Lists        []List         `json:"lists,omitempty"`
+	SubPartition *PartitionRule `json:"sub_partition,omitempty"`
+}
+
+type Range struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+type List struct {
+	Name   string   `json:"name"`
+	Values []string `json:"values"`
 }
