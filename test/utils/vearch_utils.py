@@ -22,6 +22,7 @@ import time
 import random
 from multiprocessing import Pool as ThreadPool
 import numpy as np
+import datetime
 
 router_url = os.getenv("ROUTER_URL", "http://127.0.0.1:9001")
 db_name = "ts_db"
@@ -201,6 +202,52 @@ def add_embedding_size(db_name, space_name, total, batch_size, embedding_size):
     pool.close()
     pool.join()
 
+
+def process_add_date_data(items):
+    url = router_url + "/document/upsert"
+    data = {}
+    data["documents"] = []
+
+    add_db_name = items[0]
+    add_space_name = items[1]
+    index = items[2]
+    batch_size = items[3]
+    embedding_size = items[4]
+    date_type = items[5]
+    logger = items[6]
+
+    data["db_name"] = add_db_name
+    data["space_name"] = add_space_name
+    for j in range(batch_size):
+        param_dict = {}
+        param_dict["_id"] = str(index * batch_size + j)
+        param_dict["field_int"] = index * batch_size + j
+        param_dict["field_vector"] = [random.random() for i in range(embedding_size)]
+        param_dict["field_long"] = param_dict["field_int"]
+        param_dict["field_float"] = float(param_dict["field_int"])
+        param_dict["field_double"] = float(param_dict["field_int"])
+        param_dict["field_string"] = str(param_dict["field_int"])
+        date_str = datetime.date.today().strftime("%Y-%m-%d")
+        if date_type == "str":
+            param_dict["field_date"]  = date_str
+        else:
+            param_dict["field_date"]  = datetime.datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=datetime.timezone.utc).timestamp()
+        data["documents"].append(param_dict)
+
+    response = requests.post(url, auth=(username, password), json=data)
+    if response.json()["code"] != 0:
+        logger.info(response.json())
+    assert response.json()["code"] == 0
+
+
+def add_date(db_name, space_name, start, end, batch_size, embedding_size, date_type, logger):
+    pool = ThreadPool()
+    total_data = []
+    for i in range(start, end):
+        total_data.append((db_name, space_name, i, batch_size, embedding_size, date_type, logger))
+    results = pool.map(process_add_date_data, total_data)
+    pool.close()
+    pool.join()
 
 def process_add_error_data(items):
     url = router_url + "/document/upsert"
@@ -1123,8 +1170,6 @@ def prepare_cluster_for_document_test(logger, total, xb, partition_num=1):
     )
 
     add(total_batch, batch_size, xb, with_id, full_field)
-
-    time.sleep(3)
 
     query_interface(logger, total_batch, batch_size, xb, full_field, seed, "by_ids")
 
