@@ -289,14 +289,17 @@ func (r *routerRequest) UpsertByPartitions(partitions []uint32) *routerRequest {
 			for _, field := range doc.Fields {
 				if field.Name == r.space.PartitionRule.Field {
 					found = true
-					pids, err := r.space.PartitionIdsByRangeField(string(field.Value), field.Type)
+					pids, err := r.space.PartitionIdsByRangeField(field.Value, field.Type)
 					if err != nil {
 						r.Err = err
 						return r
 					}
-					random_index := murmur3.Sum32WithSeed([]byte(doc.PKey), 0) % uint32(len(pids))
-					partitionID = pids[random_index]
-
+					if len(pids) == 1 {
+						partitionID = pids[0]
+					} else {
+						random_index := murmur3.Sum32WithSeed([]byte(doc.PKey), 0) % uint32(len(pids))
+						partitionID = pids[random_index]
+					}
 					break
 				}
 			}

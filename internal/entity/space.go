@@ -20,6 +20,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/vearch/vearch/v3/internal/pkg/cbbytes"
 	"github.com/vearch/vearch/v3/internal/pkg/log"
 	"github.com/vearch/vearch/v3/internal/proto/vearchpb"
 )
@@ -100,11 +101,14 @@ type SpaceInfo struct {
 	Errors        *[]string        `json:"errors,omitempty"`
 }
 
-type SpaceResource struct {
-	SpaceName    string `json:"space_name"`
-	DbName       string `json:"db_name"`
-	PartitionNum int    `json:"partition_num,omitempty"`
-	ReplicaNum   uint8  `json:"replica_num,omitempty"`
+type SpacePartitionResource struct {
+	SpaceName             string         `json:"space_name"`
+	DbName                string         `json:"db_name"`
+	PartitionNum          int            `json:"partition_num,omitempty"`
+	ReplicaNum            uint8          `json:"replica_num,omitempty"`
+	PartitionRule         *PartitionRule `json:"partition_rule,omitempty"`
+	PartitionName         string         `json:"partition_name,omitempty"`
+	PartitionOperatorType string         `json:"operator_type,omitempty"`
 }
 
 type SpaceDescribeRequest struct {
@@ -179,12 +183,7 @@ func (s *Space) PartitionId(slotID SlotID) PartitionID {
 	return arr[low-1].Id
 }
 
-func isDate(s string) bool {
-	_, err := time.Parse("2006-01-02", s)
-	return err == nil
-}
-
-func (s *Space) PartitionIdsByRangeField(value string, field_type vearchpb.FieldType) ([]PartitionID, error) {
+func (s *Space) PartitionIdsByRangeField(value []byte, field_type vearchpb.FieldType) ([]PartitionID, error) {
 	pids := make([]PartitionID, 0)
 	if len(s.Partitions) == 1 {
 		pids = append(pids, s.Partitions[0].Id)
@@ -192,21 +191,26 @@ func (s *Space) PartitionIdsByRangeField(value string, field_type vearchpb.Field
 	}
 
 	arr := s.Partitions
-	index := 0
-
-	if !isDate(value) {
-		return pids, vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("space partition field value is not date type"))
-	}
-	for i, range_rule := range s.PartitionRule.Ranges {
-		value, _ := time.Parse("2006-01-02", value)
-		value_range, _ := time.Parse("2006-01-02", range_rule.Value)
-		if value.Day() <= value_range.Day() {
-			index = i
+	partition_name := ""
+	ts := cbbytes.Bytes2Int(value)
+	found := false
+	for _, r := range s.PartitionRule.Ranges {
+		value, _ := ToTimestamp(r.Value)
+		if ts < value {
+			partition_name = r.Name
+			found = true
 			break
 		}
 	}
-	for i := 0; i < s.PartitionNum; i++ {
-		pids = append(pids, arr[index+i].Id)
+	if !found {
+		u := cbbytes.Bytes2Int(value)
+		timeStr := time.Unix(u/1e9, u%1e9)
+		return pids, vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("can't set partition for field value %s, space ranges %v", timeStr, s.PartitionRule.Ranges))
+	}
+	for i := 0; i < len(arr); i++ {
+		if arr[i].Name == partition_name {
+			pids = append(pids, arr[i].Id)
+		}
 	}
 	return pids, nil
 }
