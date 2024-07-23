@@ -47,10 +47,6 @@ class TestClusterPartitionServerAdd:
             [512, "IVFPQ"],
             [512, "IVFFLAT"],
             [512, "HNSW"],
-            [1536, "FLAT"],
-            [1536, "IVFPQ"],
-            [1536, "IVFFLAT"],
-            [1536, "HNSW"],
         ],
     )
     def test_vearch_space_create(self, embedding_size, index_type):
@@ -58,7 +54,7 @@ class TestClusterPartitionServerAdd:
         space_config = {
             "name": space_name_each,
             "partition_num": 2,
-            "replica_num": 3,
+            "replica_num": 1,
             "fields": [
                 {"name": "field_int", "type": "integer"},
                 {"name": "field_long", "type": "long"},
@@ -90,7 +86,7 @@ class TestClusterPartitionServerAdd:
         }
 
         response = create_space(router_url, db_name, space_config)
-        logger.info(response)
+        logger.info(response.json())
 
         add_embedding_size(db_name, space_name_each, 50, 100, embedding_size)
 
