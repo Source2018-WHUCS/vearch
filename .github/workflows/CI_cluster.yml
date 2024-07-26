@@ -96,6 +96,7 @@ jobs:
         docker-compose start master1
 
     - name: Run tests for restart ps
+      # TODO FIXME ON ARM64
       if: matrix.platform != 'arm64'
       run: |
         cd test
