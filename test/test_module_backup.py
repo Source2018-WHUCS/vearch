@@ -42,13 +42,12 @@ class TestBackup:
         self.db_name = db_name
         self.space_name = space_name
 
-    def backup(self, router_url, command, with_schema, corrupted = False, error_param = False):
+    def backup(self, router_url, command, corrupted=False, error_param=False):
         url = router_url + "/backup/dbs/" + self.db_name + "/spaces/" + self.space_name
         use_ssl_str = os.getenv("S3_USE_SSL", "False")
 
         data = {
             "command": command,
-            "with_schema": with_schema,
             "s3_param": {
                 "access_key": os.getenv("S3_ACCESS_KEY", "minioadmin"),
                 "secret_key": os.getenv("S3_SECRET_KEY", "minioadmin"),
@@ -74,11 +73,28 @@ class TestBackup:
 
             data["s3_param"]["bucket_name"] = os.getenv("S3_BUCKET_NAME", "test")
             data["s3_param"]["endpoint"] = "error_endpoint"
+            response = requests.post(url, auth=(username, password), json=data)
+            assert response.status_code != 0
+
+            data["s3_param"]["endpoint"] = os.getenv("S3_ENDPOINT", "minio:9000")
+
+            # test db not exist
+            url = router_url + "/backup/dbs/" + "err_db" + "/spaces/" + self.space_name
+            response = requests.post(url, auth=(username, password), json=data)
+            assert response.status_code != 0
+
+            # test space not exist
+            url = router_url + "/backup/dbs/" + self.db_name + "/spaces/" + "error_space"
+            response = requests.post(url, auth=(username, password), json=data)
+            assert response.status_code != 0
+
+            data["s3_param"] = {}
+            response = requests.post(url, auth=(username, password), json=data)
             assert response.status_code != 0
             return
 
         response = requests.post(url, auth=(username, password), json=data)
-        
+
         if not corrupted:
             assert response.json()["code"] == 0
         else:
@@ -118,7 +134,6 @@ class TestBackup:
         response = create_space(router_url, self.db_name, space_config)
         self.logger.info(response.json())
 
-
     def query(self, parallel_on_queries, k):
         query_dict = {
             "vectors": [],
@@ -143,12 +158,10 @@ class TestBackup:
             assert recalls[1] >= 0.95
             assert recalls[10] >= 1.0
 
-
     def compare_doc(self, doc1, doc2):
         self.logger.debug("doc1: " + json.dumps(doc1))
         self.logger.debug("doc2: " + json.dumps(doc2))
         return doc1["_id"] == doc2["_id"] and doc1["field_int"] == doc2["field_int"] and doc1["field_vector"] == doc2["field_vector"]
-
 
     def waiting_backup_finish(self, timewait=5):
         url = router_url + "/dbs/" + self.db_name + "/spaces/" + self.space_name
@@ -186,7 +199,7 @@ class TestBackup:
         except S3Error as err:
             self.logger.error(f"Error occurred: {err} bucket_name {bucket_name} secure {secure} endpoint {endpoint}")
 
-    def benchmark(self, store_type: str, with_schema: bool, corrupted: bool):
+    def benchmark(self, corrupted: bool):
         embedding_size = self.xb.shape[1]
         batch_size = 100
         k = 100
@@ -196,25 +209,22 @@ class TestBackup:
         self.logger.info("dataset num: %d, total_batch: %d, dimension: %d, search num: %d, topK: %d" % (
             total, total_batch, embedding_size, self.xq.shape[0], k))
 
-        self.create(router_url, embedding_size, store_type)
+        self.create(router_url, embedding_size)
 
         add(total_batch, batch_size, self.xb, with_id=True)
 
         waiting_index_finish(self.logger, total)
 
-        self.backup(router_url, "create", with_schema)
+        self.backup(router_url, "create")
         self.waiting_backup_finish()
 
-        if with_schema:
-            drop_space(router_url, self.db_name, self.space_name)
-        else:
-            destroy(router_url, self.db_name, self.space_name)
-            self.create(router_url, embedding_size, store_type)
+        destroy(router_url, self.db_name, self.space_name)
+        self.create(router_url, embedding_size)
 
         if corrupted:
-            self.remove_oss_file(self.db_name + "/" + self.space_name + "/" +"0.json.zst")
+            self.remove_oss_file(f"{self.db_name}/{self.space_name}/0.json.zst")
 
-        self.backup(router_url, "restore", with_schema, corrupted)
+        self.backup(router_url, "restore", corrupted)
 
         if corrupted:
             destroy(router_url, self.db_name, self.space_name)
@@ -246,20 +256,13 @@ class TestBackup:
 
         destroy(router_url, self.db_name, self.space_name)
 
-
-    @pytest.mark.parametrize(["store_type", "with_schema"], [
-        ["MemoryOnly", False],
-        ["MemoryOnly", True],
+    @pytest.mark.parametrize(["corrupted_data"], [
+        [False],
+        [True],
     ])
-    def test_vearch_backup(self, store_type: str, with_schema: bool):
-        self.benchmark(store_type, with_schema, False)
+    def test_vearch_backup(self, corrupted_data: bool):
+        self.benchmark(corrupted_data)
 
-    @pytest.mark.parametrize(["store_type", "with_schema"], [
-        ["MemoryOnly", False],
-        ["MemoryOnly", True],
-    ])
-    def test_vearch_backup_with_corrupted_data(self, store_type: str, with_schema: bool):
-        self.benchmark(store_type, with_schema, True)
 
     def test_error_params(self):
         embedding_size = self.xb.shape[1]
@@ -271,12 +274,12 @@ class TestBackup:
         self.logger.info("dataset num: %d, total_batch: %d, dimension: %d, search num: %d, topK: %d" % (
             total, total_batch, embedding_size, self.xq.shape[0], k))
 
-        self.create(router_url, embedding_size, "MemoryOnly")
+        self.create(router_url, embedding_size)
 
         add(total_batch, batch_size, self.xb, with_id=True)
 
         waiting_index_finish(self.logger, total)
 
-        self.backup(router_url, "create", True, error_param=True)
+        self.backup(router_url, "create", error_param=True)
 
         destroy(router_url, self.db_name, self.space_name)
