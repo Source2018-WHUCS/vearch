@@ -26,5 +26,4 @@ CheckRestart() {
         done
 }
 
-# 1分钟执行一次进程检测
 CheckRestart
