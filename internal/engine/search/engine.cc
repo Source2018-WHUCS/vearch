@@ -752,7 +752,7 @@ int Engine::GetDoc(const std::string &key, Doc &doc) {
 int Engine::GetDoc(int docid, Doc &doc, bool next) {
   int ret = 0;
 
-  if (docid < 0 || docid >= max_docid_) {
+  if ((next ? docid < -1 : docid < 0) || docid >= max_docid_) {
     LOG(ERROR) << space_name_ << " docid [" << docid << "] error, max_docid_ = " << max_docid_;
     return -1;
   }
