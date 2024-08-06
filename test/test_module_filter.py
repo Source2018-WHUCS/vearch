@@ -20,6 +20,7 @@ import requests
 import json
 import pytest
 import logging
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from utils.vearch_utils import *
 from utils.data_utils import *
@@ -140,6 +141,44 @@ def process_get_data_by_filter(items):
     elif mode == "()":
         prepare_filter_bound(data["filters"]["conditions"], index,
                              batch_size, full_field, ">", "<")
+    elif mode == "upper_outbound":
+        range_filter = [
+            {
+                "field": "field_int",
+                "operator": ">=",
+                "value": 2**31 - 1
+            },
+            {
+                "field": "field_long",
+                "operator": ">=",
+                "value": 2**63 - 1
+            },
+            {
+                "field": "field_double",
+                "operator": ">=",
+                "value": sys.float_info.max - 1
+            },
+        ]
+        data["filters"]["conditions"].extend(range_filter)
+    elif mode == "lower_outbound":
+        range_filter = [
+            {
+                "field": "field_int",
+                "operator": "<=",
+                "value": -2**31 + 1
+            },
+            {
+                "field": "field_long",
+                "operator": "<=",
+                "value": -2**63 + 1
+            },
+            {
+                "field": "field_double",
+                "operator": "<=",
+                "value": sys.float_info.min + 1
+            },
+        ]
+        data["filters"]["conditions"].extend(range_filter)
     data["limit"] = batch_size
 
     json_str = json.dumps(data)
@@ -151,8 +190,8 @@ def process_get_data_by_filter(items):
 
     documents = rs.json()["data"]["documents"]
     if len(documents) != batch_size:
-        logger.info("len(documents) = " + str(len(documents)))
-        logger.info(json_str)
+        logger.debug("len(documents) = " + str(len(documents)))
+        logger.debug(json_str)
 
     if mode == "[]":
         assert len(documents) == batch_size
@@ -199,6 +238,9 @@ def process_get_data_by_filter(items):
                 assert documents[j]["field_float"] == float(value)
                 assert documents[j]["field_double"] == float(value)
     elif mode == "()":
+        assert len(documents) == 0
+        assert rs.text.find("\"total\":" + str(0)) >= 0
+    elif mode == "upper_outbound" or mode == "lower_outbound":
         assert len(documents) == 0
         assert rs.text.find("\"total\":" + str(0)) >= 0
 
@@ -327,6 +369,8 @@ def check(total, full_field, xb, mode: str):
     [True, "[]"],
     [True, "(]"],
     [True, "[)"],
+    [True, "upper_outbound"],
+    [True, "lower_outbound"],
 ])
 def test_module_filter(full_field: bool, mode: str):
     check(100, full_field, xb, mode)
