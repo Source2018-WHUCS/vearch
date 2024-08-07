@@ -175,7 +175,75 @@ def process_get_data_by_filter(items):
             {
                 "field": "field_double",
                 "operator": "<=",
-                "value": sys.float_info.min + 1
+                "value": -sys.float_info.max + 1
+            },
+        ]
+        data["filters"]["conditions"].extend(range_filter)
+    elif mode == "[lower_bound, valid_value]":
+        range_filter = [
+            {
+                "field": "field_int",
+                "operator": ">=",
+                "value": -2**31 + 1
+            },
+            {
+                "field": "field_int",
+                "operator": "<=",
+                "value": (index + 1) * batch_size
+            },
+            {
+                "field": "field_long",
+                "operator": ">=",
+                "value": -2**63 + 1
+            },
+            {
+                "field": "field_long",
+                "operator": "<=",
+                "value": (index + 1) * batch_size
+            },
+            {
+                "field": "field_double",
+                "operator": ">=",
+                "value": -sys.float_info.max + 1
+            },
+            {
+                "field": "field_double",
+                "operator": "<=",
+                "value": (index + 1) * batch_size
+            },
+        ]
+        data["filters"]["conditions"].extend(range_filter)
+    elif mode == "[valid_value, upper_bound]":
+        range_filter = [
+            {
+                "field": "field_int",
+                "operator": "<=",
+                "value": 2**31 - 1
+            },
+            {
+                "field": "field_int",
+                "operator": ">=",
+                "value": index * batch_size
+            },
+            {
+                "field": "field_long",
+                "operator": "<=",
+                "value": 2**63 - 1
+            },
+            {
+                "field": "field_long",
+                "operator": ">=",
+                "value": index * batch_size
+            },
+            {
+                "field": "field_double",
+                "operator": "<=",
+                "value": sys.float_info.max - 1
+            },
+            {
+                "field": "field_double",
+                "operator": ">=",
+                "value": index * batch_size
             },
         ]
         data["filters"]["conditions"].extend(range_filter)
@@ -243,6 +311,8 @@ def process_get_data_by_filter(items):
     elif mode == "upper_outbound" or mode == "lower_outbound":
         assert len(documents) == 0
         assert rs.text.find("\"total\":" + str(0)) >= 0
+    elif mode == "[lower_bound, valid_value]" or mode == "[valid_value, upper_bound]":
+        assert len(documents) > 0
 
 
 def query_by_filter_interface(logger, total, full_field, mode: str):
@@ -371,6 +441,8 @@ def check(total, full_field, xb, mode: str):
     [True, "[)"],
     [True, "upper_outbound"],
     [True, "lower_outbound"],
+    [True, "[lower_bound, valid_value]"],
+    [True, "[valid_value, upper_bound]"],
 ])
 def test_module_filter(full_field: bool, mode: str):
     check(100, full_field, xb, mode)
