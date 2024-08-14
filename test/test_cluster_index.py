@@ -38,6 +38,8 @@ def document_upsert(add_db_name, add_space_name, embedding_size, crud_time):
 
     count = 0
     while time.time() < end_time:
+        # TODO why should sleep here
+        time.sleep(0.01)
         try:
             items[2] = random.randint(0, 30000000)
             items[3] = random.randint(0, 10)
@@ -82,6 +84,8 @@ def document_query(query_db_name, query_space_name, crud_time):
     ]
 
     while time.time() < end_time:
+        # TODO why should sleep here
+        time.sleep(0.01)
         try:
             items[1] = random.randint(0, 30000000)
             items[2] = random.randint(0, 100)
@@ -133,6 +137,7 @@ def document_search(search_db_name, search_space_name, embedding_size, crud_time
         check,
     ]
     while time.time() < end_time:
+        time.sleep(0.01)
         try:
             items[1] = random.randint(0, 30000000)
             items[2] = random.randint(0, 100)
@@ -178,6 +183,7 @@ def document_delete(delete_db_name, delete_space_name, crud_time):
         check,
     ]
     while time.time() < end_time:
+        time.sleep(0.01)
         try:
             items[1] = random.randint(0, 30000000)
             items[2] = random.randint(0, 100)
@@ -205,7 +211,7 @@ class TestClusterIndex:
     @pytest.mark.parametrize(
         ["index_type", "embedding_size"],
         [
-            ["FLAT", 64],
+            ["BFFLAT", 64], # avoid pytest -k mix with ivfflat, BF as brute search
             ["IVFPQ", 64],
             ["IVFFLAT", 64],
             ["HNSW", 64],
@@ -219,7 +225,10 @@ class TestClusterIndex:
             "cluster_index_" + str(embedding_size) + "_" + index_type
         )
         TestClusterIndex.embedding_size = embedding_size
-        TestClusterIndex.index_type = index_type
+        if index_type == "BFFLAT":
+            TestClusterIndex.index_type = "FLAT"
+        else:
+            TestClusterIndex.index_type = index_type
 
     def test_vearch_index_space_create(self):
         response = create_db(router_url, TestClusterIndex.db_name)
