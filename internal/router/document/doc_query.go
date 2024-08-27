@@ -33,16 +33,19 @@ import (
 )
 
 const (
-	URLQueryFrom      = "from"
-	UrlQueryRouting   = "routing"
-	UrlQueryTypedKey  = "typed_keys"
-	UrlQueryVersion   = "version"
-	UrlQueryOpType    = "op_type"
-	UrlQueryTimeout   = "timeout"
-	DefaultSize       = 50
-	WeightedRanker    = "WeightedRanker"
-	TermOperatorIN    = int32(1)
-	TermOperatorNOTIN = int32(2)
+	URLQueryFrom     = "from"
+	UrlQueryRouting  = "routing"
+	UrlQueryTypedKey = "typed_keys"
+	UrlQueryVersion  = "version"
+	UrlQueryOpType   = "op_type"
+	UrlQueryTimeout  = "timeout"
+	DefaultSize      = 50
+	WeightedRanker   = "WeightedRanker"
+)
+
+const (
+	TermOperatorIN    int32 = 1
+	TermOperatorNOTIN int32 = 2
 )
 
 type VectorQuery struct {
