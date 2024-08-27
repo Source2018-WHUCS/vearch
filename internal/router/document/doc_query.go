@@ -33,14 +33,16 @@ import (
 )
 
 const (
-	URLQueryFrom     = "from"
-	UrlQueryRouting  = "routing"
-	UrlQueryTypedKey = "typed_keys"
-	UrlQueryVersion  = "version"
-	UrlQueryOpType   = "op_type"
-	UrlQueryTimeout  = "timeout"
-	DefaultSize      = 50
-	WeightedRanker   = "WeightedRanker"
+	URLQueryFrom      = "from"
+	UrlQueryRouting   = "routing"
+	UrlQueryTypedKey  = "typed_keys"
+	UrlQueryVersion   = "version"
+	UrlQueryOpType    = "op_type"
+	UrlQueryTimeout   = "timeout"
+	DefaultSize       = 50
+	WeightedRanker    = "WeightedRanker"
+	TermOperatorIN    = int32(1)
+	TermOperatorNOTIN = int32(2)
 )
 
 type VectorQuery struct {
@@ -140,7 +142,7 @@ func parseFilter(filters *request.Filter, space *entity.Space) ([]*vearchpb.Rang
 				if !ok {
 					tm = &Term{
 						Value:    condition.Value,
-						Operator: 1,
+						Operator: TermOperatorIN,
 					}
 					termConditionMap[condition.Field] = tm
 				} else {
@@ -157,7 +159,7 @@ func parseFilter(filters *request.Filter, space *entity.Space) ([]*vearchpb.Rang
 				if !ok {
 					tm = &Term{
 						Value:    condition.Value,
-						Operator: 2,
+						Operator: TermOperatorNOTIN,
 					}
 					termConditionMap[condition.Field] = tm
 				} else {

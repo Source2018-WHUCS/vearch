@@ -252,7 +252,7 @@ def process_get_data_by_filter(items):
             {
                 "field": "field_string",
                 "operator": "IN",
-                "value": [str(index * batch_size)]
+                "value": [str(index * batch_size), str((index + 1) * batch_size)]
             },
         ]
         data["filters"]["conditions"].extend(term_filter)
@@ -261,7 +261,7 @@ def process_get_data_by_filter(items):
             {
                 "field": "field_string",
                 "operator": "NOT IN",
-                "value": [str(index * batch_size)]
+                "value": [str(index * batch_size), str((index + 1) * batch_size)]
             },
         ]
         data["filters"]["conditions"].extend(term_filter)
@@ -333,10 +333,10 @@ def process_get_data_by_filter(items):
         assert len(documents) > 0
     elif mode == "IN":
         for doc in documents:
-            assert doc["field_string"] == str(index)
+            assert (doc["field_string"] == str(index) or doc["field_string"] == str(index + 1))
     elif mode == "NOT IN":
         for doc in documents:
-            assert doc["field_string"] != str(index)
+            assert (doc["field_string"] != str(index) and doc["field_string"] != str(index + 1))
 
 
 def query_by_filter_interface(logger, total, full_field, mode: str):
