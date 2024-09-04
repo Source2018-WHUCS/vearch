@@ -452,7 +452,7 @@ class TestIncompleteShardSearch:
             "feature": xb[:1].flatten().tolist(),
         }
 
-        data["load_balance"] = random.choice(["leader", "random", "no_leader", "least_connection"])
+        data["load_balance"] = random.choice(["leader", "random", "not_leader", "least_connection"])
         data["vectors"].append(vector_info)
         data["limit"] = 1
 
@@ -464,7 +464,7 @@ class TestIncompleteShardSearch:
             assert False
 
         documents = rs.json()["data"]["documents"]
-        if data["load_balance"] in ["leader", "no_leader"]:
+        if data["load_balance"] in ["leader", "not_leader"]:
             assert len(documents) >= 0
         else:
             assert len(documents) > 0
