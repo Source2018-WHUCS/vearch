@@ -661,10 +661,9 @@ func queryRequestToPb(searchDoc *request.SearchDocumentRequest, space *entity.Sp
 				spaceProKeyMap, _ = entity.UnmarshalPropertyJSON(space.Fields)
 			}
 			for fieldName, property := range spaceProKeyMap {
-				if property.Type != "" && strings.Compare(property.Type, "vector") != 0 {
+				if property.Type != "vector" {
 					queryReq.Fields = append(queryReq.Fields, fieldName)
-				}
-				if property.Type != "" && strings.Compare(property.Type, "vector") == 0 {
+				} else {
 					vectorFieldArr = append(vectorFieldArr, fieldName)
 				}
 			}
@@ -696,8 +695,8 @@ func queryRequestToPb(searchDoc *request.SearchDocumentRequest, space *entity.Sp
 	}
 
 	queryFieldMap := make(map[string]string)
-	for _, feild := range queryReq.Fields {
-		queryFieldMap[feild] = feild
+	for _, field := range queryReq.Fields {
+		queryFieldMap[field] = field
 	}
 
 	sortOrder, err := searchDoc.SortOrder()
@@ -852,7 +851,7 @@ func requestToPb(searchDoc *request.SearchDocumentRequest, space *entity.Space, 
 		metricType = indexParams.MetricType
 	}
 
-	if metricType != "" && metricType == "L2" {
+	if metricType == "L2" {
 		sortOrder = sortorder.SortOrder{&sortorder.SortScore{Desc: false}}
 	}
 	spaceProMap := space.SpaceProperties
