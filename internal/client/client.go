@@ -1454,12 +1454,12 @@ func AddMerge(sr *vearchpb.SearchResult, other *vearchpb.SearchResult) {
 	}
 }
 
-func mergeSortedArrays(arr1, arr2 []*vearchpb.ResultItem, n int, findMax bool) []*vearchpb.ResultItem {
-	m, n1 := len(arr1), len(arr2)
-	merged := make([]*vearchpb.ResultItem, 0, m+n1)
+func mergeSortedArrays(arr1, arr2 []*vearchpb.ResultItem, topN int, desc bool) []*vearchpb.ResultItem {
+	m, n := len(arr1), len(arr2)
+	merged := make([]*vearchpb.ResultItem, 0, m+n)
 
 	i, j := 0, 0
-	for i < m && j < n1 {
+	for i < m && j < n {
 		if arr1[i].Score < arr2[j].Score {
 			merged = append(merged, arr1[i])
 			i++
@@ -1476,21 +1476,21 @@ func mergeSortedArrays(arr1, arr2 []*vearchpb.ResultItem, n int, findMax bool) [
 	}
 
 	// Append remaining elements from arr2
-	for j < n1 {
+	for j < n {
 		merged = append(merged, arr2[j])
 		j++
 	}
 
-	// Determine the result based on findMax
-	if findMax {
+	// Determine the result based on desc
+	if desc {
 		// Get the last n elements for max values
-		if len(merged) > n {
-			return merged[len(merged)-n:]
+		if len(merged) > topN {
+			return merged[len(merged)-topN:]
 		}
 	} else {
 		// Get the first n elements for min values
-		if len(merged) > n {
-			return merged[:n]
+		if len(merged) > topN {
+			return merged[:topN]
 		}
 	}
 
