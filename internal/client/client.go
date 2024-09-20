@@ -1459,13 +1459,25 @@ func mergeSortedArrays(arr1, arr2 []*vearchpb.ResultItem, topN int, desc bool) [
 	merged := make([]*vearchpb.ResultItem, 0, m+n)
 
 	i, j := 0, 0
-	for i < m && j < n {
-		if arr1[i].Score < arr2[j].Score {
-			merged = append(merged, arr1[i])
-			i++
-		} else {
-			merged = append(merged, arr2[j])
-			j++
+	if desc {
+		for i < m && j < n {
+			if arr1[i].Score > arr2[j].Score {
+				merged = append(merged, arr1[i])
+				i++
+			} else {
+				merged = append(merged, arr2[j])
+				j++
+			}
+		}
+	} else {
+		for i < m && j < n {
+			if arr1[i].Score < arr2[j].Score {
+				merged = append(merged, arr1[i])
+				i++
+			} else {
+				merged = append(merged, arr2[j])
+				j++
+			}
 		}
 	}
 
@@ -1481,17 +1493,8 @@ func mergeSortedArrays(arr1, arr2 []*vearchpb.ResultItem, topN int, desc bool) [
 		j++
 	}
 
-	// Determine the result based on desc
-	if desc {
-		// Get the last n elements for max values
-		if len(merged) > topN {
-			return merged[len(merged)-topN:]
-		}
-	} else {
-		// Get the first n elements for min values
-		if len(merged) > topN {
-			return merged[:topN]
-		}
+	if len(merged) > topN {
+		return merged[:topN]
 	}
 
 	return merged
