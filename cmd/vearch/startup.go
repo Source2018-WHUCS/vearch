@@ -61,12 +61,19 @@ const (
 
 func newProfileHttpServer(port uint16) {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error("start pprof server error: %v", r)
+			}
+		}()
+
 		for i := 0; i < 3; i++ {
 			err := http.ListenAndServe("0.0.0.0:"+cast.ToString(port), nil)
 			if err != nil {
 				log.Error(err.Error())
 				time.Sleep(10 * time.Second)
 			} else {
+				log.Info("start pprof server on port %d", port)
 				break
 			}
 		}
