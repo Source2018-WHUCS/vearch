@@ -9,9 +9,8 @@ COPY . .
 RUN microdnf install -y dnf && \
     dnf install -y epel-release && \
     dnf install -y wget make cmake automake git which libzstd-devel openssl-devel tbb-devel tar findutils gcc-c++ && \
-    dnf --enablerepo=crb install -y blas-devel lapack-devel openblas-devel golang libuv
-
-RUN mkdir -p /env/app/go/src/github.com/vearch && \
+    dnf --enablerepo=crb install -y blas-devel lapack-devel openblas-devel golang libuv && \
+    mkdir -p /env/app/go/src/github.com/vearch && \
     ln -s /vearch /env/app/go/src/github.com/vearch && \
     git config --global --add safe.directory /vearch && \
     cd /env/app/go/src/github.com/vearch/vearch/build && \
