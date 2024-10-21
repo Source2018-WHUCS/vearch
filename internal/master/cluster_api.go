@@ -1064,7 +1064,6 @@ func (ca *clusterAPI) partitionList(c *gin.Context) {
 
 // list fail servers
 func (cluster *clusterAPI) FailServerList(c *gin.Context) {
-
 	ctx, _ := c.Get(vearchhttp.Ctx)
 
 	failServers, err := cluster.masterService.Master().QueryAllFailServer(ctx.(context.Context))
@@ -1163,7 +1162,7 @@ func (cluster *clusterAPI) RecoverFailServer(c *gin.Context) {
 	rsStr := vjson.ToJsonString(rs)
 	log.Info("RecoverFailServer is %s,", rsStr)
 	if err := cluster.masterService.RecoverFailServer(ctx.(context.Context), rs); err != nil {
-		response.New(c).JsonError(errors.NewErrInternal(fmt.Errorf("%s failed recover,err is %v", rsStr, err)))
+		response.New(c).JsonError(errors.NewErrInternal(fmt.Errorf("%s failed recover, err is %v", rsStr, err)))
 	} else {
 		response.New(c).JsonSuccess(fmt.Sprintf("%s success recover!", rsStr))
 	}
