@@ -116,7 +116,6 @@ func documentGetResponse(space *entity.Space, reply *vearchpb.GetResponse, retur
 		}
 	}
 	response["total"] = total
-	response["request_id"] = reply.Head.RequestId
 
 	documents := make([]map[string]interface{}, 0, len(reply.Items))
 	for _, item := range reply.Items {
@@ -189,7 +188,6 @@ func documentSearchResponse(srs []*vearchpb.SearchResult, head *vearchpb.Respons
 			return nil, vearchpb.NewError(head.Err.Code, errors.New(head.Err.Msg))
 		}
 	}
-	response["request_id"] = head.RequestId
 
 	documents := make([][]map[string]interface{}, 0, len(srs))
 	for _, sr := range srs {
