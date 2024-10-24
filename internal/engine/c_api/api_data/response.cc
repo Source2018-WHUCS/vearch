@@ -140,7 +140,7 @@ int Response::Serialize(const std::string &space_name,
   if (perf_tool_) {
     PerfTool *perf_tool = static_cast<PerfTool *>(perf_tool_);
     perf_tool->Perf("serialize");
-    LOG(TRACE) << space_name << " " << request_id_
+    LOG(TRACE) << space_name << " " << request_id_ << " "
                << perf_tool->OutputPerf().str();
   }
   return 0;
