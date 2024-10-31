@@ -60,6 +60,14 @@ struct VectorResult {
   void init(int a, int b) {
     n = a;
     topn = b;
+    if (dists) {
+      delete[] dists;
+      dists = nullptr;
+    }
+    if (docids) {
+      delete[] docids;
+      docids = nullptr;
+    }
     dists = new float[n * topn];
     docids = new int64_t[n * topn];
     total.resize(n, 0);
@@ -200,6 +208,18 @@ struct GammaResult {
 
   void init(int n, std::string *vec_names, int vec_num) {
     topn = n;
+
+    if (docs) {
+      for (int i = 0; i < topn; i++) {
+        if (docs[i]) {
+          delete docs[i];
+          docs[i] = nullptr;
+        }
+      }
+      delete[] docs;
+      docs = nullptr;
+    }
+
     docs = new (std::nothrow) VectorDoc *[topn];
     assert(docs != nullptr);
 
