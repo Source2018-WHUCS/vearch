@@ -58,18 +58,13 @@ struct VectorResult {
   }
 
   void init(int a, int b) {
+    if (dists || docids) {
+      LOG(WARNING) << "allocate memory repeatedly and release the old one";
+      return;
+    }
+
     n = a;
     topn = b;
-    if (dists) {
-      LOG(WARNING) << "allocate memory repeatedly and release the old one";
-      delete[] dists;
-      dists = nullptr;
-    }
-    if (docids) {
-      LOG(WARNING) << "allocate memory repeatedly and release the old one";
-      delete[] docids;
-      docids = nullptr;
-    }
     dists = new float[n * topn];
     docids = new int64_t[n * topn];
     total.resize(n, 0);
@@ -209,19 +204,12 @@ struct GammaResult {
   }
 
   void init(int n, std::string *vec_names, int vec_num) {
-    topn = n;
-
     if (docs) {
       LOG(WARNING) << "allocate memory repeatedly and release the old one";
-      for (int i = 0; i < topn; i++) {
-        if (docs[i]) {
-          delete docs[i];
-          docs[i] = nullptr;
-        }
-      }
-      delete[] docs;
-      docs = nullptr;
+      return;
     }
+
+    topn = n;
 
     docs = new (std::nothrow) VectorDoc *[topn];
     assert(docs != nullptr);
