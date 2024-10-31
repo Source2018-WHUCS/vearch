@@ -61,10 +61,12 @@ struct VectorResult {
     n = a;
     topn = b;
     if (dists) {
+      LOG(WARNING) << "allocate memory repeatedly and release the old one";
       delete[] dists;
       dists = nullptr;
     }
     if (docids) {
+      LOG(WARNING) << "allocate memory repeatedly and release the old one";
       delete[] docids;
       docids = nullptr;
     }
@@ -210,6 +212,7 @@ struct GammaResult {
     topn = n;
 
     if (docs) {
+      LOG(WARNING) << "allocate memory repeatedly and release the old one";
       for (int i = 0; i < topn; i++) {
         if (docs[i]) {
           delete docs[i];
