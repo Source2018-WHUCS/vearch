@@ -152,8 +152,17 @@ jobs:
         set -e
         cd test
         pytest test_cluster_ps.py -x -k "TestFailServerPrepare" --log-cli-level=INFO
-        cd .. && docker-compose -f cloud/docker-compose.yml stop ps1
+        sed -i 's/name = "vearch"/name = "test"/' ../cloud/config_cluster.toml
+        cd .. && docker-compose -f cloud/docker-compose.yml restart ps1
+        sed -i 's/name = "test"/name = "vearch"/' cloud/config_cluster.toml
         sleep 60
+        status=$(curl -u root:secret http://127.0.0.1:8817/cluster/health | jq -r '.data[0].spaces[0].status')
+        if [ "$status" != "yellow" ]; then
+          echo "Error: Status is not yellow. Status is $status."
+          exit 1
+        else
+          echo "Status is yellow."
+        fi
         docker-compose -f cloud/docker-compose.yml up ps4 -d
         sleep 60
         status=$(curl -u root:secret http://127.0.0.1:8817/cluster/health | jq -r '.data[0].spaces[0].status')
