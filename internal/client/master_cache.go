@@ -845,7 +845,26 @@ func (w *watcherJob) serverDelete(cacheKey string) (err error) {
 				// get partition
 				partition, err := w.masterClient.QueryPartition(w.ctx, failPid)
 				errutil.ThrowError(err)
-				replicas := partition.Replicas
+				space, err := w.masterClient.QuerySpaceByID(w.ctx, partition.DBId, partition.SpaceId)
+				if err != nil {
+					log.Error("query space by id %d err: %v", partition.SpaceId, err)
+					continue
+				}
+				replicas := make([]entity.NodeID, 0)
+				for _, r := range partition.Replicas {
+					server, err := w.masterClient.QueryServer(w.ctx, r)
+					if err != nil {
+						log.Error("query server by id %d err: %v", r, err)
+						continue
+					}
+					if IsLive(server.RpcAddr()) {
+						replicas = append(replicas, r)
+					}
+				}
+				if len(replicas) < int(space.ReplicaNum/2) {
+					log.Error("partition %d replica num %d less than half of space replica num %d", failPid, len(replicas), space.ReplicaNum)
+					continue
+				}
 				// get all server
 				servers, err := w.masterClient.QueryServers(w.ctx)
 				errutil.ThrowError(err)
@@ -882,8 +901,8 @@ func (w *watcherJob) serverDelete(cacheKey string) (err error) {
 
 				cm := &entity.ChangeMembers{
 					PartitionIDs: []entity.PartitionID{failPid},
-					NodeID:       nodeID,
-					Method:       proto.ConfRemoveNode,
+					NodeID:       availableServers[0].ID,
+					Method:       proto.ConfAddNode,
 				}
 				reqBody, err := vjson.Marshal(cm)
 				if err != nil {
@@ -892,7 +911,7 @@ func (w *watcherJob) serverDelete(cacheKey string) (err error) {
 				}
 				response, err := w.masterClient.HTTPRequest(w.ctx, http.MethodPost, "/partitions/change_member", string(reqBody))
 				if err != nil {
-					log.Error("%v", err)
+					log.Error("%s: %v", string(reqBody), err)
 					continue
 				}
 				js := &httpResonse.HttpReply{}
@@ -908,8 +927,8 @@ func (w *watcherJob) serverDelete(cacheKey string) (err error) {
 
 				cm = &entity.ChangeMembers{
 					PartitionIDs: []entity.PartitionID{failPid},
-					NodeID:       availableServers[0].ID,
-					Method:       proto.ConfAddNode,
+					NodeID:       nodeID,
+					Method:       proto.ConfRemoveNode,
 				}
 				reqBody, err = vjson.Marshal(cm)
 				if err != nil {
@@ -918,7 +937,7 @@ func (w *watcherJob) serverDelete(cacheKey string) (err error) {
 				}
 				response, err = w.masterClient.HTTPRequest(w.ctx, http.MethodPost, "/partitions/change_member", string(reqBody))
 				if err != nil {
-					log.Error("%s: %v", string(reqBody), err)
+					log.Error("%v", err)
 					continue
 				}
 				js = &httpResonse.HttpReply{}
