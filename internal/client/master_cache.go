@@ -17,16 +17,20 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/cubefs/cubefs/depends/tiglabs/raft/proto"
 	"github.com/patrickmn/go-cache"
 	"github.com/spf13/cast"
 	"github.com/vearch/vearch/v3/internal/config"
 	"github.com/vearch/vearch/v3/internal/entity"
+	httpResonse "github.com/vearch/vearch/v3/internal/entity/response"
 	"github.com/vearch/vearch/v3/internal/pkg/errutil"
 	"github.com/vearch/vearch/v3/internal/pkg/log"
 	"github.com/vearch/vearch/v3/internal/pkg/vearchlog"
@@ -829,21 +833,111 @@ func (w *watcherJob) serverDelete(cacheKey string) (err error) {
 			log.Debug("node meta not found: %v, %v", found, get)
 			return nil
 		}
-		server := get.(*entity.Server)
+		failServer := get.(*entity.Server)
 		// attach alive, timeout is 5s
-		if IsLive(server.RpcAddr()) || len(server.PartitionIds) == 0 {
-			log.Info("%+v is alive or server partition is zero.", server)
+		if IsLive(failServer.RpcAddr()) || len(failServer.PartitionIds) == 0 {
+			log.Info("%v is alive or server partition num is 0.", *failServer)
 			return nil
 		}
-		failServer := &entity.FailServer{ID: server.ID, TimeStamp: time.Now().Unix()}
-		failServer.Node = server
-		value, err := vjson.Marshal(failServer)
-		errutil.ThrowError(err)
-		key := entity.FailServerKey(server.ID)
+
+		if config.Conf().Global.AutoRecoverPs {
+			for _, failPid := range failServer.PartitionIds {
+				// get partition
+				partition, err := w.masterClient.QueryPartition(w.ctx, failPid)
+				errutil.ThrowError(err)
+				replicas := partition.Replicas
+				// get all server
+				servers, err := w.masterClient.QueryServers(w.ctx)
+				errutil.ThrowError(err)
+				availableServers := make([]*entity.Server, 0)
+				for _, server := range servers {
+					if server.ID == nodeID {
+						continue
+					}
+
+					bFound := false
+					for _, id := range replicas {
+						if id == server.ID {
+							bFound = true
+						}
+					}
+					if bFound {
+						continue
+					}
+					availableServers = append(availableServers, server)
+				}
+
+				if len(availableServers) == 0 {
+					log.Error("no available server to recover partition %d", failPid)
+					continue
+				}
+
+				sort.Slice(availableServers, func(i, j int) bool {
+					return len(availableServers[i].PartitionIds) < len(availableServers[j].PartitionIds)
+				})
+
+				err = w.masterClient.PutFailServerByID(w.ctx, nodeID, failServer)
+				errutil.ThrowError(err)
+				log.Info("put failServer %d: %v", nodeID, *failServer)
+
+				cm := &entity.ChangeMembers{
+					PartitionIDs: []entity.PartitionID{failPid},
+					NodeID:       nodeID,
+					Method:       proto.ConfRemoveNode,
+				}
+				reqBody, err := vjson.Marshal(cm)
+				if err != nil {
+					log.Error("%v", err)
+					continue
+				}
+				response, err := w.masterClient.HTTPRequest(w.ctx, http.MethodPost, "/partitions/change_member", string(reqBody))
+				if err != nil {
+					log.Error("%v", err)
+					continue
+				}
+				js := &httpResonse.HttpReply{}
+				err = vjson.Unmarshal(response, js)
+				if err != nil {
+					log.Error("%v", err)
+					continue
+				}
+				if js.Code != int(vearchpb.ErrorEnum_SUCCESS) {
+					log.Error("client master api recover server error, code: %d, msg: %s", js.Code, js.Msg)
+					continue
+				}
+
+				cm = &entity.ChangeMembers{
+					PartitionIDs: []entity.PartitionID{failPid},
+					NodeID:       availableServers[0].ID,
+					Method:       proto.ConfAddNode,
+				}
+				reqBody, err = vjson.Marshal(cm)
+				if err != nil {
+					log.Error("%v", err)
+					continue
+				}
+				response, err = w.masterClient.HTTPRequest(w.ctx, http.MethodPost, "/partitions/change_member", string(reqBody))
+				if err != nil {
+					log.Error("%s: %v", string(reqBody), err)
+					continue
+				}
+				js = &httpResonse.HttpReply{}
+				err = vjson.Unmarshal(response, js)
+				if err != nil {
+					log.Error("%v", err)
+					continue
+				}
+				if js.Code != int(vearchpb.ErrorEnum_SUCCESS) {
+					log.Error("client master api recover server error, code: %d, msg: %s", js.Code, js.Msg)
+					continue
+				}
+			}
+		}
+
 		// put fail node info into etcd
-		err = w.masterClient.Put(w.ctx, key, value)
+		err = w.masterClient.PutFailServerByID(w.ctx, nodeID, failServer)
 		errutil.ThrowError(err)
-		log.Info("put failServer %s: %s", key, string(value))
+		log.Info("put failServer %d: %v", nodeID, *failServer)
 	}
 	// update the cache
 	w.cache.Delete(cacheServerKey(nodeID))
