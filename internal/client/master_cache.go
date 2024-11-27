@@ -775,27 +775,27 @@ func (w *watcherJob) serverPut(value []byte) (e error) {
 		panic(err)
 	}
 	// mutex ensure only one master update the meta, others just update local cache
-	mutex := w.masterClient.Client().Master().NewLock(w.ctx, entity.ClusterWatchServerKey, time.Second*188)
+	mutex := w.masterClient.Client().Master().NewLock(w.ctx, entity.ClusterWatchServerKeyPut, time.Second*188)
 	if getLock, err := mutex.TryLock(); getLock && err == nil {
 		defer func() {
 			if err := mutex.Unlock(); err != nil {
 				log.Error("failed to unlock space,the Error is:%v ", err)
 			}
 		}()
-		log.Debug("get LOCK success, process fail server %+v ", server)
+		log.Debug("get LOCK success, process put server %+v ", server)
 
 		// get failServer info
 		if len(server.PartitionIds) == 0 {
 			// recover failServer
 			// if the partition num of the newNode is empty, then recover data by it.
-			if config.Conf().Global.AutoRecoverPs {
-				err = w.masterClient.RecoverByNewServer(w.ctx, server)
-				if err != nil {
-					log.Debug("auto recover err %v, server is %+v", err, server)
-				} else {
-					log.Info("recover success, server is %+v", server)
-				}
-			}
+			// if config.Conf().Global.AutoRecoverPs {
+			// 	err = w.masterClient.RecoverByNewServer(w.ctx, server)
+			// 	if err != nil {
+			// 		log.Debug("auto recover err %v, server is %+v", err, server)
+			// 	} else {
+			// 		log.Info("recover success, server is %+v", server)
+			// 	}
+			// }
 		} else {
 			// if failserver recover, then remove record
 			w.masterClient.TryRemoveFailServer(w.ctx, server)
@@ -820,7 +820,7 @@ func (w *watcherJob) serverDelete(cacheKey string) (err error) {
 		return fmt.Errorf("nodeID is invalid: %d", nodeID)
 	}
 	// mutex ensure only one master update the meta, the other just update local cache
-	mutex := w.masterClient.Client().Master().NewLock(w.ctx, entity.ClusterWatchServerKey, time.Second*188)
+	mutex := w.masterClient.Client().Master().NewLock(w.ctx, entity.ClusterWatchServerKeyDelete, time.Second*188)
 	if getLock, err := mutex.TryLock(); getLock && err == nil {
 		defer func() {
 			if err := mutex.Unlock(); err != nil {
@@ -838,119 +838,6 @@ func (w *watcherJob) serverDelete(cacheKey string) (err error) {
 		if IsLive(failServer.RpcAddr()) || len(failServer.PartitionIds) == 0 {
 			log.Info("%v is alive or server partition num is 0.", *failServer)
 			return nil
-		}
-
-		if config.Conf().Global.AutoRecoverPs {
-			for _, failPid := range failServer.PartitionIds {
-				// get partition
-				partition, err := w.masterClient.QueryPartition(w.ctx, failPid)
-				errutil.ThrowError(err)
-				space, err := w.masterClient.QuerySpaceByID(w.ctx, partition.DBId, partition.SpaceId)
-				if err != nil {
-					log.Error("query space by id %d err: %v", partition.SpaceId, err)
-					continue
-				}
-				replicas := make([]entity.NodeID, 0)
-				for _, r := range partition.Replicas {
-					server, err := w.masterClient.QueryServer(w.ctx, r)
-					if err != nil {
-						log.Error("query server by id %d err: %v", r, err)
-						continue
-					}
-					if IsLive(server.RpcAddr()) {
-						replicas = append(replicas, r)
-					}
-				}
-				if len(replicas) < int(space.ReplicaNum/2) {
-					log.Error("partition %d replica num %d less than half of space replica num %d", failPid, len(replicas), space.ReplicaNum)
-					continue
-				}
-				// get all server
-				servers, err := w.masterClient.QueryServers(w.ctx)
-				errutil.ThrowError(err)
-				availableServers := make([]*entity.Server, 0)
-				for _, server := range servers {
-					if server.ID == nodeID {
-						continue
-					}
-
-					bFound := false
-					for _, id := range replicas {
-						if id == server.ID {
-							bFound = true
-						}
-					}
-					if bFound {
-						continue
-					}
-					availableServers = append(availableServers, server)
-				}
-
-				if len(availableServers) == 0 {
-					log.Error("no available server to recover partition %d", failPid)
-					continue
-				}
-
-				sort.Slice(availableServers, func(i, j int) bool {
-					return len(availableServers[i].PartitionIds) < len(availableServers[j].PartitionIds)
-				})
-
-				err = w.masterClient.PutFailServerByID(w.ctx, nodeID, failServer)
-				errutil.ThrowError(err)
-				log.Info("put failServer %d: %v", nodeID, *failServer)
-
-				cm := &entity.ChangeMembers{
-					PartitionIDs: []entity.PartitionID{failPid},
-					NodeID:       availableServers[0].ID,
-					Method:       proto.ConfAddNode,
-				}
-				reqBody, err := vjson.Marshal(cm)
-				if err != nil {
-					log.Error("%v", err)
-					continue
-				}
-				response, err := w.masterClient.HTTPRequest(w.ctx, http.MethodPost, "/partitions/change_member", string(reqBody))
-				if err != nil {
-					log.Error("%s: %v", string(reqBody), err)
-					continue
-				}
-				js := &httpResonse.HttpReply{}
-				err = vjson.Unmarshal(response, js)
-				if err != nil {
-					log.Error("%v", err)
-					continue
-				}
-				if js.Code != int(vearchpb.ErrorEnum_SUCCESS) {
-					log.Error("client master api recover server error, code: %d, msg: %s", js.Code, js.Msg)
-					continue
-				}
-
-				cm = &entity.ChangeMembers{
-					PartitionIDs: []entity.PartitionID{failPid},
-					NodeID:       nodeID,
-					Method:       proto.ConfRemoveNode,
-				}
-				reqBody, err = vjson.Marshal(cm)
-				if err != nil {
-					log.Error("%v", err)
-					continue
-				}
-				response, err = w.masterClient.HTTPRequest(w.ctx, http.MethodPost, "/partitions/change_member", string(reqBody))
-				if err != nil {
-					log.Error("%v", err)
-					continue
-				}
-				js = &httpResonse.HttpReply{}
-				err = vjson.Unmarshal(response, js)
-				if err != nil {
-					log.Error("%v", err)
-					continue
-				}
-				if js.Code != int(vearchpb.ErrorEnum_SUCCESS) {
-					log.Error("client master api recover server error, code: %d, msg: %s", js.Code, js.Msg)
-					continue
-				}
-			}
 		}
 
 		// put fail node info into etcd
@@ -1051,6 +938,15 @@ func (cliCache *clientCache) initMasters() error {
 	return nil
 }
 
+func removePartitionID(partitionIds []entity.PartitionID, failPid entity.PartitionID) []entity.PartitionID {
+	for i, id := range partitionIds {
+		if id == failPid {
+			return append(partitionIds[:i], partitionIds[i+1:]...)
+		}
+	}
+	return partitionIds
+}
+
 func (wj *watcherJob) start() {
 	go func() {
 		defer func() {
@@ -1111,6 +1007,180 @@ func (wj *watcherJob) start() {
 							err := wj.delete(string(event.Kv.Key))
 							if err != nil {
 								log.Error("delete cache %s, err: %s , content: %s", wj.prefix, err.Error(), string(event.Kv.Value))
+							}
+						}
+					}
+				}
+			}()
+
+			wj.wg.Add(1)
+			go func() {
+				defer func() {
+					if rErr := recover(); rErr != nil {
+						log.Error("recover() err:[%v]", rErr)
+						log.Error("stack:[%s]", debug.Stack())
+					}
+				}()
+				defer wj.wg.Done()
+
+				if !config.Conf().Global.AutoRecoverPs {
+					return
+				}
+
+				for {
+					select {
+					case <-wj.ctx.Done():
+						log.Debug("watchjob job to stop %s", wj.prefix)
+						return
+					default:
+					}
+
+					time.Sleep(60 * time.Second)
+					mutex := wj.masterClient.Client().Master().NewLock(wj.ctx, entity.ClusterWatchServerKeyScan, time.Second*188)
+					if getLock, err := mutex.TryLock(); getLock && err == nil {
+						defer func() {
+							if err := mutex.Unlock(); err != nil {
+								log.Error("failed to unlock space, the Error is:%v ", err)
+							}
+						}()
+
+						fs, err := wj.masterClient.QueryAllFailServer(wj.ctx)
+						if err != nil {
+							log.Error("query all fail server err: %v", err)
+							time.Sleep(1 * time.Second)
+							continue
+						}
+
+						for _, failServer := range fs {
+							if len(failServer.Node.PartitionIds) == 0 {
+								continue
+							}
+
+							recoverTime := int64(1800)
+							if config.Conf().PS.ReplicaAutoRecoverTime > 0 {
+								recoverTime = config.Conf().PS.ReplicaAutoRecoverTime
+							}
+							if time.Now().Unix()-failServer.TimeStamp > recoverTime {
+								log.Debug("failServer %v is dead, try to recover replicas", *failServer)
+
+								for _, failPid := range failServer.Node.PartitionIds {
+									// get partition
+									partition, err := wj.masterClient.QueryPartition(wj.ctx, failPid)
+									errutil.ThrowError(err)
+									space, err := wj.masterClient.QuerySpaceByID(wj.ctx, partition.DBId, partition.SpaceId)
+									if err != nil {
+										log.Error("query space by id %d err: %v", partition.SpaceId, err)
+										continue
+									}
+									replicas := make([]entity.NodeID, 0)
+									for _, r := range partition.Replicas {
+										server, err := wj.masterClient.QueryServer(wj.ctx, r)
+										if err != nil {
+											log.Error("query server by id %d err: %v", r, err)
+											continue
+										}
+										if IsLive(server.RpcAddr()) {
+											replicas = append(replicas, r)
+										}
+									}
+									if len(replicas) < int((space.ReplicaNum+1)/2) {
+										log.Error("partition %d replica num %d less than half of space replica num %d", failPid, len(replicas), space.ReplicaNum)
+										continue
+									}
+									// get all server
+									servers, err := wj.masterClient.QueryServers(wj.ctx)
+									errutil.ThrowError(err)
+									availableServers := make([]*entity.Server, 0)
+									for _, server := range servers {
+										if server.ID == failServer.ID {
+											continue
+										}
+
+										bFound := false
+										for _, id := range replicas {
+											if id == server.ID {
+												bFound = true
+											}
+										}
+										if bFound {
+											continue
+										}
+										availableServers = append(availableServers, server)
+									}
+
+									if len(availableServers) == 0 {
+										log.Error("no available server to recover partition %d", failPid)
+										continue
+									}
+
+									sort.Slice(availableServers, func(i, j int) bool {
+										return len(availableServers[i].PartitionIds) < len(availableServers[j].PartitionIds)
+									})
+
+									cm := &entity.ChangeMembers{
+										PartitionIDs: []entity.PartitionID{failPid},
+										NodeID:       availableServers[0].ID,
+										Method:       proto.ConfAddNode,
+									}
+									reqBody, err := vjson.Marshal(cm)
+									if err != nil {
+										log.Error("%v", err)
+										continue
+									}
+									response, err := wj.masterClient.HTTPRequest(wj.ctx, http.MethodPost, "/partitions/change_member", string(reqBody))
+									if err != nil {
+										log.Error("%s: %v", string(reqBody), err)
+										continue
+									}
+									js := &httpResonse.HttpReply{}
+									err = vjson.Unmarshal(response, js)
+									if err != nil {
+										log.Error("%v", err)
+										continue
+									}
+									if js.Code != int(vearchpb.ErrorEnum_SUCCESS) {
+										log.Error("client master api recover server error, code: %d, msg: %s", js.Code, js.Msg)
+										continue
+									}
+
+									cm = &entity.ChangeMembers{
+										PartitionIDs: []entity.PartitionID{failPid},
+										NodeID:       failServer.ID,
+										Method:       proto.ConfRemoveNode,
+									}
+									reqBody, err = vjson.Marshal(cm)
+									if err != nil {
+										log.Error("%v", err)
+										continue
+									}
+									response, err = wj.masterClient.HTTPRequest(wj.ctx, http.MethodPost, "/partitions/change_member", string(reqBody))
+									if err != nil {
+										log.Error("%v", err)
+										continue
+									}
+									js = &httpResonse.HttpReply{}
+									err = vjson.Unmarshal(response, js)
+									if err != nil {
+										log.Error("%v", err)
+										continue
+									}
+									if js.Code != int(vearchpb.ErrorEnum_SUCCESS) {
+										log.Error("client master api recover server error, code: %d, msg: %s", js.Code, js.Msg)
+										continue
+									}
+
+									failServer.Node.PartitionIds = removePartitionID(failServer.Node.PartitionIds, failPid)
+								}
+								err = wj.masterClient.DeleteFailServerByNodeID(wj.ctx, failServer.ID)
+								if err != nil {
+									log.Error("remove failServer %v err: %v", *failServer, err)
+								}
+
+								if len(failServer.Node.PartitionIds) > 0 {
+									err = wj.masterClient.PutFailServerByID(wj.ctx, failServer.ID, failServer.Node)
+									errutil.ThrowError(err)
+									log.Info("put failServer %d: %v", failServer.ID, *failServer)
+								}
 							}
 						}
 					}

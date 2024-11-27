@@ -182,7 +182,7 @@ jobs:
         fi
         docker-compose -f cloud/docker-compose.yml up ps4 -d
         docker-compose -f cloud/docker-compose.yml restart router1
-        sleep 60
+        sleep 120
         status=$(curl -u root:secret http://127.0.0.1:8817/cluster/health | jq -r '.data[0].spaces[0].status')
         if [ "$status" != "green" ]; then
           echo "Error: Status is not green. Status is $status."
@@ -203,7 +203,7 @@ jobs:
         cd .. && docker-compose -f cloud/docker-compose.yml up ps4 -d
         sleep 10
         docker-compose -f cloud/docker-compose.yml stop ps1
-        sleep 60
+        sleep 180
         docker-compose -f cloud/docker-compose.yml start ps1
         sleep 60
         status=$(curl -s -L -u root:secret http://127.0.0.1:8817/servers 2>/dev/null | jq -r '.data.servers[] | select(.server.ip == "172.16.238.16") | .partitions | length == 0')
