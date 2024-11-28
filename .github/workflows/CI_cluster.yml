@@ -203,7 +203,7 @@ jobs:
         cd .. && docker-compose -f cloud/docker-compose.yml up ps4 -d
         sleep 10
         docker-compose -f cloud/docker-compose.yml stop ps1
-        sleep 180
+        sleep 240
         docker-compose -f cloud/docker-compose.yml start ps1
         sleep 60
         status=$(curl -s -L -u root:secret http://127.0.0.1:8817/servers 2>/dev/null | jq -r '.data.servers[] | select(.server.ip == "172.16.238.16") | .partitions | length == 0')
