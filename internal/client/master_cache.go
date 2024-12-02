@@ -1117,6 +1117,10 @@ func (wj *watcherJob) start() {
 										return len(availableServers[i].PartitionIds) < len(availableServers[j].PartitionIds)
 									})
 
+									if len(availableServers[0].PartitionIds) > 0 {
+										// only use the server which has 0 partition
+										continue
+									}
 									cm := &entity.ChangeMembers{
 										PartitionIDs: []entity.PartitionID{failPid},
 										NodeID:       availableServers[0].ID,
