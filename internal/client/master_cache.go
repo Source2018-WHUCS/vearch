@@ -1119,6 +1119,7 @@ func (wj *watcherJob) start() {
 
 									if len(availableServers[0].PartitionIds) > 0 {
 										// only use the server which has 0 partition
+										log.Warn("server %d has %d partitions, can not recover partition %d", availableServers[0].ID, len(availableServers[0].PartitionIds), failPid)
 										continue
 									}
 									cm := &entity.ChangeMembers{
