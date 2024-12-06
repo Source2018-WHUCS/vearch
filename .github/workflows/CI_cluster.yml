@@ -287,6 +287,30 @@ jobs:
         sleep 60 && docker ps
         curl -s -L -u root:secret http://127.0.0.1:8817/servers | jq
         curl -s -L -u root:secret http://127.0.0.1:8817/cluster/health?detail=true | jq
+
+    - name: Run tests for replica anti_affinity strategy
+      run: |
+        docker-compose -f cloud/docker-compose.yml start ps4
+        docker-compose -f cloud/docker-compose.yml start ps5
+        sleep 20
+        cd test
+        max_retries=30
+        retry=0
+        while [ $retry -lt $max_retries ]; do
+          pytest test_cluster_ps.py -x -k "TestAntiAffinity" --log-cli-level=INFO
+          status_ps4=$(echo $servers | jq -r '.data.servers[] | select(.server.ip == "172.16.238.19") | .partitions | length == 1')
+          status_ps5=$(echo $servers | jq -r '.data.servers[] | select(.server.ip == "172.16.238.20") | .partitions | length == 1')
+          if [ "$status_ps4" == "true" ] && [ "$status_ps5" == "true" ]; then
+            echo "ps4 and ps5 partitions num should not be 1 together."
+            exit 1
+          fi
+          retry=$((retry+1))
+          pytest test_cluster_ps.py -x -k "TestClusterPartitionServerDestroy" --log-cli-level=INFO
+          sleep 5
+        done
+        
+        cd .. && docker-compose -f cloud/docker-compose.yml stop ps4
+        docker-compose -f cloud/docker-compose.yml stop ps5
   
     - name: Run tests for master replace member
       run: |
@@ -308,4 +332,8 @@ jobs:
 
     - name: Clean cluster
       run: |
+        docker-compose -f cloud/docker-compose.yml --profile cluster stop
+        docker-compose -f cloud/docker-compose.yml stop master4
+        docker-compose -f cloud/docker-compose.yml down ps4
+        docker-compose -f cloud/docker-compose.yml down ps5
         docker-compose -f cloud/docker-compose.yml --profile cluster down
