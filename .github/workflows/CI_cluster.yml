@@ -94,7 +94,7 @@ jobs:
         pytest test_cluster_master.py -x -k "TestClusterMasterOperate" --log-cli-level=INFO
         # all down
         cd ../cloud && docker-compose stop master3
-        sleep 120
+        sleep 60
         cd ../test
         pytest test_cluster_master.py -x -k "TestClusterMasterOperate" --log-cli-level=INFO
         cd ../cloud
@@ -104,6 +104,9 @@ jobs:
         cd ../test
         pytest test_cluster_master.py -x -k "TestClusterMasterOperate" --log-cli-level=INFO
         pytest test_vearch.py -x -k "test_vearch_basic_usage" --log-cli-level=INFO
+        sleep 10
+        curl -s -L -u root:secret http://127.0.0.1:8817/schedule/clean_task
+        sleep 10
         curl -s -L -u root:secret http://127.0.0.1:8817/servers | jq
         curl -s -L -u root:secret http://127.0.0.1:8817/cluster/health?detail=true | jq
 
@@ -127,6 +130,7 @@ jobs:
           exit 1
         fi
         pytest test_cluster_ps.py -k "TestClusterPartitionChange" --log-cli-level=INFO
+        sleep 10
         curl -s -L -u root:secret http://127.0.0.1:8817/servers | jq
         curl -s -L -u root:secret http://127.0.0.1:8817/cluster/health?detail=true | jq
 
@@ -159,6 +163,8 @@ jobs:
           echo "db is not empty"
           exit 1
         fi
+        curl -s -L -u root:secret http://127.0.0.1:8817/schedule/clean_task
+        sleep 10
         curl -s -L -u root:secret http://127.0.0.1:8817/servers | jq
         curl -s -L -u root:secret http://127.0.0.1:8817/cluster/health?detail=true | jq
 
@@ -188,6 +194,8 @@ jobs:
           echo "db is not empty"
           exit 1
         fi
+        curl -s -L -u root:secret http://127.0.0.1:8817/schedule/clean_task
+        sleep 10
         curl -s -L -u root:secret http://127.0.0.1:8817/servers | jq
         curl -s -L -u root:secret http://127.0.0.1:8817/cluster/health?detail=true | jq
 
@@ -250,6 +258,8 @@ jobs:
         fi
         cd .. && docker-compose -f cloud/docker-compose.yml stop ps4
         sleep 30 && docker ps
+        curl -s -L -u root:secret http://127.0.0.1:8817/schedule/clean_task
+        sleep 10
         curl -s -L -u root:secret http://127.0.0.1:8817/servers | jq
         curl -s -L -u root:secret http://127.0.0.1:8817/cluster/health?detail=true | jq
 
@@ -320,6 +330,8 @@ jobs:
         fi
         cd .. && docker-compose -f cloud/docker-compose.yml stop ps4
         sleep 60 && docker ps
+        curl -s -L -u root:secret http://127.0.0.1:8817/schedule/clean_task
+        sleep 10
         curl -s -L -u root:secret http://127.0.0.1:8817/servers | jq
         curl -s -L -u root:secret http://127.0.0.1:8817/cluster/health?detail=true | jq
 
@@ -344,7 +356,7 @@ jobs:
 
           sleep 20
           cd test
-          max_retries=20
+          max_retries=10
           retry=0
           while [ $retry -lt $max_retries ]; do
             pytest test_cluster_ps.py -x -k "TestAntiAffinity" --log-cli-level=INFO
@@ -379,6 +391,8 @@ jobs:
           anti_affinity=$((anti_affinity+1))
         done
 
+        sleep 10
+
         for master in master1 master2 master3; do
           docker-compose -f cloud/docker-compose.yml restart $master
         done
@@ -387,8 +401,15 @@ jobs:
           docker-compose -f cloud/docker-compose.yml restart $ps
         done
 
+        sleep 30
+        curl -s -L -u root:secret http://127.0.0.1:8817/schedule/clean_task
+        sleep 10
+
         docker-compose -f cloud/docker-compose.yml stop ps4
         docker-compose -f cloud/docker-compose.yml stop ps5
+        sleep 30
+        curl -s -L -u root:secret http://127.0.0.1:8817/servers | jq
+        curl -s -L -u root:secret http://127.0.0.1:8817/cluster/health?detail=true | jq
   
     - name: Run tests for master replace member
       run: |
