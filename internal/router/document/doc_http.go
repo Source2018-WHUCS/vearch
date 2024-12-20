@@ -52,6 +52,7 @@ const (
 	URLParamUserName    = "user_name"
 	URLParamRoleName    = "role_name"
 	URLParamMemberId    = "member_id"
+	defaultTimeout      = 10 * time.Second
 )
 
 type DocumentHandler struct {
@@ -145,7 +146,7 @@ func ExportDocumentHandler(httpServer *gin.Engine, client *client.Client) {
 	}
 
 	documentHandler.proxyMaster(groupProxy)
-	group.Use(master.TimeoutMiddleware(10 * time.Second))
+	group.Use(master.TimeoutMiddleware(defaultTimeout))
 	// open router api
 	if err := documentHandler.ExportInterfacesToServer(group); err != nil {
 		panic(err)
