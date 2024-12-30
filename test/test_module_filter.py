@@ -297,6 +297,23 @@ def process_get_data_by_filter(index: int, full_field: bool, mode: str, total: i
         ]
         data["filters"]["conditions"].extend(in_filter)
         data["filters"]["conditions"].extend(not_in_filter)
+    elif mode == "No result":
+        term_filter = [
+            {
+                "field": "field_string",
+                "operator": "IN",
+                "value": [str(index * batch_size), str((index + 1) * batch_size)]
+            },
+        ]
+        term_filter2 = [
+            {
+                "field": "field_string2",
+                "operator": "IN",
+                "value": [str((index - 1) * batch_size)]
+            }
+        ]
+        data["filters"]["conditions"].extend(term_filter)
+        data["filters"]["conditions"].extend(term_filter2)
 
     data["limit"] = batch_size
 
@@ -382,6 +399,8 @@ def process_get_data_by_filter(index: int, full_field: bool, mode: str, total: i
         for doc in documents:
             assert doc["field_string"] == str(index * batch_size)
             assert doc["field_string2"] != str(index * batch_size)
+    elif mode == "No result":
+        assert len(documents) == 0
 
 
 def query_by_filter_interface(total, full_field, mode: str):
@@ -532,6 +551,7 @@ def check(total, full_field, xb, mode: str):
     [True, "Hybrid range NOT IN"],
     [True, "Hybrid range IN"],
     [True, "Hybrid IN NOT IN"],
+    [True, "No result"],
 ])
 def test_module_filter(full_field: bool, mode: str):
     check(100, full_field, xb, mode)
