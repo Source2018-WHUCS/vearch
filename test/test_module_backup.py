@@ -209,8 +209,8 @@ class TestBackup:
                                 logger.error(f"Error occurred: {rs.json()}")
                                 assert rs.status_code == 200
                             
-                        # delete file
-                        os.remove(local_file_path)
+                    # delete file
+                    os.remove(local_file_path)
         except S3Error as err:
             logger.error(f"Error occurred: {err}")
 

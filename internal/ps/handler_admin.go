@@ -25,6 +25,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/vearch/vearch/v3/internal/client"
+	"github.com/vearch/vearch/v3/internal/config"
 	"github.com/vearch/vearch/v3/internal/entity"
 
 	"github.com/vearch/vearch/v3/internal/pkg/errutil"
@@ -469,6 +470,7 @@ func (bh *BackupHandler) Execute(ctx context.Context, req *vearchpb.PartitionDat
 	bucketName := backup.S3Param.BucketName
 	objectName := fmt.Sprintf("%s/%s/%d_%d.txt", dbName, space.Name, req.PartitionID, backup.Part)
 
+	clusterName := config.Conf().Global.Name
 	if backup.Command == "create" {
 		// if backup dir not exist, create it
 		if _, err = os.Stat(fmt.Sprintf("%s/backup", *engineConfig.Path)); os.IsNotExist(err) {
@@ -499,8 +501,8 @@ func (bh *BackupHandler) Execute(ctx context.Context, req *vearchpb.PartitionDat
 				return
 			}
 			fileName := fmt.Sprintf("%d_%d.txt", req.PartitionID, backup.Part)
-			objectName := fmt.Sprintf("%s/%s/%s", dbName, space.Name, fileName)
-			doneName := fmt.Sprintf("%s/%s/%d.done", dbName, space.Name, req.PartitionID)
+			objectName := fmt.Sprintf("%s/%s/%s/%s", clusterName, dbName, space.Name, fileName)
+			doneName := fmt.Sprintf("%s/%s/%s/%d.done", clusterName, dbName, space.Name, req.PartitionID)
 			backupFileName = fmt.Sprintf("%s/backup/%s", *engineConfig.Path, fileName)
 			file, err := os.OpenFile(backupFileName, os.O_APPEND|os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
