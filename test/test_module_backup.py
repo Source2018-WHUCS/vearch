@@ -96,6 +96,7 @@ class TestBackup:
             assert response.status_code != 0
             return
 
+        url = router_url + "/backup/dbs/" + self.db_name
         response = requests.post(url, auth=(username, password), json=data)
 
         if not corrupted:
