@@ -562,6 +562,7 @@ func (ca *clusterAPI) getSpace(c *gin.Context) {
 			spaceInfo.PartitionRule = space.PartitionRule
 			if _, err := ca.masterService.describeSpaceService(c, space, spaceInfo, detail_info); err != nil {
 				response.New(c).JsonError(errors.NewErrInternal(err))
+				return
 			} else {
 				response.New(c).JsonSuccess(spaceInfo)
 			}
@@ -641,6 +642,7 @@ func (ca *clusterAPI) backupDb(c *gin.Context) {
 	data, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		response.New(c).JsonError(errors.NewErrBadRequest(err))
+		return
 	}
 
 	dbID, err := ca.masterService.Master().QueryDBName2Id(c, dbName)
@@ -651,6 +653,7 @@ func (ca *clusterAPI) backupDb(c *gin.Context) {
 	spaces, err := ca.masterService.Master().QuerySpaces(c, dbID)
 	if err != nil {
 		response.New(c).JsonError(errors.NewErrInternal(err))
+		return
 	}
 	backup := &entity.BackupSpace{}
 	err = vjson.Unmarshal(data, backup)
@@ -677,6 +680,7 @@ func (ca *clusterAPI) backupSpace(c *gin.Context) {
 	data, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		response.New(c).JsonError(errors.NewErrBadRequest(err))
+		return
 	}
 
 	errutil.ThrowError(err)
@@ -685,11 +689,13 @@ func (ca *clusterAPI) backupSpace(c *gin.Context) {
 	err = vjson.Unmarshal(data, backup)
 	if err != nil {
 		response.New(c).JsonError(errors.NewErrBadRequest(err))
+		return
 	}
 
 	err = ca.masterService.BackupSpace(c, dbName, spaceName, backup)
 	if err != nil {
 		response.New(c).JsonError(errors.NewErrInternal(err))
+		return
 	} else {
 		response.New(c).JsonSuccess(backup)
 	}
@@ -729,6 +735,7 @@ func (ca *clusterAPI) createAlias(c *gin.Context) {
 
 	if err := ca.masterService.createAliasService(c, alias); err != nil {
 		response.New(c).JsonError(errors.NewErrInternal(err))
+		return
 	} else {
 		response.New(c).JsonSuccess(alias)
 	}
@@ -740,6 +747,7 @@ func (ca *clusterAPI) deleteAlias(c *gin.Context) {
 
 	if err := ca.masterService.deleteAliasService(c, aliasName); err != nil {
 		response.New(c).JsonError(errors.NewErrInternal(err))
+		return
 	} else {
 		response.New(c).SuccessDelete()
 	}
@@ -750,12 +758,14 @@ func (ca *clusterAPI) getAlias(c *gin.Context) {
 	if aliasName == "" {
 		if alias, err := ca.masterService.queryAllAlias(c); err != nil {
 			response.New(c).JsonError(errors.NewErrNotFound(err))
+			return
 		} else {
 			response.New(c).JsonSuccess(alias)
 		}
 	} else {
 		if alias, err := ca.masterService.queryAliasService(c, aliasName); err != nil {
 			response.New(c).JsonError(errors.NewErrNotFound(err))
+			return
 		} else {
 			response.New(c).JsonSuccess(alias)
 		}
@@ -783,6 +793,7 @@ func (ca *clusterAPI) modifyAlias(c *gin.Context) {
 	}
 	if err := ca.masterService.updateAliasService(c, alias); err != nil {
 		response.New(c).JsonError(errors.NewErrInternal(err))
+		return
 	} else {
 		response.New(c).JsonSuccess(alias)
 	}
@@ -801,6 +812,7 @@ func (ca *clusterAPI) createUser(c *gin.Context) {
 
 	if err := ca.masterService.createUserService(c, user, true); err != nil {
 		response.New(c).JsonError(errors.NewErrInternal(err))
+		return
 	} else {
 		// just return user name
 		user_return := &entity.User{Name: user.Name}
@@ -814,6 +826,7 @@ func (ca *clusterAPI) deleteUser(c *gin.Context) {
 
 	if err := ca.masterService.deleteUserService(c, name); err != nil {
 		response.New(c).JsonError(errors.NewErrInternal(err))
+		return
 	} else {
 		response.New(c).SuccessDelete()
 	}
@@ -824,12 +837,14 @@ func (ca *clusterAPI) getUser(c *gin.Context) {
 	if name == "" {
 		if users, err := ca.masterService.queryAllUser(c); err != nil {
 			response.New(c).JsonError(errors.NewErrNotFound(err))
+			return
 		} else {
 			response.New(c).JsonSuccess(users)
 		}
 	} else {
 		if user, err := ca.masterService.queryUserService(c, name, true); err != nil {
 			response.New(c).JsonError(errors.NewErrNotFound(err))
+			return
 		} else {
 			response.New(c).JsonSuccess(user)
 		}
@@ -1216,6 +1231,7 @@ func (cluster *clusterAPI) ChangeReplicas(c *gin.Context) {
 	log.Info("dbModify is %s", dbStr)
 	if dbModify.DbName == "" || dbModify.SpaceName == "" {
 		response.New(c).JsonError(errors.NewErrBadRequest(fmt.Errorf("dbModify info incorrect [%s]", dbStr)))
+		return
 	}
 	if err := cluster.masterService.ChangeReplica(c.Request.Context(), dbModify); err != nil {
 		response.New(c).JsonError(errors.NewErrInternal(fmt.Errorf("[%s] failed ChangeReplicas,err is %v", dbStr, err)))
