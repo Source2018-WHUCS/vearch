@@ -244,7 +244,7 @@ int Response::PackResultItem(const VectorDoc *vec_doc,
     }
 
     std::vector<std::string> vec;
-    int ret = vector_mgr->GetVector(vec_fields_ids, vec, true);
+    int ret = vector_mgr->GetVector(vec_fields_ids, vec);
 
     table->GetDocInfo(docid, doc, table_fields);
 

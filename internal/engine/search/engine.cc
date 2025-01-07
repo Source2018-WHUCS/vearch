@@ -780,7 +780,7 @@ int Engine::GetDoc(int docid, Doc &doc, bool next) {
   }
 
   std::vector<std::string> vec;
-  ret = vec_manager_->GetVector(vec_fields_ids, vec, true);
+  ret = vec_manager_->GetVector(vec_fields_ids, vec);
   if (ret == 0 && vec.size() == vec_fields_ids.size()) {
     for (size_t i = 0; i < index_names.size(); ++i) {
       struct Field field;
@@ -1263,7 +1263,7 @@ void Engine::BackupThread(int command) {
       }
 
       std::vector<std::string> vec;
-      ret = vec_manager_->GetVector(vec_fields_ids, vec, true);
+      ret = vec_manager_->GetVector(vec_fields_ids, vec);
       if (ret == 0 && vec.size() == vec_fields_ids.size()) {
         for (size_t i = 0; i < index_names.size(); ++i) {
           struct Field field;
