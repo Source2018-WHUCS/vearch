@@ -130,9 +130,9 @@ func documentGetResponse(space *entity.Space, reply *vearchpb.GetResponse, retur
 			doc["msg"] = item.Err.Msg
 		}
 
-		if item.Doc.Fields != nil && len(item.Doc.Fields) > 0 {
-			nextDocid, _ := docFieldSerialize(item.Doc, space, returnFieldsMap, vectorValue, doc)
-			if nextDocid > 0 {
+		if len(item.Doc.Fields) > 0 {
+			nextDocid, _ := DocFieldSerialize(item.Doc, space, returnFieldsMap, vectorValue, doc)
+			if nextDocid >= 0 {
 				doc["_docid"] = strconv.Itoa(int(nextDocid))
 			}
 		}
@@ -208,7 +208,7 @@ func documentSearchResponse(srs []*vearchpb.SearchResult, head *vearchpb.Respons
 	return response, nil
 }
 
-func docFieldSerialize(doc *vearchpb.Document, space *entity.Space, returnFieldsMap map[string]string, vectorValue bool, docOut map[string]interface{}) (nextDocid int32, err error) {
+func DocFieldSerialize(doc *vearchpb.Document, space *entity.Space, returnFieldsMap map[string]string, vectorValue bool, docOut map[string]interface{}) (nextDocid int32, err error) {
 	spaceProperties := space.SpaceProperties
 	if spaceProperties == nil {
 		spacePro, _ := entity.UnmarshalPropertyJSON(space.Fields)
@@ -217,11 +217,12 @@ func docFieldSerialize(doc *vearchpb.Document, space *entity.Space, returnFields
 	nextDocid = -1
 	for _, fv := range doc.Fields {
 		name := fv.Name
-		if name == entity.IdField && returnFieldsMap == nil {
+
+		if name == entity.IdField && len(returnFieldsMap) == 0 {
 			docOut[name] = string(fv.Value)
 			continue
 		}
-		if (returnFieldsMap != nil && returnFieldsMap[name] != "") || returnFieldsMap == nil {
+		if (returnFieldsMap[name] != "") || len(returnFieldsMap) == 0 {
 			field := spaceProperties[name]
 			if field == nil {
 				if name == "_docid" {
