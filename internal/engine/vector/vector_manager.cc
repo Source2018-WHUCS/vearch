@@ -724,7 +724,10 @@ int VectorManager::GetDocVector(int docid, std::string &field_name,
   }
 
   ScopeVector scope_vec;
-  raw_vec->GetVector(docid, scope_vec);
+  int ret = raw_vec->GetVector(docid, scope_vec);
+  if (ret != 0) {
+    return ret;
+  }
   const float *feature = (const float *)(scope_vec.Get());
 
   int d = raw_vec->MetaInfo()->Dimension();
