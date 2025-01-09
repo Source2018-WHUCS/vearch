@@ -34,7 +34,7 @@ space = Space(database_name, space_name, client)
 ids = []
 
 
-def create_space_schema(space_name) -> SpaceSchema:
+def create_space_schema(space_name, replica_num=1) -> SpaceSchema:
 
     book_name = Field(
         "book_name",
@@ -60,7 +60,7 @@ def create_space_schema(space_name) -> SpaceSchema:
     space_schema = SpaceSchema(
         space_name,
         fields=[book_name, book_num, book_vector, ractor_address],
-        replica_num=1,
+        replica_num=replica_num,
     )
     return space_schema
 
@@ -83,6 +83,12 @@ def test_create_space():
     assert ret.code == 0
     logger.debug(ret.data)
     assert ret.data["name"] == "book_info"
+
+
+def test_create_space_with_replica():
+    ret = space.create(create_space_schema("book_info_replica", replica_num=3))
+    assert ret.code != 0
+    logger.debug(ret.msg)
 
 
 def test_is_space_exist():
