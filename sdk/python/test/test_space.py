@@ -58,7 +58,9 @@ def create_space_schema(space_name) -> SpaceSchema:
         "ractor_address", DataType.STRING, desc="the place of the book put"
     )
     space_schema = SpaceSchema(
-        space_name, fields=[book_name, book_num, book_vector, ractor_address]
+        space_name,
+        fields=[book_name, book_num, book_vector, ractor_address],
+        replica_num=1,
     )
     return space_schema
 
@@ -130,6 +132,7 @@ def test_upsert_doc():
     global ids
     ids = ret.get_document_ids()
     logger.debug(ids)
+
 
 def test_query_with_document_ids():
     ret = space.query(document_ids=ids)
