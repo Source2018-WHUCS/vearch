@@ -588,6 +588,7 @@ func documentParse(ctx context.Context, handler *DocumentHandler, r *http.Reques
 				Head:        setRequestHead(netutil.NewMockUriParams(map[string]string{"db_name": args.Head.DbName, "space_name": args.Head.SpaceName, "_id": primaryKey}), r),
 				DocumentIds: []string{primaryKey},
 				LoadBalance: request.Leader,
+				Fields:      []string{entity.IdField},
 			}
 			reply := handler.docService.query(ctx, arg)
 
