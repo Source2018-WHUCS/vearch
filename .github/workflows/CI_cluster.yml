@@ -156,8 +156,9 @@ jobs:
         else
           echo "Status is yellow."
         fi
-        cd test
-        pytest test_cluster_ps.py -k "TestFailServerUpsert" -x --log-cli-level=INFO
+        cd ../test
+        pytest test_cluster_ps.py -k "TestFailServerUpsertDocument" -x --log-cli-level=INFO
+        cd ../cloud
         docker-compose start ps1
         cd ../test
         sleep 30

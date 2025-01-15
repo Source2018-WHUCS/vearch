@@ -639,7 +639,7 @@ class TestFailServerUpsertPrepare:
         create_space(1, 3, self.embedding_size, "FLAT")
 
 
-class TestFailServerUpsert:
+class TestFailServerUpsertDocument:
     def setup_class(self):
         self.embedding_size = 128
 
