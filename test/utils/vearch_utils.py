@@ -851,6 +851,8 @@ def process_query_multiple_error_data(items):
         params_just_one_wrong,
         return_both_wrong,
         return_just_one_wrong,
+        duplicated_ids,
+        duplicated_ids_by_hash,
     ) = items[5]
 
     if params_both_wrong:
@@ -866,6 +868,13 @@ def process_query_multiple_error_data(items):
     if return_just_one_wrong:
         data["document_ids"] = ["1", "10086"]
 
+    if duplicated_ids:
+        data["document_ids"] = ["2", "2"]
+
+    if duplicated_ids_by_hash:
+        data["document_ids"] = ["3", "3"]
+        data["get_by_hash"] = True
+
     json_str = json.dumps(data)
     logger.info(json_str)
 
@@ -879,6 +888,19 @@ def process_query_multiple_error_data(items):
             assert rs.json()["data"]["total"] == 0
         if return_just_one_wrong:
             assert rs.json()["data"]["total"] == 1
+        if duplicated_ids:
+            if interface == "query":
+                assert rs.json()["data"]["total"] == 2
+            if interface == "delete":
+                assert rs.json()["data"]["total"] == 1
+        if duplicated_ids_by_hash:
+            if interface == "query":
+                assert rs.json()["data"]["total"] == 1
+                duplicated_ids = rs.json()["data"]["documents"]
+                assert "msg" in duplicated_ids[0]
+                assert "duplicate" in duplicated_ids[0]["msg"]
+            if interface == "delete":
+                assert rs.json()["data"]["total"] == 1
 
 
 def query_error(total, batch_size, xb, interface: str, wrong_parameters: list):
