@@ -74,7 +74,7 @@ func documentUpsertResponse(reply *vearchpb.BulkResponse) (map[string]interface{
 func documentResultSerialize(item *vearchpb.Item) map[string]interface{} {
 	result := make(map[string]interface{})
 	if item == nil {
-		result["msg"] = "duplicate id"
+		result["msg"] = "item is nil"
 		result["code"] = http.StatusInternalServerError
 		return result
 	}
@@ -126,10 +126,9 @@ func documentGetResponse(space *entity.Space, reply *vearchpb.GetResponse, retur
 	for _, item := range reply.Items {
 		doc := make(map[string]interface{})
 
-		// duplicate id will return nil
 		if item == nil {
 			doc["code"] = http.StatusInternalServerError
-			doc["msg"] = "duplicate id"
+			doc["msg"] = "item is nil"
 			documents = append(documents, doc)
 			continue
 		}

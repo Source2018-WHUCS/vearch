@@ -891,16 +891,24 @@ def process_query_multiple_error_data(items):
         if duplicated_ids:
             if interface == "query":
                 assert rs.json()["data"]["total"] == 2
+                duplicated_ids = rs.json()["data"]["documents"]
+                assert duplicated_ids[0]["_id"] == "2"
+                assert duplicated_ids[1]["_id"] == "2"
             if interface == "delete":
                 assert rs.json()["data"]["total"] == 1
+                duplicated_ids = rs.json()["data"]["document_ids"]
+                assert duplicated_ids[0] == "2"
         if duplicated_ids_by_hash:
             if interface == "query":
-                assert rs.json()["data"]["total"] == 1
                 duplicated_ids = rs.json()["data"]["documents"]
-                assert "msg" in duplicated_ids[0]
-                assert "duplicate" in duplicated_ids[0]["msg"]
+                assert rs.json()["data"]["total"] == 2
+                assert duplicated_ids[0]["_id"] == "3"
+                assert duplicated_ids[1]["_id"] == "3"
+
             if interface == "delete":
                 assert rs.json()["data"]["total"] == 1
+                duplicated_ids = rs.json()["data"]["document_ids"]
+                assert duplicated_ids[0] == "3"
 
 
 def query_error(total, batch_size, xb, interface: str, wrong_parameters: list):
