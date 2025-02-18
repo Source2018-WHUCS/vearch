@@ -67,6 +67,37 @@ def download_from_irisa(host, dirname, local_dir, filename):
         logger.error("%s download failed" % (local_dir + filename))
         return False
 
+def download_from_github(url, local_dir, filename):
+    """Download file from github
+    
+    Args:
+        url: github url
+        local_dir: local directory to save file
+        filename: filename to save
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    import requests
+
+    if not os.path.exists(local_dir):
+        os.makedirs(local_dir)
+
+    fname = os.path.join(local_dir, filename)
+    if os.path.isfile(fname):
+        return True
+
+    try:
+        response = requests.get(url, timeout=30)
+        if response.status_code == 200:
+            with open(fname, "wb") as file:
+                file.write(response.content)
+            return True
+        else:
+            return False
+    except Exception as e:
+        return False
+
 
 def untar(fname, dirs, untar_result_dirs):
     if not os.path.exists(dirs):
@@ -113,12 +144,19 @@ def get_sift1M():
 
 def get_sift10K():
     url = "ftp://ftp.irisa.fr"
-    dirname = "local/texmex/corpus/"
-    filename = "siftsmall.tar.gz"
-    host = get_ftp_ip(url)
-    if download_from_irisa(host, dirname, "./", filename) == False:
-        return
-    untar(filename, "./", "siftsmall")
+    # dirname = "local/texmex/corpus/"
+    # filename = "siftsmall.tar.gz"
+    # host = get_ftp_ip(url)
+    # if download_from_irisa(host, dirname, "./", filename) == False:
+    #     return
+    # untar(filename, "./", "siftsmall")
+
+    filename = "v0.0.1.tar.gz"
+    download_from_github("https://github.com/vearch/sift/archive/refs/tags/v0.0.1.tar.gz", "./", filename)
+
+    untar(filename, "./", "v0.0.1")
+    untar("v0.0.1/siftsmall.tar.gz", "./", "siftsmall")
+
     xb, xq, xt, gt = load_sift10K()
     return xb, xq, xt, gt
 
@@ -171,15 +209,20 @@ class DatasetSift10K(Dataset):
         self.download()
 
     def download(self):
-        dirname = "local/texmex/corpus/"
-        filename = "siftsmall.tar.gz"
-        host = get_ftp_ip(self.url)
-        if (
-            download_from_irisa(host, dirname, self.basedir, filename)
-            == False
-        ):
-            return
-        untar(filename, self.basedir, "siftsmall")
+        # dirname = "local/texmex/corpus/"
+        # filename = "siftsmall.tar.gz"
+        # host = get_ftp_ip(self.url)
+        # if (
+        #     download_from_irisa(host, dirname, self.basedir, filename)
+        #     == False
+        # ):
+        #     return
+        # untar(filename, self.basedir, "siftsmall")
+        filename = "v0.0.1.tar.gz"
+        download_from_github("https://github.com/vearch/sift/archive/refs/tags/v0.0.1.tar.gz", "./", filename)
+
+        untar(filename, "./", "v0.0.1")
+        untar("v0.0.1/siftsmall.tar.gz", "./", "siftsmall")
 
     def get_database(self):
         return fvecs_read(self.basedir + "siftsmall/siftsmall_base.fvecs")
