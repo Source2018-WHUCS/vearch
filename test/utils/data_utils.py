@@ -67,48 +67,76 @@ def download_from_irisa(host, dirname, local_dir, filename):
         logger.error("%s download failed" % (local_dir + filename))
         return False
 
-def download_from_github(url, local_dir, filename):
-    """Download file from github
+def download_from_github(url: str, local_dir: str, filename: str, max_retries: int = 3) -> bool:
+    """Download file from GitHub with retry mechanism and file integrity verification
     
     Args:
-        url: github url
-        local_dir: local directory to save file
-        filename: filename to save
+        url: GitHub download URL
+        local_dir: Local directory to save file
+        filename: Name of the file to save
+        max_retries: Maximum number of retry attempts
     
     Returns:
         bool: True if successful, False otherwise
     """
     import requests
-
+    import time
+    import tarfile
+    from tqdm import tqdm
+    
     if not os.path.exists(local_dir):
         os.makedirs(local_dir)
-
+        
     fname = os.path.join(local_dir, filename)
-    if os.path.isfile(fname):
-        return True
-
-    try:
-        response = requests.get(url, timeout=30)
-        if response.status_code == 200:
-            with open(fname, "wb") as file:
-                file.write(response.content)
-            return True
-        else:
-            return False
-    except Exception as e:
-        return False
+    
+    for attempt in range(max_retries):
+        try:
+            # Stream download
+            with requests.get(url, stream=True, timeout=30) as response:
+                response.raise_for_status()
+                
+                with open(fname, 'wb') as f:
+                    for chunk in tqdm(
+                        response.iter_content(chunk_size=8192),
+                        desc=f'Downloading {filename} (attempt {attempt + 1}/{max_retries})'
+                    ):
+                        if chunk:
+                            f.write(chunk)
+                            
+            # Verify if file is a valid tar.gz
+            try:
+                with tarfile.open(fname, 'r:gz') as tar:
+                    tar.getmembers()  # Verify file content
+                logger.info(f"Successfully downloaded: {filename}")
+                return True
+            except Exception as e:
+                logger.error(f"File is corrupted: {e}")
+                os.remove(fname)
+                raise Exception("Invalid file format")
+                
+        except Exception as e:
+            logger.error(f"Download failed (attempt {attempt + 1}/{max_retries}): {str(e)}")
+            if os.path.exists(fname):
+                os.remove(fname)
+            if attempt < max_retries - 1:
+                wait_time = 5 * (attempt + 1)  # Incremental wait time
+                logger.info(f"Waiting {wait_time} seconds before retry...")
+                time.sleep(wait_time)
+    
+    logger.error(f"Download failed after {max_retries} attempts")
+    return False
 
 
 def untar(fname, dirs, untar_result_dirs):
     if not os.path.exists(dirs):
         os.makedirs(dirs)
-    if not os.path.isfile(dirs + fname):
+    if not os.path.isfile(os.path.join(dirs, fname)):
         logger.debug("%s not exist, cann't untar" % (fname))
         return
-    if os.path.exists(dirs + untar_result_dirs):
-        logger.debug("%s exist, no need to untar" % (dirs + untar_result_dirs))
+    if os.path.exists(os.path.join(dirs, untar_result_dirs)):
+        logger.debug("%s exist, no need to untar" % os.path.join(dirs, untar_result_dirs))
         return
-    t = tarfile.open(dirs + fname)
+    t = tarfile.open(os.path.join(dirs, fname))
     t.extractall(path=dirs)
 
 
@@ -139,25 +167,6 @@ def get_sift1M():
         return
     untar(filename, "./", "sift")
     xb, xq, xt, gt = load_sift1M()
-    return xb, xq, xt, gt
-
-
-def get_sift10K():
-    url = "ftp://ftp.irisa.fr"
-    # dirname = "local/texmex/corpus/"
-    # filename = "siftsmall.tar.gz"
-    # host = get_ftp_ip(url)
-    # if download_from_irisa(host, dirname, "./", filename) == False:
-    #     return
-    # untar(filename, "./", "siftsmall")
-
-    filename = "v0.0.1.tar.gz"
-    download_from_github("https://github.com/vearch/sift/archive/refs/tags/v0.0.1.tar.gz", "./", filename)
-
-    untar(filename, "./", "v0.0.1")
-    untar("v0.0.1/siftsmall.tar.gz", "./", "siftsmall")
-
-    xb, xq, xt, gt = load_sift10K()
     return xb, xq, xt, gt
 
 
@@ -219,10 +228,15 @@ class DatasetSift10K(Dataset):
         #     return
         # untar(filename, self.basedir, "siftsmall")
         filename = "v0.0.1.tar.gz"
-        download_from_github("https://github.com/vearch/sift/archive/refs/tags/v0.0.1.tar.gz", "./", filename)
+        download_from_github("https://github.com/vearch/sift/archive/refs/tags/v0.0.1.tar.gz", "datasets", filename)
 
-        untar(filename, "./", "v0.0.1")
-        untar("v0.0.1/siftsmall.tar.gz", "./", "siftsmall")
+        untar(filename, "datasets", "v0.0.1")
+        shutil.move("datasets/sift-0.0.1/siftsmall.tar.gz", "datasets/siftsmall.tar.gz")
+        # remove the extracted files
+        shutil.rmtree("datasets/sift-0.0.1")
+        # remove v0.0.1
+        os.remove("datasets/v0.0.1.tar.gz")
+        untar("siftsmall.tar.gz", "./datasets", "siftsmall")
 
     def get_database(self):
         return fvecs_read(self.basedir + "siftsmall/siftsmall_base.fvecs")
