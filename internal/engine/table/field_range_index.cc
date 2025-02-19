@@ -270,7 +270,7 @@ int64_t MultiFieldsRangeIndex::Search(
   RangeQueryResult result;
   RangeQueryResult result_not_in;
   result_not_in.SetNotIn(true);
-  int64_t retval = 0;
+  std::atomic<int64_t> retval{0};
 
   for (size_t i = 0; i < fsize; ++i) {
     RangeQueryResult result_tmp;
@@ -308,10 +308,11 @@ int64_t MultiFieldsRangeIndex::Search(
         storage_mgr_->GetColumnFamilyHandle(cf_id_);
     std::string value;
     rocksdb::ReadOptions read_options;
-    std::unique_ptr<rocksdb::Iterator> it(
-        db->NewIterator(read_options, cf_handler));
 
     if (fields_[filter.field]->IsNumeric()) {
+      std::unique_ptr<rocksdb::Iterator> it(
+          db->NewIterator(read_options, cf_handler));
+
       std::string lower_key, upper_key;
       lower_key = ToRowKey(filter.field) + "_" +
                   FloatingToSortableStr(filter.lower_value) + "_";
@@ -341,7 +342,13 @@ int64_t MultiFieldsRangeIndex::Search(
       } else {
         items.push_back(filter.lower_value);
       }
-      for (std::string &item : items) {
+
+#pragma omp parallel for if (items.size() >= 10) schedule(dynamic)
+      for (size_t i = 0; i < items.size(); i++) {
+        std::string item = items[i];
+        std::unique_ptr<rocksdb::Iterator> it(
+            db->NewIterator(read_options, cf_handler));
+
         std::string prefix = ToRowKey(filter.field) + "_" + item + "_";
         size_t prefix_len = prefix.length();
 
