@@ -26,7 +26,6 @@ import (
 	"github.com/vearch/vearch/v3/internal/pkg/errutil"
 	"github.com/vearch/vearch/v3/internal/pkg/log"
 	"github.com/vearch/vearch/v3/internal/pkg/number"
-	"github.com/vearch/vearch/v3/internal/pkg/vjson"
 	json "github.com/vearch/vearch/v3/internal/pkg/vjson"
 	"github.com/vearch/vearch/v3/internal/proto/vearchpb"
 	"go.etcd.io/etcd/client/v3/concurrency"
@@ -178,7 +177,7 @@ func (s *DBService) QueryDBs(ctx context.Context) ([]*entity.DB, error) {
 	dbs := make([]*entity.DB, 0, len(bytesArr))
 	for _, bs := range bytesArr {
 		db := &entity.DB{}
-		if err := vjson.Unmarshal(bs, db); err != nil {
+		if err := json.Unmarshal(bs, db); err != nil {
 			log.Error("decode db err: %s,and the bs is:%s", err.Error(), string(bs))
 			continue
 		}
