@@ -79,8 +79,7 @@ $ cd cloud && cp ../config/config.toml .
 $ docker-compose --profile standalone up -d
 
 # 集群模式
-$ cd cloud
-$ cp ../config/config_cluster.toml .
+$ cd cloud && cp ../config/config_cluster.toml .
 $ docker-compose --profile cluster up -d
 ```
 
