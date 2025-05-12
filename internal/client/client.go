@@ -695,9 +695,6 @@ func (r *routerRequest) searchFromPartition(ctx context.Context, partitionID ent
 				deSerialize := deSerializeEndTime.Sub(deSerializeStartTime).Seconds() * 1000
 				deSerializeStr := strconv.FormatFloat(deSerialize, 'f', 4, 64)
 				searchResponse.Head.Params["deSerialize_"+partitionIDstr] = deSerializeStr
-				fieldParsingTime := time.Since(deSerializeEndTime).Seconds() * 1000
-				fieldParsingTimeStr := strconv.FormatFloat(fieldParsingTime, 'f', 4, 64)
-				searchResponse.Head.Params["fieldParsing_"+partitionIDstr] = fieldParsingTimeStr
 			}
 		}
 	}
