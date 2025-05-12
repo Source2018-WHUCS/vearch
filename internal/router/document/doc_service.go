@@ -182,7 +182,9 @@ func (docService *docService) search(ctx context.Context, searchReq *vearchpb.Se
 			sortOrder = append(sortOrder, &sortorder.SortField{Field: sortF.Field, Desc: sortF.Type})
 		}
 	}
-	searchResponse := request.SearchFieldSortExecute(sortOrder)
+
+	desc := sortOrder[0].GetSortOrder()
+	searchResponse := request.SearchFieldSortExecute(desc)
 
 	if searchResponse == nil {
 		return &vearchpb.SearchResponse{Head: setErrHead(request.Err)}

@@ -43,7 +43,6 @@ import (
 	"github.com/vearch/vearch/v3/internal/pkg/log"
 	"github.com/vearch/vearch/v3/internal/pkg/number"
 	"github.com/vearch/vearch/v3/internal/proto/vearchpb"
-	"github.com/vearch/vearch/v3/internal/ps/engine/sortorder"
 )
 
 // Client include client of master and ps
@@ -712,7 +711,7 @@ func (r *routerRequest) searchFromPartition(ctx context.Context, partitionID ent
 	respChain <- responseDoc
 }
 
-func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *vearchpb.SearchResponse {
+func (r *routerRequest) SearchFieldSortExecute(desc bool) *vearchpb.SearchResponse {
 	startTime := time.Now()
 	var wg sync.WaitGroup
 	sendPartitionMap := r.sendMap
@@ -745,7 +744,6 @@ func (r *routerRequest) SearchFieldSortExecute(sortOrder sortorder.SortOrder) *v
 		}
 	}
 
-	desc := sortOrder[0].GetSortOrder()
 	startSearchPartitonsTime := time.Now()
 	var searchReq *vearchpb.SearchRequest
 	respChain := make(chan *response.SearchDocResult, len(sendPartitionMap))
@@ -1014,7 +1012,6 @@ func (r *routerRequest) QueryFieldSortExecute() *vearchpb.SearchResponse {
 		return searchResponse
 	}
 
-	log.Info("len(searchReq.DocumentIds) = %d", len(searchReq.DocumentIds))
 	if len(searchReq.DocumentIds) == 0 {
 		for _, resp := range result {
 			if resp.ResultItems != nil && len(resp.ResultItems) > 0 && searchReq.Limit > 0 {
@@ -1029,7 +1026,6 @@ func (r *routerRequest) QueryFieldSortExecute() *vearchpb.SearchResponse {
 		orderMap := make(map[string]int)
 		for i, name := range searchReq.DocumentIds {
 			orderMap[name] = i
-			log.Info("orderMap[%s] = %d", name, i)
 		}
 		for _, item := range result[0].ResultItems {
 			for _, field := range item.Fields {
