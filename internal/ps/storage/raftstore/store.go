@@ -168,12 +168,12 @@ func (s *Store) Start() (err error) {
 		peer := proto.Peer{Type: proto.PeerNormal, ID: uint64(repl)}
 		raftConf.Peers = append(raftConf.Peers, peer)
 	}
-	rafgLog, err := rlog.NewLog(config.Conf().GetLogDir(), "PS.RAFT", vearchlog.WarnLogType)
+	raftLog, err := rlog.NewLog(config.Conf().GetLogDir(), "PS.RAFT", vearchlog.WarnLogType)
 	if err != nil {
 		s.Engine.Close()
 		return vearchpb.NewError(vearchpb.ErrorEnum_INTERNAL_ERROR, fmt.Errorf("start partition[%d] open raft log error: %s", s.Partition.Id, err.Error()))
 	}
-	rlogger.SetLogger(rafgLog)
+	rlogger.SetLogger(raftLog)
 	if err = s.RaftServer.CreateRaft(raftConf); err != nil {
 		s.Engine.Close()
 		return vearchpb.NewError(vearchpb.ErrorEnum_INTERNAL_ERROR, fmt.Errorf("start partition[%d] create raft error: %s", s.Partition.Id, err))
