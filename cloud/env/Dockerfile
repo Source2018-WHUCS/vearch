@@ -1,12 +1,12 @@
 FROM quay.io/centos/centos:stream9 AS builder
 
 WORKDIR /env
-COPY env.sh .
+COPY install-dependencies.sh .
 
 RUN dnf install -y epel-release && \
     dnf install -y wget make automake cmake git which libzstd-devel openssl-devel tbb-devel boost-devel tar findutils gcc-c++ && \
     dnf --enablerepo=crb install -y blas-devel lapack-devel openblas-devel && \
-    cd /env && ./env.sh
+    cd /env && ./install-dependencies.sh
 
 FROM quay.io/centos/centos:stream9
 
