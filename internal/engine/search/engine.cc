@@ -117,7 +117,8 @@ Engine::Engine(const std::string &index_root_path,
     : index_root_path_(index_root_path),
       space_name_(space_name),
       date_time_format_("%Y-%m-%d-%H:%M:%S"),
-      backup_status_(0) {
+      backup_status_(0),
+      refresh_interval_(1000) {
   table_ = nullptr;
   vec_manager_ = nullptr;
   index_status_ = IndexStatus::UNINDEXED;

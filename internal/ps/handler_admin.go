@@ -83,7 +83,7 @@ func ExportToRpcAdminHandler(server *Server) {
 			handler.NewChain(h.name, handler.DefaultPanicHandler, errorHandler, initAdminHandler, h.handler),
 			"",
 		); err != nil {
-			log.Fatalf("failed to register handler %s: %v", h.name, err)
+			log.Fatal("failed to register handler %s: %v", h.name, err)
 		}
 	}
 }
@@ -107,7 +107,7 @@ func (c *CreatePartitionHandler) Execute(ctx context.Context, req *vearchpb.Part
 	reply.Err = &vearchpb.Error{Code: vearchpb.ErrorEnum_SUCCESS}
 	space := new(entity.Space)
 	if err := json.Unmarshal(req.Data, space); err != nil {
-		log.Errorf("create partition failed to unmarshal space data: %v", err)
+		log.Error("create partition failed to unmarshal space data: %v", err)
 		return vearchpb.NewError(vearchpb.ErrorEnum_RPC_PARAM_ERROR, err)
 	}
 
@@ -118,7 +118,7 @@ func (c *CreatePartitionHandler) Execute(ctx context.Context, req *vearchpb.Part
 
 	if err := c.server.CreatePartition(ctx, space, req.PartitionID); err != nil {
 		c.server.DeletePartition(req.PartitionID)
-		log.Errorf("failed to create partition %d: %v", req.PartitionID, err)
+		log.Error("failed to create partition %d: %v", req.PartitionID, err)
 		return err
 	}
 
@@ -155,7 +155,7 @@ func (handler *UpdatePartitionHandler) Execute(ctx context.Context, req *vearchp
 
 	space := new(entity.Space)
 	if err := json.Unmarshal(req.Data, space); err != nil {
-		log.Errorf("failed to unmarshal space data: %v", err)
+		log.Error("failed to unmarshal space data: %v", err)
 		return vearchpb.NewError(vearchpb.ErrorEnum_RPC_PARAM_ERROR, err)
 	}
 
@@ -168,7 +168,7 @@ func (handler *UpdatePartitionHandler) Execute(ctx context.Context, req *vearchp
 	}
 
 	if err := store.UpdateSpace(ctx, space); err != nil {
-		log.Errorf("failed to update space for partition %d: %v", req.PartitionID, err)
+		log.Error("failed to update space for partition %d: %v", req.PartitionID, err)
 		return err
 	}
 
@@ -194,12 +194,12 @@ func (pih *PartitionInfoHandler) Execute(ctx context.Context, req *vearchpb.Part
 	stores := pih.collectPartitionStores(pid)
 	pis, err := pih.buildPartitionInfos(stores, req.Type)
 	if err != nil {
-		log.Errorf("failed to build partition infos: %v", err)
+		log.Error("failed to build partition infos: %v", err)
 		return err
 	}
 
 	if reply.Data, err = json.Marshal(pis); err != nil {
-		log.Errorf("failed to marshal partition info: %v", err)
+		log.Error("failed to marshal partition info: %v", err)
 		return err
 	}
 	return nil
@@ -288,7 +288,7 @@ func (sh *StatsHandler) Execute(ctx context.Context, req *vearchpb.PartitionData
 
 		// size, err := store.GetEngine().Reader().Capacity(ctx)
 		// if err != nil {
-		// 	err = fmt.Errorf("got capacity from engine err:[%s]", err.Error())
+		// 	err = fmt.Error("got capacity from engine err:[%s]", err.Error())
 		// 	pi.Error = err.Error()
 		// 	return
 		// }
@@ -394,7 +394,7 @@ func handlePartitionNotLeaderError(server *Server, req *vearchpb.PartitionData, 
 	} else {
 		leaderInfo, err := json.Marshal(server.raftResolver.ToReplica(leaderID))
 		if err != nil {
-			log.Errorf("failed to marshal raft resolver info: %v", err)
+			log.Error("failed to marshal raft resolver info: %v", err)
 			return err
 		}
 		reply.Err = &vearchpb.Error{
@@ -417,16 +417,16 @@ func (ch *EngineCfgHandler) Execute(ctx context.Context, req *vearchpb.Partition
 	partitonStore := ch.server.GetPartition(req.PartitionID)
 	if partitonStore == nil {
 		log.Debug("partitonStore is nil.")
-		return vearchpb.NewError(vearchpb.ErrorEnum_PARTITION_IS_INVALID, fmt.Errorf("partition (%v), partitonStore is nil ", req.PartitionID))
+		return vearchpb.NewError(vearchpb.ErrorEnum_PARTITION_IS_INVALID, fmt.Error("partition (%v), partitonStore is nil ", req.PartitionID))
 	}
 	engine := partitonStore.GetEngine()
 	if engine == nil {
-		return vearchpb.NewError(vearchpb.ErrorEnum_PARTITION_IS_INVALID, fmt.Errorf("partition (%v), engine is nil ", req.PartitionID))
+		return vearchpb.NewError(vearchpb.ErrorEnum_PARTITION_IS_INVALID, fmt.Error("partition (%v), engine is nil ", req.PartitionID))
 	}
 	if req.Type == vearchpb.OpType_CREATE {
 		err := engine.SetEngineCfg(req.Data)
 		if err != nil {
-			log.Debug("cache info set error [%+v]", err)
+			log.Error("cache info set error [%+v]", err)
 		}
 	} else if req.Type == vearchpb.OpType_GET {
 		// invoke c interface
@@ -434,7 +434,7 @@ func (ch *EngineCfgHandler) Execute(ctx context.Context, req *vearchpb.Partition
 		cfg := &entity.SpaceConfig{}
 		err := engine.GetEngineCfg(cfg)
 		if err != nil {
-			log.Debug("cache info set error [%+v]", err)
+			log.Error("cache info set error [%+v]", err)
 		}
 		data, _ := json.Marshal(cfg)
 		reply.Data = data
