@@ -75,7 +75,6 @@ class Engine {
 
   int GetDocsNum();
 
-  int GetBRunning() { return b_running_; }
   int GetTrainingThreshold() { return training_threshold_; }
   void SetIsDirty(bool is_dirty) { is_dirty_ = is_dirty; }
   int GetMaxDocid() { return max_docid_; }
@@ -128,8 +127,9 @@ class Engine {
 
   std::atomic<int> delete_num_;
 
-  int b_running_;  // 0 not run, not 0 running
+  std::atomic<int> b_running_;                // 0 not run, not 0 running
 
+  std::mutex running_mutex_;
   std::condition_variable running_cv_;
 
   enum IndexStatus index_status_;

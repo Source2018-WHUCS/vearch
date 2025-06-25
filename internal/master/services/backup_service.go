@@ -384,24 +384,6 @@ func (s *BackupService) BackupSpace(ctx context.Context, dbService *DBService, s
 			continue
 		}
 
-		for _, nodeID := range partition.Replicas {
-			log.Debug("nodeID is [%+v], partition is [%+v], [%+v]", nodeID, partition.Id, partition.LeaderID)
-			if nodeID != partition.LeaderID && req.Command != "restore" {
-				continue
-			}
-			server, err := mc.QueryServer(ctx, nodeID)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-			log.Debug("invoke nodeID [%v], partition [%v] address [%+v]", nodeID, partition.Id, server.RpcAddr())
-			req.Part = s3PartitionMap[partition.Id]
-			err = client.BackupSpace(server.RpcAddr(), req, partition.Id)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-		}
 		if len(partition.Replicas) == 1 && partition.LeaderID == 0 {
 			server, err := mc.QueryServer(ctx, partition.Replicas[0])
 			if err != nil {
@@ -414,6 +396,25 @@ func (s *BackupService) BackupSpace(ctx context.Context, dbService *DBService, s
 			if err != nil {
 				log.Error(err)
 				continue
+			}
+		} else {
+			for _, nodeID := range partition.Replicas {
+				log.Debug("nodeID is [%+v], partition is [%+v], [%+v]", nodeID, partition.Id, partition.LeaderID)
+				if nodeID != partition.LeaderID && req.Command != "restore" {
+					continue
+				}
+				server, err := mc.QueryServer(ctx, nodeID)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+				log.Debug("invoke nodeID [%v], partition [%v] address [%+v]", nodeID, partition.Id, server.RpcAddr())
+				req.Part = s3PartitionMap[partition.Id]
+				err = client.BackupSpace(server.RpcAddr(), req, partition.Id)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
 			}
 		}
 	}

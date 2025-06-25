@@ -310,9 +310,20 @@ class TestBackup:
             logger.info("restore data")
             time.sleep(10)
             self.backup(router_url, "restore", corrupted)
-            time.sleep(30)
 
-        waiting_index_finish(total)
+            num = 0
+            while num < total:
+                num = 0
+                response = requests.get(router_url + "/dbs/" + db_name + "/spaces/" + space_name, auth=(username, password))
+                if response.json()["data"] is None or response.json()["data"].get("partitions") is None:
+                    logger.info("waiting for restore finish")
+                    time.sleep(5)
+                    continue
+                partitions = response.json()["data"]["partitions"]
+                for p in partitions:
+                    num += p["doc_num"]
+                logger.info("doc num: %d" % (num))
+                time.sleep(5)
 
         for parallel_on_queries in [0, 1]:
             self.query(parallel_on_queries, k)

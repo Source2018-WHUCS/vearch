@@ -14,6 +14,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <chrono>
 #include <cstring>
 #include <fstream>
@@ -123,7 +124,7 @@ Engine::Engine(const std::string &index_root_path,
   vec_manager_ = nullptr;
   index_status_ = IndexStatus::UNINDEXED;
   delete_num_ = 0;
-  b_running_ = 0;
+  b_running_.store(0);
   is_dirty_ = false;
   field_range_index_ = nullptr;
   created_table_ = false;
@@ -135,10 +136,9 @@ Engine::Engine(const std::string &index_root_path,
 }
 
 Engine::~Engine() {
-  if (b_running_) {
-    b_running_ = 0;
-    std::mutex running_mutex;
-    std::unique_lock<std::mutex> lk(running_mutex);
+  if (b_running_.load()) {
+    b_running_.store(0);
+    std::unique_lock<std::mutex> lk(running_mutex_);
     running_cv_.wait(lk);
   }
 
@@ -248,21 +248,24 @@ Status Engine::Search(Request &request, Response &response_results) {
     RequestConcurrentController::GetInstance().Release(req_num);
     return Status::InvalidArgument(msg);
   }
-  int brute_force_search = request.BruteForceSearch(); // 0: normal search, 1: brute force search, 2: auto
+  int brute_force_search =
+      request.BruteForceSearch();  // 0: normal search, 1: brute force search,
+                                   // 2: auto
   std::vector<struct VectorQuery> &vec_fields = request.VecFields();
   size_t vec_fields_num = vec_fields.size();
 
-  if (vec_fields_num > 0 && brute_force_search == 2 && index_status_ != IndexStatus::INDEXED) {
-    brute_force_search = 1; // force to use brute force search
+  if (vec_fields_num > 0 && brute_force_search == 2 &&
+      index_status_ != IndexStatus::INDEXED) {
+    brute_force_search = 1;  // force to use brute force search
   }
 
   if (vec_fields_num > 0 && (brute_force_search == 0) &&
       (index_status_ != IndexStatus::INDEXED) &&
       (max_docid_ > brute_force_search_threshold)) {
-    std::string msg = space_name_ + " index not trained, " + 
-                      "brute_force_search is 0, max_docid_ = " +
-                      std::to_string(max_docid_) + ", threshold = " +
-                      std::to_string(brute_force_search_threshold);
+    std::string msg =
+        space_name_ + " index not trained, " +
+        "brute_force_search is 0, max_docid_ = " + std::to_string(max_docid_) +
+        ", threshold = " + std::to_string(brute_force_search_threshold);
     LOG(WARNING) << msg;
     for (int i = 0; i < req_num; ++i) {
       SearchResult result;
@@ -604,8 +607,7 @@ Status Engine::CreateTable(TableInfo &table) {
   }
 
   refresh_interval_ = table.RefreshInterval();
-  LOG(INFO) << space_name_
-            << " init refresh_interval=" << refresh_interval_;
+  LOG(INFO) << space_name_ << " init refresh_interval=" << refresh_interval_;
 
   LOG(INFO) << "create table [" << table_name << "] success!";
   created_table_ = true;
@@ -676,7 +678,8 @@ int Engine::AddOrUpdate(Doc &doc) {
     return -7;
   };
 
-  if (this->refresh_interval_ >= 0 and not b_running_ and index_status_ == UNINDEXED) {
+  if (refresh_interval_ >= 0 and not b_running_.load() and
+      index_status_ == UNINDEXED) {
     if (max_docid_ - delete_num_ >= training_threshold_) {
       LOG(INFO) << space_name_ << " begin indexing. training_threshold="
                 << training_threshold_;
@@ -876,8 +879,8 @@ int Engine::GetDoc(int docid, Doc &doc, bool next) {
 }
 
 int Engine::BuildIndex() {
-  int running = __sync_fetch_and_add(&b_running_, 1);
-  if (running) {
+  int running = b_running_.fetch_add(1);
+  if (running > 0) {
     LOG(INFO) << space_name_ << " start build index!";
     return 0;
   }
@@ -891,7 +894,7 @@ int Engine::BuildIndex() {
 // TODO set limit for cpu
 int Engine::RebuildIndex(int drop_before_rebuild, int limit_cpu, int describe) {
   int ret = 0;
-  if (!b_running_ || index_status_ == IndexStatus::UNINDEXED) {
+  if (!b_running_.load() || index_status_ == IndexStatus::UNINDEXED) {
     LOG(INFO) << space_name_ << " index not trained, no need to rebuild!";
     return ret;
   }
@@ -900,10 +903,9 @@ int Engine::RebuildIndex(int drop_before_rebuild, int limit_cpu, int describe) {
     return ret;
   }
 
-  if (b_running_) {
-    b_running_ = 0;
-    std::mutex running_mutex;
-    std::unique_lock<std::mutex> lk(running_mutex);
+  if (b_running_.load()) {
+    b_running_.store(0);
+    std::unique_lock<std::mutex> lk(running_mutex_);
     running_cv_.wait(lk);
   }
 
@@ -918,7 +920,8 @@ int Engine::RebuildIndex(int drop_before_rebuild, int limit_cpu, int describe) {
       return ret;
     }
 
-    if (not b_running_ && max_docid_ - delete_num_ > training_threshold_) {
+    if (not b_running_.load() &&
+        max_docid_ - delete_num_ > training_threshold_) {
       ret = vec_manager_->TrainIndex(vector_indexes);
       if (ret) {
         LOG(ERROR) << space_name_
@@ -941,7 +944,8 @@ int Engine::RebuildIndex(int drop_before_rebuild, int limit_cpu, int describe) {
     index_status_ = IndexStatus::UNINDEXED;
   }
 
-  if (this->refresh_interval_ >= 0 and not b_running_ && max_docid_ - delete_num_ >= training_threshold_) {
+  if (refresh_interval_ >= 0 and not b_running_.load() &&
+      max_docid_ - delete_num_ >= training_threshold_) {
     ret = BuildIndex();
     if (ret) {
       LOG(ERROR) << space_name_
@@ -963,14 +967,14 @@ int Engine::RebuildIndex(int drop_before_rebuild, int limit_cpu, int describe) {
 int Engine::Indexing() {
   if (vec_manager_->TrainIndex(vec_manager_->VectorIndexes()) != 0) {
     LOG(ERROR) << space_name_ << " create index failed!";
-    b_running_ = 0;
+    b_running_.store(0);
     return -1;
   }
 
   LOG(INFO) << space_name_ << " vector manager TrainIndex success!";
   int ret = 0;
   bool has_error = false;
-  while (b_running_) {
+  while (b_running_.load()) {
     if (has_error) {
       usleep(5000 * 1000);  // sleep 5000ms
       continue;
@@ -986,11 +990,11 @@ int Engine::Indexing() {
     if (index_is_dirty == true) {
       is_dirty_ = true;
     }
-    if(this->refresh_interval_ > 0) {
+    if (refresh_interval_ > 0) {
       std::this_thread::sleep_for(std::chrono::milliseconds(refresh_interval_));
     }
   }
-  running_cv_.notify_one();
+  running_cv_.notify_all();
   LOG(INFO) << space_name_ << " build index exited!";
   return ret;
 }
@@ -1184,27 +1188,6 @@ int Engine::Load() {
   }
   max_docid_ = doc_num;
 
-  if (field_range_index_->DocCount() <= 0) {
-    int field_num = table_->FieldsNum();
-    // add fields into field_range_index_ in multi-thread
-    std::thread t([=]() {
-#pragma omp parallel for
-      for (int j = 0; j < field_num; ++j) {
-        for (int i = 0; i < max_docid_; ++i) {
-          if (docids_bitmap_->Test(i)) {
-            continue;
-          }
-          field_range_index_->AddDoc(i, j);
-          if (i % 10000 == 0) {
-            LOG(DEBUG) << space_name_ << " load field_range_index_ [" << j
-                       << "] docid [" << i << "]";
-          }
-        }
-      }
-    });
-    t.detach();
-  }
-
   delete_num_ = 0;
   for (int i = 0; i < max_docid_; ++i) {
     if (docids_bitmap_->Test(i)) {
@@ -1212,7 +1195,7 @@ int Engine::Load() {
     }
   }
 
-  if (this->refresh_interval_ >= 0 and not b_running_ and index_status_ == UNINDEXED) {
+  if (refresh_interval_ >= 0 and (b_running_.load() == 0)and index_status_ == UNINDEXED) {
     if (max_docid_ - delete_num_ >= training_threshold_) {
       LOG(INFO) << space_name_ << " begin indexing. training_threshold="
                 << training_threshold_;
@@ -1378,7 +1361,7 @@ int Engine::SetConfig(std::string conf_str) {
   if (j.contains("refresh_interval")) {
     refresh_interval_ = j["refresh_interval"];
     LOG(INFO) << space_name_
-      << " update refresh_interval=" << refresh_interval_;
+              << " update refresh_interval=" << refresh_interval_;
   }
   return 0;
 }
