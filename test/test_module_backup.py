@@ -126,6 +126,7 @@ class TestBackup:
                     "type": "FLAT",
                     "params": {
                         "metric_type": "L2",
+                        "training_threshold": 1,
                     }
                 },
             }
