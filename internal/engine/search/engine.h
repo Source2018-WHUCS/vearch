@@ -24,6 +24,14 @@ namespace vearch {
 
 enum IndexStatus { UNINDEXED = 0, INDEXING, INDEXED };
 
+// Indexing state for thread-safe operations
+enum class IndexingState : int {
+  IDLE = 0,      // Not indexing
+  STARTING = 1,  // Starting indexing process
+  RUNNING = 2,   // Actively indexing
+  STOPPING = 3   // Stopping indexing process
+};
+
 class Engine {
  public:
   static Engine *GetInstance(const std::string &index_root_path,
@@ -66,6 +74,9 @@ class Engine {
   std::string GetMemoryInfo();
 
   IndexStatus GetIndexStatus() { return index_status_; }
+  
+  // Wait for index building to complete (with optional timeout)
+  bool WaitForIndexingComplete(int timeout_ms = -1);
 
   int Dump();
   int Load();
@@ -125,12 +136,13 @@ class Engine {
   int training_threshold_;
   int long_search_time_;
 
-  std::atomic<int> delete_num_;
+  std::atomic<int>
+      delete_num_;  // Index building state management with atomic operations
+  std::atomic<IndexingState> indexing_state_{IndexingState::IDLE};
 
-  std::atomic<int> b_running_;                // 0 not run, not 0 running
-
-  std::mutex running_mutex_;
-  std::condition_variable running_cv_;
+  // Synchronization for index building operations
+  std::mutex indexing_mutex_;
+  std::condition_variable indexing_cv_;
 
   enum IndexStatus index_status_;
 

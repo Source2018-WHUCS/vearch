@@ -163,19 +163,34 @@ func (s *BackupService) restoreSchema(ctx context.Context, dbService *DBService,
 		Recursive: false,
 	})
 
-	patitionMap := make(map[string]string, 0)
+	partitionDirs := make(map[string]bool)
 	for object := range objectCh {
 		if object.Err != nil {
-			fmt.Println(object.Err)
+			log.Error("failed to list S3 objects: %v", object.Err)
 			continue
 		}
-		if strings.HasSuffix(object.Key, "/") {
-			patitionMap[object.Key] = object.Key
+
+		relativePath := strings.TrimPrefix(object.Key, s3Path+"/")
+
+		if relativePath == "" {
+			continue
+		}
+
+		if strings.HasSuffix(relativePath, "/") {
+			dirName := strings.TrimSuffix(relativePath, "/")
+			if !strings.Contains(dirName, "/") && dirName != "" {
+				partitionDirs[dirName] = true
+				log.Info("Found partition directory: %s", dirName)
+			}
 		}
 	}
 
-	if len(patitionMap) != partitionNum {
-		err = fmt.Errorf("oss partition num %d not equal schema %d", len(patitionMap), partitionNum)
+	log.Info("Total partition directories found: %d, expected: %d", len(partitionDirs), partitionNum)
+	log.Debug("Partition directories: %v", partitionDirs)
+
+	if len(partitionDirs) != partitionNum {
+		err = fmt.Errorf("S3 partition directory count %d does not match schema partition count %d, found directories: %v",
+			len(partitionDirs), partitionNum, partitionDirs)
 		return res, err
 	}
 

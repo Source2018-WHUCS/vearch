@@ -430,7 +430,6 @@ func (ch *EngineCfgHandler) Execute(ctx context.Context, req *vearchpb.Partition
 		}
 	} else if req.Type == vearchpb.OpType_GET {
 		// invoke c interface
-		log.Debug("invoke cfg info is get")
 		cfg := &entity.SpaceConfig{}
 		err := engine.GetEngineCfg(cfg)
 		if err != nil {
