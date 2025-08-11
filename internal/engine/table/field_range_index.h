@@ -73,6 +73,11 @@ class MultiFieldsRangeIndex {
  private:
   int DeleteDoc(int64_t docid, int field, std::string &key);
 
+  int64_t QueryWithEarlyTermination(
+      FilterOperator query_filter_operator,
+      const std::vector<FilterInfo> &origin_filters,
+      std::vector<uint64_t> &docids, size_t topn);
+
   Table *table_;
   std::vector<std::shared_ptr<FieldRangeIndex>> fields_;
   StorageManager *storage_mgr_;
