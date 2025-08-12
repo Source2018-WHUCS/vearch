@@ -479,29 +479,6 @@ int64_t MultiFieldsRangeIndex::Query(
     FilterOperator query_filter_operator,
     const std::vector<FilterInfo> &origin_filters,
     std::vector<uint64_t> &docids, size_t topn) {
-  // For small topn values, we can optimize by implementing early termination
-  // directly in this method to avoid collecting all results
-  if (topn > 0 && topn < 10000) {  // Optimize for small result sets
-    return QueryWithEarlyTermination(query_filter_operator, origin_filters,
-                                     docids, topn);
-  }
-
-  // For large topn or unlimited results, use the standard approach
-  MultiRangeQueryResults range_query_result;
-  int64_t retval =
-      Search(query_filter_operator, origin_filters, &range_query_result);
-  if (retval <= 0) {
-    return retval;
-  }
-
-  docids = range_query_result.GetDocIDs(topn);
-  return retval;
-}
-
-int64_t MultiFieldsRangeIndex::QueryWithEarlyTermination(
-    FilterOperator query_filter_operator,
-    const std::vector<FilterInfo> &origin_filters,
-    std::vector<uint64_t> &docids, size_t topn) {
   docids.clear();
   docids.reserve(topn);
 
@@ -639,7 +616,7 @@ int64_t MultiFieldsRangeIndex::QueryWithEarlyTermination(
   }
 
   docids = range_query_result.GetDocIDs(topn);
-  return retval;
+  return static_cast<int64_t>(docids.size());
 }
 
 int MultiFieldsRangeIndex::AddField(int field, enum DataType field_type,
