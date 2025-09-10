@@ -234,7 +234,6 @@ int GammaIVFFlatGPUIndex::Indexing() {
         train_raw_vec = headers.Get(0);
         n_get = lens[0];
         if (num > n_get) {
-debug2: channel 0: window 999314 sent adjust 49262
           LOG(ERROR) << "training vector get count [" << n_get
                      << "] less then training_threshold[" << num
                      << "], failed!";
