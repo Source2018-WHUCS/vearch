@@ -161,8 +161,13 @@ func TimeoutMiddleware(defaultTimeout time.Duration) gin.HandlerFunc {
 				timeout = time.Duration(t) * time.Millisecond
 			} else {
 				msg := fmt.Sprintf("timeout[%s] param parse to int failed, err: %s", timeoutStr, err.Error())
+				err := errors.NewErrBadRequest(fmt.Errorf(msg))
 				log.Error(msg)
-				response.New(c).JsonError(errors.NewErrBadRequest(fmt.Errorf(msg)))
+				c.JSON(err.HttpCode(),
+					gin.H{
+						"request_id": c.GetHeader("X-Request-Id"),
+						"code":       err.Code(),
+						"msg":        err.Msg()})
 				c.Abort()
 				return
 			}
