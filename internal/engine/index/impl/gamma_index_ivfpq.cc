@@ -65,16 +65,47 @@ GammaIVFPQIndex::~GammaIVFPQIndex() {
 }
 
 faiss::InvertedListScanner *GammaIVFPQIndex::GetInvertedListScanner(
-    bool store_pairs, const faiss::IDSelector *sel,
-    const RetrievalContext *retrieval_context, faiss::MetricType metric_type,
-    size_t nbits) {
-  if (sel) {
-    return get_GammaInvertedListScanner2<true>(
-        *this, store_pairs, sel, retrieval_context, metric_type, nbits);
-  } else {
-    return get_GammaInvertedListScanner2<false>(
-        *this, store_pairs, sel, retrieval_context, metric_type, nbits);
-  }
+    bool store_pairs, const faiss::IDSelector *sel, const faiss::IVFSearchParameters*,
+    const RetrievalContext *retrieval_context) {
+  return faiss::with_simd_level([&]<faiss::SIMDLevel SL>() -> faiss::InvertedListScanner* {
+      auto make =
+              [&]<class PQCodeDist, bool use_sel>() -> faiss::InvertedListScanner* {
+          if (metric_type == faiss::METRIC_INNER_PRODUCT) {
+              return new GammaIVFPQScanner<
+                      faiss::METRIC_INNER_PRODUCT,
+                      faiss::CMin<float, idx_t>,
+                      PQCodeDist,
+                      use_sel>(*this, store_pairs, 2, sel, retrieval_context);
+          } else if (metric_type == faiss::METRIC_L2) {
+              return new GammaIVFPQScanner<
+                      faiss::METRIC_L2,
+                      faiss::CMax<float, idx_t>,
+                      PQCodeDist,
+                      use_sel>(*this, store_pairs, 2, sel, retrieval_context);
+          } else {
+              return nullptr;
+          }
+      };
+
+      auto with_decoder = [&]<bool use_sel>() -> faiss::InvertedListScanner* {
+          if (pq.nbits == 8) {
+              return make.template
+              operator()<faiss::PQCodeDistance<faiss::PQDecoder8, SL>, use_sel>();
+          } else if (pq.nbits == 16) {
+              return make.template
+              operator()<faiss::PQCodeDistance<faiss::PQDecoder16, SL>, use_sel>();
+          } else {
+              return make.template
+              operator()<faiss::PQCodeDistance<faiss::PQDecoderGeneric, SL>, use_sel>();
+          }
+      };
+
+      if (sel) {
+          return with_decoder.template operator()<true>();
+      } else {
+          return with_decoder.template operator()<false>();
+      }
+  });
   return nullptr;
 }
 
@@ -122,11 +153,11 @@ Status GammaIVFPQIndex::Init(const std::string &model_parameters,
   }
 
   if (ivfpq_param.has_hnsw == false) {
-    quantizer = new faiss::IndexFlatL2(d);
+    quantizer = new faiss::IndexFlat(d, metric_type);
     quantizer_type_ = 0;
   } else {
     faiss::IndexHNSWFlat *hnsw_flat =
-        new faiss::IndexHNSWFlat(d, ivfpq_param.nlinks);
+        new faiss::IndexHNSWFlat(d, ivfpq_param.nlinks, metric_type);
     hnsw_flat->hnsw.efSearch = ivfpq_param.efSearch;
     hnsw_flat->hnsw.efConstruction = ivfpq_param.efConstruction;
     hnsw_flat->hnsw.search_bounded_queue = false;
@@ -319,6 +350,7 @@ int GammaIVFPQIndex::Indexing() {
     del_train_raw_vec.set(train_raw_vec);
     size_t offset = 0;
     for (size_t i = 0; i < headers.Size(); ++i) {
+      n_get += lens[i];
       memcpy((void *)(train_raw_vec + offset), (void *)headers.Get(i),
              sizeof(float) * raw_d * lens[i]);
       offset += sizeof(float) * raw_d * lens[i];
@@ -768,7 +800,7 @@ void GammaIVFPQIndex::search_preassigned(
 #pragma omp parallel if (do_parallel) reduction(+ : ndis)
   {
     faiss::InvertedListScanner *scanner = GetInvertedListScanner(
-        store_pairs, nullptr, retrieval_context, metric_type, this->pq.nbits);
+        store_pairs, nullptr, nullptr, retrieval_context);
     utils::ScopeDeleter1<faiss::InvertedListScanner> del(scanner);
 
     if (RequestContext::get_current_request() == nullptr) {
