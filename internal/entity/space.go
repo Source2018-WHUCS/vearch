@@ -240,7 +240,9 @@ func (index *Index) UnmarshalJSON(bs []byte) error {
 		"SCANN":          "SCANN",
 		"SCALAR":         "SCALAR",
 		"IVFRABITQ":      "IVFRABITQ",
+		"DISKANN_STATIC": "DISKANN_STATIC",
 	}
+
 	if tempIndex.Type == "" {
 		return vearchpb.NewError(vearchpb.ErrorEnum_PARAM_ERROR, fmt.Errorf("index type is null"))
 	}
