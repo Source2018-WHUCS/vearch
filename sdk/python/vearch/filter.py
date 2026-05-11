@@ -4,7 +4,9 @@ from typing import List, Union
 class RelationOperator:
     IN = "IN"
     NOT_IN = "NOT IN"
-    # TODO EQ = "="
+    # EQ and NE support after vearch v3.5.8
+    EQ = "="
+    NE = "!="
     GT = ">"
     GE = ">="
     LT = "<"
@@ -97,21 +99,6 @@ class Filter(object):
                 "operator": "IN",
                 "field": "country",
                 "value": ["USA", "Canada", "UK"]
-            },
-            {
-                "operator": "OR",
-                "conditions": [
-                    {
-                        "operator": "=",
-                        "field": "gender",
-                        "value": "Male"
-                    },
-                    {
-                        "operator": "LIKE",
-                        "field": "occupation",
-                        "value": "Engineer"
-                    }
-                ]
             }
         ]
     }
@@ -121,12 +108,11 @@ class Filter(object):
     print(result)  # True if the data satisfies the filter condition, False otherwise
     """
 
-    def __init__(self, operator: str, conditions: Union[FieldValue, Union[Condition, Conditions]]):
+    def __init__(self, operator: str, conditions: List[Condition]):
         self.operator = operator
         self.conditions = conditions
 
     def dict(self):
         if self.operator not in BooleanOperators:
-            return {"operator": self.operator, "field": self.conditions.field, "value": self.conditions.value}
-        conditions_dict = [condition.dict() for condition in self.conditions]
-        return {"operator": self.operator, "conditions": conditions_dict}
+            raise ValueError(f"Invalid operator: {self.operator}")
+        return {"operator": self.operator, "conditions": [condition.dict() for condition in self.conditions]}

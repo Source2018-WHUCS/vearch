@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 from vearch.schema.field import Field
-from vearch.schema.index import BinaryIvfIndex, IvfPQIndex
+from vearch.schema.index import Index, BinaryIvfIndex, IvfPQIndex
 from vearch.utils import DataType
 
 logger = logging.getLogger("vearch")
@@ -13,6 +13,7 @@ class SpaceSchema:
         self,
         name: str,
         fields: List[Field],
+        indexes: List[Index] = None,
         description: str = "",
         partition_num: int = 1,
         replica_num: int = 3,
@@ -27,6 +28,7 @@ class SpaceSchema:
         """
         self.name = name
         self.fields = fields
+        self.indexes = indexes
         self.description = description
         self.partition_num = partition_num
         self.replica_num = replica_num
@@ -54,6 +56,8 @@ class SpaceSchema:
         }
 
         space_schema["fields"] = [field.dict() for field in self.fields]
+        if self.indexes is not None:
+            space_schema["indexes"] = [index.dict() for index in self.indexes]
         return space_schema
 
     def dict(self):
@@ -64,6 +68,18 @@ class SpaceSchema:
         name = data_dict.get("space_name")
         schema_dict = data_dict.get("schema")
         fields = [Field.from_dict(field) for field in schema_dict.get("fields")]
+        indexes = schema_dict.get("indexes", None)
+        if indexes is not None:
+            indexes = [Index.from_dict(index) for index in indexes]
+        if indexes is not None and len(indexes) > 0:
+            return cls(
+                name=name,
+                fields=fields,
+                indexes=indexes,
+                description=data_dict.get("desc", ""),
+                partition_num=data_dict.get("partition_num"),
+                replica_num=data_dict.get("replica_num"),
+            )
         return cls(
             name=name,
             fields=fields,

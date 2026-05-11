@@ -1134,10 +1134,12 @@ class TestSpaceIndexes:
         response = create_space(router_url, db_name, space_config)
         logger.info(response.json())
         assert response.json()["code"] == 0
+        assert len(response.json()["data"]["indexes"]) == 7
 
         response = describe_space(router_url, db_name, space_name)
         logger.info(response.json())
         assert response.json()["code"] == 0
+        assert len(response.json()["data"]["schema"]["indexes"]) == 7
 
         total = 10
         add(total, 1, xb, False, True)
