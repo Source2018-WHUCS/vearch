@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	_ "go.uber.org/automaxprocs"
+
 	jaeger "github.com/uber/jaeger-client-go"
 	jaegerConfig "github.com/uber/jaeger-client-go/config"
 	"github.com/vearch/vearch/v3/internal/config"
@@ -83,8 +85,6 @@ func initJaeger(service string, c *config.TracerCfg) io.Closer {
 }
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
 	config.SetConfigVersion(BuildVersion, BuildTime, CommitID)
 
 	flag.Parse()
@@ -125,6 +125,7 @@ func main() {
 
 	log.Info("start server by version:[%s] commitID:[%s]", BuildVersion, CommitID)
 	log.Info("config file: %v", confPath)
+	log.Info("runtime cpu num: %d", runtime.GOMAXPROCS(0))
 
 	entity.SetPrefixAndSequence(config.Conf().Global.Name)
 	log.Info("The cluster prefix is: %v", entity.PrefixEtcdClusterID)
