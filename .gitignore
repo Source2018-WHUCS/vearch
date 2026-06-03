@@ -62,3 +62,4 @@ examples/golang/basic_usage/basic_usage
 scripts/benchmarks/*log
 scripts/benchmarks/__pycache__
 scripts/benchmarks/datasets/
+.joycode/
