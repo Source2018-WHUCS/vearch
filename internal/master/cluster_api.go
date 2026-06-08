@@ -774,10 +774,10 @@ func (ca *clusterAPI) getSpace(c *gin.Context) {
 				var spaceInfo = &entity.SpaceInfo{}
 				spaceInfo.DbName = dbName
 				spaceInfo.SpaceName = space.Name
-			spaceInfo.Schema = &entity.SpaceSchema{
-				Fields:  space.Fields,
-				Indexes: space.Indexes,
-			}
+				spaceInfo.Schema = &entity.SpaceSchema{
+					Fields:  space.Fields,
+					Indexes: space.Indexes,
+				}
 				spaceInfo.PartitionNum = space.PartitionNum
 				spaceInfo.ReplicaNum = space.ReplicaNum
 				spaceInfo.PartitionRule = space.PartitionRule

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Union
 
 from vearch.utils import IndexType, MetricType
 
@@ -58,23 +58,69 @@ class Index:
 
 
 class ScalarIndex(Index):
-    def __init__(self, index_name: str, field_name: str = None):
+    def __init__(self, index_name: str, field_name: Optional[str] = None):
         super().__init__(index_name, IndexType.SCALAR, field_name=field_name)
 
 
 class InvertedIndex(Index):
-    def __init__(self, index_name: str, field_name: str = None):
+    def __init__(self, index_name: str, field_name: Optional[str] = None):
         super().__init__(index_name, IndexType.INVERTED, field_name=field_name)
 
 
 class BitmapIndex(Index):
-    def __init__(self, index_name: str, field_name: str = None):
+    def __init__(self, index_name: str, field_name: Optional[str] = None):
         super().__init__(index_name, IndexType.BITMAP, field_name=field_name)
 
 
 class CompositeIndex(Index):
     def __init__(self, index_name: str, field_names: List[str]):
         super().__init__(index_name, IndexType.COMPOSITE, field_names=field_names)
+
+
+class HNSWParams:
+    """Sub-config for IVF indexes that compose HNSW (nlinks/efConstruction/efSearch only).
+
+    Use HNSWIndex when you want a standalone HNSW index with a name and metric_type;
+    use HNSWParams when nesting HNSW tuning inside IvfPQIndex/IvfFlatIndex/IvfRaBitQIndex.
+    """
+
+    def __init__(self, nlinks: int = 32, efConstruction: int = 160, efSearch: int = 64):
+        self.nlinks = nlinks
+        self.efConstruction = efConstruction
+        self.efSearch = efSearch
+
+    def _params_dict(self) -> Dict[str, Any]:
+        return {
+            "nlinks": self.nlinks,
+            "efConstruction": self.efConstruction,
+            "efSearch": self.efSearch,
+        }
+
+
+class HNSWIndex(Index):
+    def __init__(
+        self,
+        index_name: str,
+        metric_type: str,
+        nlinks: int = 32,
+        efConstruction: int = 160,
+        efSearch: int = 64,
+        field_name: Optional[str] = None
+    ):
+        params = dict(
+            metric_type=metric_type, nlinks=nlinks, efConstruction=efConstruction, efSearch=efSearch
+        )
+        super().__init__(index_name, IndexType.HNSW, params, field_name)
+
+
+def _hnsw_subparams(hnsw: Union[HNSWIndex, HNSWParams]) -> Dict[str, Any]:
+    if isinstance(hnsw, HNSWParams):
+        return hnsw._params_dict()
+    return {
+        "nlinks": hnsw._params.get("nlinks", None),
+        "efConstruction": hnsw._params.get("efConstruction", None),
+        "efSearch": hnsw._params.get("efSearch", None),
+    }
 
 
 class IvfPQIndex(Index):
@@ -88,7 +134,7 @@ class IvfPQIndex(Index):
         bucket_init_size: int = 1000,
         bucket_max_size: int = 1280000,
         nprobe: int = 80,
-        hnsw: Optional[HNSWIndex] = None,
+        hnsw: Optional[Union[HNSWIndex, HNSWParams]] = None,
         field_name: Optional[str] = None
     ):
         params = {
@@ -98,15 +144,12 @@ class IvfPQIndex(Index):
             "bucket_init_size": bucket_init_size,
             "bucket_max_size": bucket_max_size,
             "training_threshold": training_threshold
-            if training_threshold
+            if training_threshold is not None
             else int(ncentroids * 200),
             "nprobe": nprobe
         }
         if hnsw is not None:
-            params["hnsw"] = {}
-            params["hnsw"]["nlinks"] = hnsw._params.get("nlinks", None)
-            params["hnsw"]["efConstruction"] = hnsw._params.get("efConstruction", None)
-            params["hnsw"]["efSearch"] = hnsw._params.get("efSearch", None)
+            params["hnsw"] = _hnsw_subparams(hnsw)
         super().__init__(index_name, IndexType.IVFPQ, params, field_name)
 
     def nsubvector(self):
@@ -123,22 +166,19 @@ class IvfFlatIndex(Index):
         ncentroids: int,
         training_threshold: Optional[int] = None,
         nprobe: int = 80,
-        hnsw: Optional[HNSWIndex] = None,
+        hnsw: Optional[Union[HNSWIndex, HNSWParams]] = None,
         field_name: Optional[str] = None
     ):
         params = {
             "metric_type": metric_type,
             "ncentroids": ncentroids,
             "training_threshold": training_threshold
-            if training_threshold
+            if training_threshold is not None
             else int(ncentroids * 200),
             "nprobe": nprobe
         }
         if hnsw is not None:
-            params["hnsw"] = {}
-            params["hnsw"]["nlinks"] = hnsw._params.get("nlinks", None)
-            params["hnsw"]["efConstruction"] = hnsw._params.get("efConstruction", None)
-            params["hnsw"]["efSearch"] = hnsw._params.get("efSearch", None)
+            params["hnsw"] = _hnsw_subparams(hnsw)
         super().__init__(index_name, IndexType.IVFFLAT, params, field_name)
 
 
@@ -159,22 +199,6 @@ class FlatIndex(Index):
         super().__init__(index_name, IndexType.FLAT, {"metric_type": metric_type}, field_name)
 
 
-class HNSWIndex(Index):
-    def __init__(
-        self,
-        index_name: str = None,
-        metric_type: str = None,
-        nlinks: int = 32,
-        efConstruction: int = 160,
-        efSearch: int = 64,
-        field_name: Optional[str] = None
-    ):
-        params = dict(
-            metric_type=metric_type, nlinks=nlinks, efConstruction=efConstruction, efSearch=efSearch
-        )
-        super().__init__(index_name, IndexType.HNSW, params)
-
-
 class GPUIvfPQIndex(Index):
     def __init__(
         self,
@@ -192,7 +216,7 @@ class GPUIvfPQIndex(Index):
             nsubvector=nsubvector,
             nprobe=nprobe,
             training_threshold=training_threshold
-            if training_threshold
+            if training_threshold is not None
             else int(ncentroids * 200),
         )
         super().__init__(index_name, IndexType.GPU_IVFPQ, params, field_name)
@@ -216,14 +240,23 @@ class GPUIvfFlatIndex(Index):
             "bucket_init_size": bucket_init_size,
             "bucket_max_size": bucket_max_size,
             "training_threshold": training_threshold
-            if training_threshold
+            if training_threshold is not None
             else int(ncentroids * 200),
             "nprobe": nprobe
         }
         super().__init__(index_name, IndexType.GPU_IVFFLAT, params, field_name)
 
 
-class NPUIvfRaBitQIndex(Index):
+class _RaBitQBase(Index):
+    """Shared base for IvfRaBitQ-family indexes — owns the nb_bits param and getter."""
+
+    def get_nb_bits(self):
+        if self._params is None:
+            return None
+        return self._params["nb_bits"]
+
+
+class NPUIvfRaBitQIndex(_RaBitQBase):
     def __init__(
         self,
         index_name: str,
@@ -239,19 +272,14 @@ class NPUIvfRaBitQIndex(Index):
             "ncentroids": ncentroids,
             "nb_bits": nb_bits,
             "training_threshold": training_threshold
-            if training_threshold
+            if training_threshold is not None
             else int(ncentroids * 200),
             "nprobe": nprobe
         }
         super().__init__(index_name, IndexType.NPU_IVFRABITQ, params, field_name)
 
-    def nb_bits(self):
-        if self._params is None:
-            return None
-        return self._params["nb_bits"]
 
-
-class IvfRaBitQIndex(Index):
+class IvfRaBitQIndex(_RaBitQBase):
     def __init__(
         self,
         index_name: str,
@@ -262,7 +290,7 @@ class IvfRaBitQIndex(Index):
         bucket_init_size: int = 1000,
         bucket_max_size: int = 1280000,
         nprobe: int = 80,
-        hnsw: Optional[HNSWIndex] = None,
+        hnsw: Optional[Union[HNSWIndex, HNSWParams]] = None,
         field_name: Optional[str] = None
     ):
         params = {
@@ -272,18 +300,10 @@ class IvfRaBitQIndex(Index):
             "bucket_init_size": bucket_init_size,
             "bucket_max_size": bucket_max_size,
             "training_threshold": training_threshold
-            if training_threshold
+            if training_threshold is not None
             else int(ncentroids * 200),
             "nprobe": nprobe
         }
         if hnsw is not None:
-            params["hnsw"] = {}
-            params["hnsw"]["nlinks"] = hnsw._params.get("nlinks", None)
-            params["hnsw"]["efConstruction"] = hnsw._params.get("efConstruction", None)
-            params["hnsw"]["efSearch"] = hnsw._params.get("efSearch", None)
+            params["hnsw"] = _hnsw_subparams(hnsw)
         super().__init__(index_name, IndexType.IVFRABITQ, params, field_name)
-
-    def nb_bits(self):
-        if self._params is None:
-            return None
-        return self._params["nb_bits"]

@@ -19,9 +19,10 @@ class SpaceSchema:
         replica_num: int = 3,
     ):
         """
-
-        :param name:
-        :param fields:
+        :param name: space name
+        :param fields: list of Field. Per-field vector indexes can be attached via ``Field(..., index=...)``.
+        :param indexes: top-level scalar / inverted / bitmap / composite indexes that span fields.
+            Use either ``Field(..., index=...)`` or ``indexes[Index]``.
         :param description:
         field=Field("field1",DataType.INT64,"record count")
         SpaceSchema(fields=[field,],description="the description of the space")
@@ -71,18 +72,10 @@ class SpaceSchema:
         indexes = schema_dict.get("indexes", None)
         if indexes is not None:
             indexes = [Index.from_dict(index) for index in indexes]
-        if indexes is not None and len(indexes) > 0:
-            return cls(
-                name=name,
-                fields=fields,
-                indexes=indexes,
-                description=data_dict.get("desc", ""),
-                partition_num=data_dict.get("partition_num"),
-                replica_num=data_dict.get("replica_num"),
-            )
         return cls(
             name=name,
             fields=fields,
+            indexes=indexes,
             description=data_dict.get("desc", ""),
             partition_num=data_dict.get("partition_num"),
             replica_num=data_dict.get("replica_num"),

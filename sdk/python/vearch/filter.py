@@ -37,16 +37,6 @@ class Condition(object):
         return {"field": self.fv.field, "operator": self.relation_operator, "value": self.fv.value}
 
 
-class Conditions(object):
-    def __init__(self, operator: str, conditions: List[Condition]):
-        self.operator = operator
-        self.conditions = conditions
-
-    def dict(self):
-        conditions_dict = [condition.dict() for condition in self.conditions]
-        return {"operator": self.operator, "conditions": conditions_dict}
-
-
 class Filter(object):
     """
     import json

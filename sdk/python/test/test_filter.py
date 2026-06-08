@@ -5,7 +5,6 @@ from vearch.filter import (
     BooleanOperators,
     FieldValue,
     Condition,
-    Conditions,
     Filter,
 )
 
@@ -116,47 +115,6 @@ class TestCondition:
         cond = Condition(RelationOperator.NE, fv)
         d = cond.dict()
         assert d == {"field": "score", "operator": "!=", "value": 0}
-
-
-class TestConditions:
-    def test_conditions_init(self):
-        fv1 = FieldValue("age", 18)
-        fv2 = FieldValue("country", "USA")
-        cond1 = Condition(RelationOperator.GE, fv1)
-        cond2 = Condition(RelationOperator.IN, fv2)
-        conds = Conditions(BooleanOperator.AND, [cond1, cond2])
-        assert conds.operator == "AND"
-        assert len(conds.conditions) == 2
-        assert conds.conditions[0] == cond1
-        assert conds.conditions[1] == cond2
-
-    def test_conditions_dict(self):
-        fv1 = FieldValue("age", 18)
-        fv2 = FieldValue("country", ["USA", "Canada"])
-        cond1 = Condition(RelationOperator.GE, fv1)
-        cond2 = Condition(RelationOperator.IN, fv2)
-        conds = Conditions(BooleanOperator.AND, [cond1, cond2])
-        d = conds.dict()
-        assert d["operator"] == "AND"
-        assert len(d["conditions"]) == 2
-        assert d["conditions"][0] == {"field": "age", "operator": ">=", "value": 18}
-        assert d["conditions"][1] == {"field": "country", "operator": "IN", "value": ["USA", "Canada"]}
-
-    def test_conditions_dict_with_or(self):
-        fv1 = FieldValue("status", "active")
-        fv2 = FieldValue("role", "admin")
-        cond1 = Condition(RelationOperator.GE, fv1)
-        cond2 = Condition(RelationOperator.IN, fv2)
-        conds = Conditions(BooleanOperator.OR, [cond1, cond2])
-        d = conds.dict()
-        assert d["operator"] == "OR"
-        assert len(d["conditions"]) == 2
-
-    def test_conditions_empty(self):
-        conds = Conditions(BooleanOperator.AND, [])
-        d = conds.dict()
-        assert d["operator"] == "AND"
-        assert d["conditions"] == []
 
 
 class TestFilter:

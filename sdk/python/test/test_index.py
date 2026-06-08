@@ -10,6 +10,7 @@ from vearch.schema.index import (
     BinaryIvfIndex,
     FlatIndex,
     HNSWIndex,
+    HNSWParams,
     GPUIvfPQIndex,
     GPUIvfFlatIndex,
     NPUIvfRaBitQIndex,
@@ -234,7 +235,7 @@ class TestIvfPQIndex:
         assert d["params"]["nprobe"] == 50
 
     def test_ivfpq_with_hnsw(self):
-        hnsw = HNSWIndex(nlinks=16, efConstruction=80, efSearch=32)
+        hnsw = HNSWParams(nlinks=16, efConstruction=80, efSearch=32)
         idx = IvfPQIndex("vec_idx", MetricType.L2, 2048, 8, hnsw=hnsw)
         assert idx._params["hnsw"]["nlinks"] == 16
         assert idx._params["hnsw"]["efConstruction"] == 80
@@ -277,7 +278,7 @@ class TestIvfFlatIndex:
         assert idx._params["nprobe"] == 50
 
     def test_ivfflat_with_hnsw(self):
-        hnsw = HNSWIndex(nlinks=16, efConstruction=80, efSearch=32)
+        hnsw = HNSWParams(nlinks=16, efConstruction=80, efSearch=32)
         idx = IvfFlatIndex("vec_idx", MetricType.L2, 2048, hnsw=hnsw)
         assert idx._params["hnsw"]["nlinks"] == 16
         assert idx._params["hnsw"]["efConstruction"] == 80
@@ -517,7 +518,7 @@ class TestNPUIvfRaBitQIndex:
 
     def test_npu_ivfrabitq_nb_bits_method(self):
         idx = NPUIvfRaBitQIndex("vec_idx", nb_bits=4)
-        assert idx.nb_bits() == 4
+        assert idx.get_nb_bits() == 4
 
     def test_npu_ivfrabitq_to_dict(self):
         idx = NPUIvfRaBitQIndex("vec_idx", nb_bits=2, nprobe=60)
@@ -572,7 +573,7 @@ class TestIvfRaBitQIndex:
 
     def test_ivfrabitq_nb_bits_method(self):
         idx = IvfRaBitQIndex("vec_idx", MetricType.L2, 2048, 8)
-        assert idx.nb_bits() == 8
+        assert idx.get_nb_bits() == 8
 
     def test_ivfrabitq_to_dict(self):
         idx = IvfRaBitQIndex("vec_idx", MetricType.Inner_product, 2048, 8, nprobe=100)
