@@ -618,3 +618,87 @@ class TestIndexChinese:
         restored = Index.from_dict(original.to_dict())
         assert restored._index_name == original._index_name
         assert restored._index_type == original._index_type
+
+
+# ---------------------------------------------------------------------------
+# TestFromDictDispatch — Index.from_dict returns the right subclass
+# ---------------------------------------------------------------------------
+
+class TestFromDictDispatch:
+    def test_scalar_subclass_from_dict(self):
+        original = ScalarIndex("scalar_idx", field_name="book_name")
+        restored = Index.from_dict(original.to_dict())
+        assert isinstance(restored, ScalarIndex)
+        assert restored._field_name == "book_name"
+
+    def test_inverted_subclass_from_dict(self):
+        restored = Index.from_dict(InvertedIndex("inv_idx", field_name="tags").to_dict())
+        assert isinstance(restored, InvertedIndex)
+        assert restored._field_name == "tags"
+
+    def test_bitmap_subclass_from_dict(self):
+        restored = Index.from_dict(BitmapIndex("bm_idx", field_name="status").to_dict())
+        assert isinstance(restored, BitmapIndex)
+        assert restored._field_name == "status"
+
+    def test_composite_subclass_from_dict(self):
+        restored = Index.from_dict(CompositeIndex("comp_idx", ["a", "b"]).to_dict())
+        assert isinstance(restored, CompositeIndex)
+        assert restored._field_names == ["a", "b"]
+
+    def test_ivfpq_subclass_from_dict(self):
+        restored = Index.from_dict(IvfPQIndex("vec", MetricType.L2, 2048, 8).to_dict())
+        assert isinstance(restored, IvfPQIndex)
+        assert restored._params["ncentroids"] == 2048
+
+    def test_hnsw_subclass_from_dict(self):
+        restored = Index.from_dict(
+            HNSWIndex("hnsw_idx", MetricType.L2, nlinks=16, efConstruction=80).to_dict()
+        )
+        assert isinstance(restored, HNSWIndex)
+        assert restored._params["nlinks"] == 16
+        assert restored._params["efConstruction"] == 80
+
+    def test_subclass_classmethod_dispatches_by_type(self):
+        # CompositeIndex.from_dict honors the payload "type", not the class it's called on.
+        restored = CompositeIndex.from_dict(
+            ScalarIndex("scalar_idx", field_name="book_name").to_dict()
+        )
+        assert isinstance(restored, ScalarIndex)
+
+    def test_unknown_type_falls_back_to_base(self):
+        restored = Index.from_dict({"name": "x", "type": "FUTURE_INDEX_TYPE"})
+        assert type(restored) is Index
+        assert restored._index_type == "FUTURE_INDEX_TYPE"
+
+
+# ---------------------------------------------------------------------------
+# TestHNSWSubparamsWarning — _hnsw_subparams warns on metric_type mismatch
+# ---------------------------------------------------------------------------
+
+class TestHNSWSubparamsWarning:
+    def test_warn_on_metric_type_mismatch(self):
+        import warnings as _warnings
+        inner = HNSWIndex("inner", MetricType.Inner_product, nlinks=16, efConstruction=80)
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always")
+            idx = IvfPQIndex("vec", MetricType.L2, 2048, 8, hnsw=inner)
+        assert any("ignored" in str(w.message) for w in caught)
+        # outer metric_type wins in the serialized payload
+        assert idx._params["metric_type"] == MetricType.L2
+        assert "metric_type" not in idx._params["hnsw"]
+
+    def test_no_warn_on_matching_metric_type(self):
+        import warnings as _warnings
+        inner = HNSWIndex("inner", MetricType.L2, nlinks=16, efConstruction=80)
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always")
+            IvfPQIndex("vec", MetricType.L2, 2048, 8, hnsw=inner)
+        assert not any("ignored" in str(w.message) for w in caught)
+
+    def test_no_warn_with_hnswparams(self):
+        import warnings as _warnings
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always")
+            IvfPQIndex("vec", MetricType.L2, 2048, 8, hnsw=HNSWParams())
+        assert not any("ignored" in str(w.message) for w in caught)

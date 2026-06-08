@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import Any, Dict, Optional, List, Union
 
 from vearch.utils import IndexType, MetricType
@@ -48,13 +49,14 @@ class Index:
 
     @classmethod
     def from_dict(cls, index_data: Dict) -> Index:
-        return cls(
-            index_data["name"],
-            index_data["type"],
-            index_data.get("params", None),
-            index_data.get("field_name", None),
-            index_data.get("field_names", None)
-        )
+        target_cls = _INDEX_TYPE_MAP.get(index_data["type"], Index)
+        instance = object.__new__(target_cls)
+        instance._index_name = index_data["name"]
+        instance._index_type = index_data["type"]
+        instance._params = index_data.get("params", None)
+        instance._field_name = index_data.get("field_name", None)
+        instance._field_names = index_data.get("field_names", None)
+        return instance
 
 
 class ScalarIndex(Index):
@@ -113,9 +115,22 @@ class HNSWIndex(Index):
         super().__init__(index_name, IndexType.HNSW, params, field_name)
 
 
-def _hnsw_subparams(hnsw: Union[HNSWIndex, HNSWParams]) -> Dict[str, Any]:
+def _hnsw_subparams(
+    hnsw: Union[HNSWIndex, HNSWParams], outer_metric_type: Optional[str] = None
+) -> Dict[str, Any]:
     if isinstance(hnsw, HNSWParams):
         return hnsw._params_dict()
+    inner_metric_type = hnsw._params.get("metric_type")
+    if (
+        outer_metric_type is not None
+        and inner_metric_type is not None
+        and inner_metric_type != outer_metric_type
+    ):
+        warnings.warn(
+            f"HNSW sub-config metric_type={inner_metric_type!r} ignored; "
+            f"outer index metric_type={outer_metric_type!r} applies",
+            stacklevel=3,
+        )
     return {
         "nlinks": hnsw._params.get("nlinks", None),
         "efConstruction": hnsw._params.get("efConstruction", None),
@@ -149,7 +164,7 @@ class IvfPQIndex(Index):
             "nprobe": nprobe
         }
         if hnsw is not None:
-            params["hnsw"] = _hnsw_subparams(hnsw)
+            params["hnsw"] = _hnsw_subparams(hnsw, outer_metric_type=metric_type)
         super().__init__(index_name, IndexType.IVFPQ, params, field_name)
 
     def nsubvector(self):
@@ -178,7 +193,7 @@ class IvfFlatIndex(Index):
             "nprobe": nprobe
         }
         if hnsw is not None:
-            params["hnsw"] = _hnsw_subparams(hnsw)
+            params["hnsw"] = _hnsw_subparams(hnsw, outer_metric_type=metric_type)
         super().__init__(index_name, IndexType.IVFFLAT, params, field_name)
 
 
@@ -305,5 +320,22 @@ class IvfRaBitQIndex(_RaBitQBase):
             "nprobe": nprobe
         }
         if hnsw is not None:
-            params["hnsw"] = _hnsw_subparams(hnsw)
+            params["hnsw"] = _hnsw_subparams(hnsw, outer_metric_type=metric_type)
         super().__init__(index_name, IndexType.IVFRABITQ, params, field_name)
+
+
+_INDEX_TYPE_MAP: Dict[str, type] = {
+    IndexType.SCALAR: ScalarIndex,
+    IndexType.INVERTED: InvertedIndex,
+    IndexType.BITMAP: BitmapIndex,
+    IndexType.COMPOSITE: CompositeIndex,
+    IndexType.IVFPQ: IvfPQIndex,
+    IndexType.IVFFLAT: IvfFlatIndex,
+    IndexType.BINARYIVF: BinaryIvfIndex,
+    IndexType.FLAT: FlatIndex,
+    IndexType.HNSW: HNSWIndex,
+    IndexType.GPU_IVFPQ: GPUIvfPQIndex,
+    IndexType.GPU_IVFFLAT: GPUIvfFlatIndex,
+    IndexType.IVFRABITQ: IvfRaBitQIndex,
+    IndexType.NPU_IVFRABITQ: NPUIvfRaBitQIndex,
+}

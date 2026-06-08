@@ -1,8 +1,13 @@
 import logging
-from typing import List
+from typing import List, Optional
 
 from vearch.schema.field import Field
-from vearch.schema.index import Index, BinaryIvfIndex, IvfPQIndex
+from vearch.schema.index import (
+    Index,
+    BinaryIvfIndex,
+    IvfPQIndex,
+    CompositeIndex,
+)
 from vearch.utils import DataType
 
 logger = logging.getLogger("vearch")
@@ -13,7 +18,7 @@ class SpaceSchema:
         self,
         name: str,
         fields: List[Field],
-        indexes: List[Index] = None,
+        indexes: Optional[List[Index]] = None,
         description: str = "",
         partition_num: int = 1,
         replica_num: int = 3,
@@ -22,8 +27,10 @@ class SpaceSchema:
         :param name: space name
         :param fields: list of Field. Per-field vector indexes can be attached via ``Field(..., index=...)``.
         :param indexes: top-level scalar / inverted / bitmap / composite indexes that span fields.
-            Use either ``Field(..., index=...)`` or ``indexes[Index]``.
+            Use either ``Field(..., index=...)`` or ``indexes=[Index]``.
         :param description:
+        :param partition_num:
+        :param replica_num:
         field=Field("field1",DataType.INT64,"record count")
         SpaceSchema(fields=[field,],description="the description of the space")
         """
@@ -47,6 +54,16 @@ class SpaceSchema:
                     assert (
                         field.dim % field.index.nsubvector() == 0
                     ), "IVFPQIndex vector dimention must be power of nsubvector"
+        if self.indexes:
+            for idx in self.indexes:
+                if isinstance(idx, CompositeIndex):
+                    assert (
+                        idx._field_names is not None and len(idx._field_names) >= 2
+                    ), "CompositeIndex requires at least 2 field_names"
+                else:
+                    assert (
+                        idx._field_name
+                    ), f"{type(idx).__name__} requires a non-empty field_name when used as a top-level index"
 
     def to_dict(self):
         space_schema = {
