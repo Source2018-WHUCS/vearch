@@ -9,7 +9,8 @@
 vearch.iml
 .idea/
 .vscode/
-.claude/
+.claude/*
+!.claude/skills/
 __pycache__/
 err.log*
 
