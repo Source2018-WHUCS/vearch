@@ -80,7 +80,7 @@ Master: Cluster management, metadata, PS registration, heartbeat, and recovery.
 | Raft apply path | `internal/ps/storage/raftstore/raft_state_machine.go` | Committed log application. |
 | Local read path | `internal/ps/storage/raftstore/store_read.go` | Reads go directly to engine. |
 | Gamma Go binding | `internal/ps/engine/gammacb/` | PS-facing engine implementation. |
-| Gamma C++ engine | `internal/engine/` | Vector index engine source. |
+| Gamma C++ engine | `internal/engine/` | Vector index engine source. See `docs/IndexLayer.md` for the index reference; load the `architecture` skill for engine-internal work. |
 | Data model / etcd keys | `internal/entity/` | DB, Space, Partition, Server metadata. |
 | Protobuf generated types | `internal/proto/vearchpb/` | Do not hand-edit `.pb.go` files. |
 
@@ -201,7 +201,8 @@ For full command options, Docker commands, debug endpoints, and CI details, see 
 | Change replica count | `internal/master/services/member_service.go::ChangeReplica` |
 | Add an etcd key | `internal/entity/meta.go` + service-layer store access |
 | Debug slow PS writes | metrics → PS pprof `:6060` → raft jobs → Gamma writer |
-| Modify Gamma C++ engine | `internal/engine/` + cgo bindings under `internal/engine/sdk/go/gamma/` |
+| Modify Gamma C++ engine | `internal/engine/` + cgo bindings under `internal/engine/sdk/go/gamma/`; load the `architecture` skill first |
+| Add a new vector index family | `architecture` skill → `adding-an-index.md` (registers via `REGISTER_INDEX` in `internal/engine/index/impl/`); per-family reference in `docs/IndexLayer.md` |
 
 For detailed task recipes and large-file reading order, see `docs/DeveloperGuide.md`.
 
@@ -210,8 +211,24 @@ For detailed task recipes and large-file reading order, see `docs/DeveloperGuide
 ## 8. Deeper References
 
 - `docs/Architecture.md` — architecture, data/control paths, write/search/scheduling flows, call chains, external dependencies.
-- `docs/Development.md` — build flags, run modes, Docker, tests, debug endpoints, CI.
+- `docs/Development.md` — build flags, run modes, Docker, tests, debug endpoints, CI; engine CMake options and third-party deps.
 - `docs/DeveloperGuide.md` — code map, modification entrypoints, task recipes, large-file reading order.
+- `docs/IndexLayer.md` — Gamma index-layer reference: registered vector indexes, scalar/filter indexes, storage backends.
+
+## 9. Skills (load on demand)
+
+Project-local Claude skills under `.claude/skills/`. **Not** auto-loaded — invoke when the task matches the trigger.
+
+### `architecture` — engine-internal entrypoint
+
+**Trigger**: any work under `internal/engine/` — exploring engine layout, touching a vector index family (FLAT / IVFFLAT / IVFPQ / IVFPQFastScan / IVFRABITQ / BINARYIVF / HNSW / GPU\_\* / SCANN / DISKANN_STATIC), scalar/filter indexes (Bitmap / Inverted / Composite), the `IndexModel` interface, the reflector / `REGISTER_INDEX` flow, raw-vector storage backends, or the realtime inverted index.
+
+**Files**:
+
+- `SKILL.md` — directory layout, core abstractions, storage backends; pointers to `docs/IndexLayer.md` and `docs/Development.md` for reference material.
+- `adding-an-index.md` — recipe: implement `IndexModel`, `REGISTER_INDEX(NAME, Class)`, CMake wiring, storage choice, tests, documentation.
+
+**Invariant reminder for the engine**: writes still flow through raft (§5 invariant 1); the skill describes the *engine-internal* index path that runs *after* raft apply.
 
 ---
 
