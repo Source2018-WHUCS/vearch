@@ -36,6 +36,20 @@ jobs:
         sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
 
+    - name: Run balancer subsystem tests
+      # Runs first while cluster is in its default healthy state (3 masters,
+      # 3 PSes, no in-flight migrations). Many balancer tests require ≥3 PS
+      # and a stable topology — subsequent steps in this workflow stop /
+      # restart masters and add ps4/ps5, which would invalidate the
+      # assumptions of TestBalancerEndToEndMigration / SubmitDedup / etc.
+      #
+      # Hard-fail on any regression so balancer issues are caught at PR time.
+      # Tests that require capabilities the CI cluster lacks (e.g. dead PS for
+      # IsLive validation, multi-pool for §5.5) self-skip via pytest.skip.
+      run: |
+        cd test
+        pytest test_balancer.py -v --log-cli-level=INFO
+
     - name: Run tests for master down and restart
       run: |
         cd cloud
