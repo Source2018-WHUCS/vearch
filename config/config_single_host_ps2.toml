@@ -1,0 +1,84 @@
+# PS2 config — single-host cluster
+#
+# Same [global], [etcd], [[masters]], [router] as config_single_host.toml.
+# Only [ps] section ports differ so ps2 doesn't collide with ps1 on the
+# same machine.
+#
+# Ports: rpc 8082   raft_heartbeat 8900   raft_replicate 8901   pprof 6063
+
+[global]
+    name = "vearch"
+    resource_name = "default"
+    data = ["./datas"]
+    log = "./logs"
+    level = "info"
+    signkey = "secret"
+    skip_auth = false
+    self_manage_etcd = false
+    auto_recover_ps = true
+    support_etcd_auth = false
+    raft_consistent = false
+    resource_limit_rate = 0.85
+
+[etcd]
+    address = ["127.0.0.1"]
+    etcd_client_port = 2379
+    user_name = "root"
+    password = ""
+
+[[masters]]
+    name = "m1"
+    address = "127.0.0.1"
+    api_port = 8817
+    etcd_port = 2378
+    etcd_peer_port = 2390
+    etcd_client_port = 2370
+    cluster_state = "new"
+    pprof_port = 6062
+    monitor_port = 8828
+
+[[masters]]
+    name = "m2"
+    address = "127.0.0.1"
+    api_port = 8827
+    etcd_port = 2379
+    etcd_peer_port = 2391
+    etcd_client_port = 2371
+    cluster_state = "new"
+    pprof_port = 6072
+    monitor_port = 8829
+
+[[masters]]
+    name = "m3"
+    address = "127.0.0.1"
+    api_port = 8837
+    etcd_port = 2380
+    etcd_peer_port = 2392
+    etcd_client_port = 2372
+    cluster_state = "new"
+    pprof_port = 6082
+    monitor_port = 8830
+
+[router]
+    port = 9001
+    pprof_port = 6061
+    plugin_path = "plugin"
+    allow_origins = ["http://localhost", "http://127.0.0.1"]
+
+[ps]
+    rpc_port = 8082
+    ps_heartbeat_timeout = 5
+    raft_heartbeat_port = 8900
+    raft_replicate_port = 8901
+    heartbeat-interval = 200
+    raft_retain_logs = 20000000
+    raft_replica_concurrency = 1
+    raft_snap_concurrency = 1
+    raft_truncate_count = 500000
+    raft_diff_count = 10000
+    replica_auto_recover_time = 1800
+    replica_anti_affinity_strategy = 0
+    pprof_port = 6063
+    private = false
+    flush_time_interval = 600
+    flush_count_threshold = 200000

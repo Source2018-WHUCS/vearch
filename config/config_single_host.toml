@@ -1,0 +1,103 @@
+# Single-host cluster config (3 master + 1 router + 1 PS)
+#
+# Layout: all 7 processes run on 127.0.0.1 with distinct ports.
+# Each process runs in its own working dir (see scripts/start_single_host_cluster.sh)
+# so the relative `data` path resolves to per-process disk space.
+#
+# Port allocation:
+#   master m1   api 8817   etcd 2378  etcd_peer 2390  etcd_client 2370  pprof 6062  monitor 8828
+#   master m2   api 8827   etcd 2379  etcd_peer 2391  etcd_client 2371  pprof 6072  monitor 8829
+#   master m3   api 8837   etcd 2380  etcd_peer 2392  etcd_client 2372  pprof 6082  monitor 8830
+#   router      http 9001  pprof 6061
+#   ps1         rpc 8081   raft_hb 8898  raft_rep 8899  pprof 6060   (uses [ps] below)
+#   ps2         rpc 8082   raft_hb 8900  raft_rep 8901  pprof 6063   (see config_single_host_ps2.toml)
+#   ps3         rpc 8083   raft_hb 8902  raft_rep 8903  pprof 6064   (see config_single_host_ps3.toml)
+
+[global]
+    name = "vearch"
+    resource_name = "default"
+    # Relative path: each process resolves it against its own cwd, so the
+    # 3 masters / router / ps1 each get isolated on-disk data.
+    data = ["./datas"]
+    log = "./logs"
+    level = "info"
+    signkey = "secret"
+    skip_auth = false
+    self_manage_etcd = false
+    auto_recover_ps = true
+    support_etcd_auth = false
+    raft_consistent = false
+    resource_limit_rate = 0.85
+
+[etcd]
+    address = ["127.0.0.1"]
+    etcd_client_port = 2379
+    user_name = "root"
+    password = ""
+
+# ----- Masters -----------------------------------------------------------
+# Three master entries, each on 127.0.0.1 with unique ports.
+# All 3 master processes load this same file; the -master=mX flag tells each
+# process which entry applies to itself.
+
+[[masters]]
+    name = "m1"
+    address = "127.0.0.1"
+    api_port = 8817
+    etcd_port = 2378
+    etcd_peer_port = 2390
+    etcd_client_port = 2370
+    cluster_state = "new"
+    pprof_port = 6062
+    monitor_port = 8828
+
+[[masters]]
+    name = "m2"
+    address = "127.0.0.1"
+    api_port = 8827
+    etcd_port = 2379
+    etcd_peer_port = 2391
+    etcd_client_port = 2371
+    cluster_state = "new"
+    pprof_port = 6072
+    monitor_port = 8829
+
+[[masters]]
+    name = "m3"
+    address = "127.0.0.1"
+    api_port = 8837
+    etcd_port = 2380
+    etcd_peer_port = 2392
+    etcd_client_port = 2372
+    cluster_state = "new"
+    pprof_port = 6082
+    monitor_port = 8830
+
+# ----- Router ------------------------------------------------------------
+
+[router]
+    port = 9001
+    pprof_port = 6061
+    plugin_path = "plugin"
+    allow_origins = ["http://localhost", "http://127.0.0.1"]
+
+# ----- PS (this section is for ps1; ps2/ps3 use separate files) ----------
+
+[ps]
+    rpc_port = 8081
+    ps_heartbeat_timeout = 5
+    raft_heartbeat_port = 8898
+    raft_replicate_port = 8899
+    heartbeat-interval = 200
+    raft_retain_logs = 20000000
+    raft_replica_concurrency = 1
+    raft_snap_concurrency = 1
+    raft_truncate_count = 500000
+    raft_diff_count = 10000
+    replica_auto_recover_time = 1800
+    # 0=no anti-affinity (single host, all PSes share host_ip → anti-affinity infeasible).
+    replica_anti_affinity_strategy = 0
+    pprof_port = 6060
+    private = false
+    flush_time_interval = 600
+    flush_count_threshold = 200000
