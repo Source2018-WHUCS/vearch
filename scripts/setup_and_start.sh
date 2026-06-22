@@ -10,14 +10,20 @@
 #                                                         # run pytest, then stop cluster regardless
 #   bash scripts/setup_and_start.sh --with-tests --pass-threshold 90
 #                                                         # exit non-zero if pytest pass rate < 90%
+#   bash scripts/setup_and_start.sh --clean               # wipe $RUN_ROOT before start (data + logs)
 #   bash scripts/setup_and_start.sh --dry-run             # only port scan, no changes / start
 #   bash scripts/setup_and_start.sh --stop                # stop cluster + restore config
+#   bash scripts/setup_and_start.sh --stop --clean        # stop and wipe data dirs
 #
 # Flags:
 #   --with-tests          run test/test_balancer.py after the cluster is healthy
 #   --auto-stop           after --with-tests finishes, stop the cluster (default: leave running)
 #   --pass-threshold N    when --with-tests is set, require pass rate >= N% (default: 100)
 #                         pass rate = passed / (passed + failed + errors); skipped excluded
+#   --clean               remove $RUN_ROOT (default /tmp/vearch-single) before starting,
+#                         so etcd data dirs don't carry stale member URLs from a previous
+#                         run that used different ports. ALWAYS use this after editing
+#                         config ports or after check_ports.sh reallocates anything.
 #   --dry-run             only scan ports; do not modify or start anything
 #   --stop                stop the cluster and restore configs from .bak
 #
@@ -44,6 +50,7 @@ WITH_TESTS=0
 DRY_RUN=0
 STOP_ONLY=0
 AUTO_STOP=0
+CLEAN=0
 PASS_THRESHOLD=100
 
 usage() {
@@ -56,6 +63,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --with-tests)         WITH_TESTS=1; shift ;;
         --auto-stop)          AUTO_STOP=1; shift ;;
+        --clean)              CLEAN=1; shift ;;
         --dry-run)            DRY_RUN=1; shift ;;
         --stop)               STOP_ONLY=1; shift ;;
         --pass-threshold)     PASS_THRESHOLD="$2"; shift 2 ;;
@@ -128,15 +136,22 @@ dump_role_log() {
 
     # vearch's real application log dir — [global].log = "./logs"
     if [[ -d "$run_dir/logs" ]]; then
-        # Take the most-recently-modified .log files; tail each.
+        # Dump every .log file (FATAL/ERROR/WARN/INFO/ETCD/...). Empty ones
+        # are informative too — they tell us the process never reached that
+        # log level. List by mtime desc so FATAL (if it exists) comes first.
         local logs
         logs=$(find "$run_dir/logs" -maxdepth 3 -type f -name '*.log' 2>/dev/null \
-               | xargs -r ls -t 2>/dev/null | head -n 3)
+               | xargs -r ls -t 2>/dev/null)
         if [[ -n "$logs" ]]; then
             while IFS= read -r f; do
                 [[ -z "$f" ]] && continue
-                echo "  --- $f (last 40 lines) ---"
-                tail -n 40 "$f" 2>/dev/null | sed 's/^/    /'
+                local size; size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null || echo "?")
+                echo "  --- $f (size=$size bytes, last 40 lines) ---"
+                if [[ "$size" = "0" ]]; then
+                    echo "    (empty)"
+                else
+                    tail -n 40 "$f" 2>/dev/null | sed 's/^/    /'
+                fi
             done <<< "$logs"
         else
             echo "  (no *.log files under $run_dir/logs yet)"
@@ -219,8 +234,30 @@ if [[ $STOP_ONLY -eq 1 ]]; then
     bash "$START_CLUSTER" stop || true
     echo "==> restoring config from .bak"
     bash "$CHECK_PORTS" --restore || true
+    if [[ $CLEAN -eq 1 ]]; then
+        echo "==> --clean: wiping $RUN_ROOT"
+        rm -rf "$RUN_ROOT"
+    fi
     echo "done"
     exit 0
+fi
+
+# ---- step 0: optional clean of run root ----------------------------------
+
+if [[ $CLEAN -eq 1 ]] && [[ $DRY_RUN -eq 0 ]]; then
+    echo "==> --clean: wiping $RUN_ROOT (etcd data dirs, logs, pid files)"
+    # Be slightly defensive — only nuke the exact dir we manage.
+    case "$RUN_ROOT" in
+        /tmp/vearch-single|/tmp/vearch-single/|/var/lib/vearch-single|/var/lib/vearch-single/)
+            rm -rf "$RUN_ROOT"
+            ;;
+        *)
+            # Custom RUN_ROOT — only remove sub-dirs we know we created
+            for sub in m1 m2 m3 router ps1 ps2 ps3; do
+                rm -rf "$RUN_ROOT/$sub"
+            done
+            ;;
+    esac
 fi
 
 # ---- step 1: check ports + (auto-rewrite or dry-run) ---------------------
