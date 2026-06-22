@@ -25,6 +25,12 @@
 #   - $VEARCH_BIN (default ./build/bin/vearch) compiled
 #   - bash, sed, awk, curl, jq
 
+# Self-re-exec under bash if invoked with `sh script.sh` (dash on Debian/Ubuntu
+# doesn't recognise process substitution `< <(...)` and would die at line ~195).
+if [ -z "${BASH_VERSION:-}" ]; then
+    exec bash "$0" "$@"
+fi
+
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -192,7 +198,12 @@ bash "$CHECK_PORTS"
 
 # ---- step 2: figure out the actual ports the cluster will use ------------
 
-mapfile -t MASTER_PORTS < <(read_master_api_ports)
+# Read master api_ports as a newline-split array. Avoid `mapfile + < <(...)`
+# so the script doesn't depend on process substitution (failing under `sh`).
+_old_IFS=$IFS
+IFS=$'\n'
+MASTER_PORTS=( $(read_master_api_ports) )
+IFS=$_old_IFS
 ROUTER_PORT="$(read_router_port)"
 
 if [[ ${#MASTER_PORTS[@]} -lt 3 ]] || [[ -z "${ROUTER_PORT:-}" ]]; then
@@ -289,7 +300,14 @@ if [[ $WITH_TESTS -eq 1 ]]; then
     PYTEST_RC=${PIPESTATUS[0]}
     set -e
 
-    read -r PASSED FAILED ERRORS SKIPPED < <(parse_pytest_summary "$PYTEST_LOG")
+    # Parse via a temp string; avoid `read < <(...)` so the line parses cleanly
+    # under any shell (the self-re-exec at top should already guarantee bash,
+    # but defence in depth).
+    _summary="$(parse_pytest_summary "$PYTEST_LOG")"
+    PASSED="${_summary%% *}"; _rest="${_summary#* }"
+    FAILED="${_rest%% *}";    _rest="${_rest#* }"
+    ERRORS="${_rest%% *}";    SKIPPED="${_rest#* }"
+    : "${PASSED:=0}" "${FAILED:=0}" "${ERRORS:=0}" "${SKIPPED:=0}"
     TOTAL=$(( PASSED + FAILED + ERRORS ))
 
     echo
