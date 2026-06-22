@@ -97,6 +97,16 @@ func LockAliasKey(aliasName string) string {
 	return fmt.Sprintf("%s%s", PrefixLock, aliasName)
 }
 
+// PSStatKey balancer 用：PS 实时负载快照
+func PSStatKey(nodeID NodeID) string {
+	return fmt.Sprintf("%s%d", PrefixPSStat, nodeID)
+}
+
+// MigrateTaskKey balancer 用：迁移任务持久化键
+func MigrateTaskKey(taskID string) string {
+	return PrefixMigrateTask + taskID
+}
+
 func SetPrefixAndSequence(cluster_id string) {
 	if strings.HasPrefix(cluster_id, Prefix) {
 		PrefixEtcdClusterID = cluster_id
@@ -122,6 +132,8 @@ func SetPrefixAndSequence(cluster_id string) {
 	PrefixAlias = PrefixEtcdClusterID + PrefixAlias
 	PrefixRole = PrefixEtcdClusterID + PrefixRole
 	PrefixMasterMember = PrefixEtcdClusterID + PrefixMasterMember
+	PrefixPSStat = PrefixEtcdClusterID + PrefixPSStat
+	PrefixMigrateTask = PrefixEtcdClusterID + PrefixMigrateTask
 }
 
 // sids sequence key for etcd
@@ -152,6 +164,15 @@ var (
 	PrefixAlias        = "/alias/"
 	PrefixRole         = "/role/"
 	PrefixMasterMember = "/member/"
+	// balancer 相关
+	PrefixPSStat      = "/ps_stat/"
+	PrefixMigrateTask = "/migrate_task/"
+)
+
+// balancer 相关全局键
+const (
+	KeyBalancerConfig = "/balancer/config"
+	KeyBalancerLock   = "/balancer/lock"
 )
 
 var PrefixEtcdClusterID = "/vearch/default/"

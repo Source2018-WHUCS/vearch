@@ -1244,6 +1244,16 @@ func (s *SpaceService) updateSpacePartitonRule(ctx context.Context, dbs *DBServi
 //
 // The function considers the anti-affinity strategy configured in the master service to avoid placing replicas in the same zone.
 func (s *SpaceService) selectServersForPartition(servers []*entity.Server, serverPartitionCounts map[int]int, replicaCount uint8, partition *entity.Partition) ([]string, error) {
+	// balancer hook: only returns result when ScoreBasedPlacement is on.
+	// selectServersForPartition has no ctx param yet; pass Background until refactored.
+	if hook := getPlacementHook(); hook != nil {
+		if addrs, err := hook(context.Background(), partition, replicaCount); err == nil && len(addrs) > 0 {
+			return addrs, nil
+		} else if err != nil {
+			log.Warnf("[balancer] placement hook failed, fallback to legacy: %s", err.Error())
+		}
+	}
+
 	selectedAddresses := make([]string, 0, replicaCount)
 	originalReplicaCount := replicaCount
 	partition.Replicas = make([]entity.NodeID, 0, replicaCount)

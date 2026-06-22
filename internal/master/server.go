@@ -27,6 +27,7 @@ import (
 	"github.com/vearch/vearch/v3/internal/client"
 	"github.com/vearch/vearch/v3/internal/config"
 	"github.com/vearch/vearch/v3/internal/entity"
+	"github.com/vearch/vearch/v3/internal/master/services/balancer"
 	"github.com/vearch/vearch/v3/internal/monitor"
 	"github.com/vearch/vearch/v3/internal/pkg/log"
 	"github.com/vearch/vearch/v3/internal/pkg/vjson"
@@ -41,6 +42,7 @@ type Server struct {
 	client     *client.Client
 	etcdServer *embed.Etcd
 	ctx        context.Context
+	balancer   *balancer.Balancer
 }
 
 func NewServer(ctx context.Context) (*Server, error) {
@@ -146,6 +148,14 @@ func (s *Server) Start() (err error) {
 
 	ExportToClusterHandler(httpServer, service, s)
 
+	// 【balancer 接入】启动 Balancer + 注入 hook + 注册 HTTP API + 注册 cron
+	bal, err := startBalancer(s.ctx, s, httpServer, service)
+	if err != nil {
+		log.Errorf("start balancer failed: %s (continuing without balancer)", err.Error())
+	} else {
+		s.balancer = bal
+	}
+
 	monitor.Register(monitorService.Client, monitorService.etcdServer, config.Conf().Masters.Self().MonitorPort)
 	// monitorService.Register()
 
@@ -238,6 +248,9 @@ func (s *Server) Start() (err error) {
 
 func (s *Server) Stop() {
 	log.Info("master shutdown... start")
+	if s.balancer != nil {
+		s.balancer.Stop()
+	}
 	s.etcdServer.Server.Stop()
 	log.Info("master shutdown... end")
 }

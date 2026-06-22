@@ -240,7 +240,20 @@ func (s *MemberService) ChangeReplica(ctx context.Context, dbService *DBService,
 	}
 	// change space replicas of partition, add or delete one
 	changeServer := make([]*entity.ChangeMember, 0)
+	// Optional balancer hook (ConfAddNode only).
+	hook := getMemberAddHook()
 	for _, partition := range space.Partitions {
+		// Prefer hook for picking the target node (add only).
+		if dbModify.Method == proto.ConfAddNode && hook != nil {
+			if picked, err := hook(ctx, partition); err == nil && picked != nil {
+				cm := &entity.ChangeMember{PartitionID: partition.Id, NodeID: picked.ID, Method: dbModify.Method}
+				changeServer = append(changeServer, cm)
+				continue
+			} else if err != nil {
+				log.Warnf("[balancer] memberAdd hook failed for partition %d, fallback: %s", partition.Id, err.Error())
+			}
+		}
+
 		// sort servers, low to high
 		sort.Slice(servers, func(i, j int) bool {
 			return len(servers[i].PartitionIds) < len(servers[j].PartitionIds)
