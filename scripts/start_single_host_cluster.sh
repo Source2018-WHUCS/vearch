@@ -28,11 +28,46 @@ CFG_PS3="$REPO_ROOT/config/config_single_host_ps3.toml"
 LD_LIBRARY_PATH="$VEARCH_GAMMA_LIB:${LD_LIBRARY_PATH:-}"
 export LD_LIBRARY_PATH
 
-declare -A PORTS=(
-    [m1]=8817 [m2]=8827 [m3]=8837
-    [router]=9001
-    [ps1]=8081 [ps2]=8082 [ps3]=8083
-)
+# Read a single port value from the TOML for display purposes only. The
+# actual port used by each process comes from -conf, not this map.
+# `section` is the bare section name like "router" or "ps"; we build the
+# regex internally to avoid shell/awk backslash-escaping confusion.
+toml_port() {
+    local file="$1" section="$2" key="$3"
+    awk -v sec="$section" -v key="$key" '
+        BEGIN { pat = "^[[]" sec "[]]" }
+        $0 ~ pat       { in_block=1; next }
+        /^\[/          { in_block=0 }
+        in_block && $0 ~ ("^[[:space:]]*"key"[[:space:]]*=") {
+            gsub(/[^0-9]/, "", $NF); print $NF; exit
+        }
+    ' "$file"
+}
+
+resolve_role_port() {
+    local role="$1"
+    case "$role" in
+        router)   toml_port "$CFG_MAIN" "router" "port" ;;
+        ps1)      toml_port "$CFG_MAIN" "ps"     "rpc_port" ;;
+        ps2)      toml_port "$CFG_PS2"  "ps"     "rpc_port" ;;
+        ps3)      toml_port "$CFG_PS3"  "ps"     "rpc_port" ;;
+    esac
+}
+
+# Master api_port lives in [[masters]] blocks; read by name.
+master_api_port() {
+    local name="$1"
+    awk -v name="$name" '
+        /^\[\[masters\]\]/      { in_block=1; this=""; next }
+        /^\[/ && !/^\[\[masters/ { in_block=0 }
+        in_block && /name[[:space:]]*=/ {
+            v=$NF; gsub(/[ \t"]/, "", v); this=v
+        }
+        in_block && this==name && /api_port[[:space:]]*=/ {
+            gsub(/[^0-9]/, "", $NF); print $NF; exit
+        }
+    ' "$CFG_MAIN"
+}
 
 # (role, config_file, extra_flags)
 declare -a INSTANCES=(
@@ -80,7 +115,12 @@ start_all() {
         fi
 
         log_file="$run_dir/vearch.log"
-        echo "[start] $name -> $run_dir (port ${PORTS[$name]})"
+        local port
+        case "$name" in
+            m1|m2|m3) port=$(master_api_port "$name") ;;
+            *)        port=$(resolve_role_port "$name") ;;
+        esac
+        echo "[start] $name -> $run_dir (port ${port:-?})"
         nohup "$VEARCH_BIN" -conf "$conf" "${rest_flags[@]}" \
             > "$log_file" 2>&1 &
         echo $! > "$pid_file"
@@ -93,10 +133,11 @@ start_all() {
     done
 
     echo
-    echo "Cluster boot kicked off. Logs under: $RUN_ROOT/<name>/vearch.log"
+    echo "Cluster boot kicked off. Logs under: $RUN_ROOT/<name>/{vearch.log,logs/}"
+    local m1_port; m1_port=$(master_api_port m1)
     echo "Wait ~30-60s for master quorum + PS registration, then verify:"
-    echo "  curl -s -u root:secret http://127.0.0.1:8817/cluster/health | jq"
-    echo "  curl -s -u root:secret http://127.0.0.1:8817/servers       | jq '.data.servers // .data | length'"
+    echo "  curl -s -u root:secret http://127.0.0.1:${m1_port:-8817}/cluster/health | jq"
+    echo "  curl -s -u root:secret http://127.0.0.1:${m1_port:-8817}/servers       | jq '.data.servers // .data | length'"
 }
 
 stop_all() {
@@ -124,7 +165,12 @@ status() {
         parts=($line)
         name="${parts[0]}"
         pid_file="$RUN_ROOT/$name/vearch.pid"
-        port="${PORTS[$name]}"
+        local port
+        case "$name" in
+            m1|m2|m3) port=$(master_api_port "$name") ;;
+            *)        port=$(resolve_role_port "$name") ;;
+        esac
+        port="${port:-?}"
         if [[ -f "$pid_file" ]] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
             printf "%-8s %-8s %-7s %s\n" "$name" "$(cat "$pid_file")" "$port" "running"
         else

@@ -4,14 +4,19 @@
 # Each process runs in its own working dir (see scripts/start_single_host_cluster.sh)
 # so the relative `data` path resolves to per-process disk space.
 #
+# All ports are shifted +10000 from upstream defaults to dodge common service
+# collisions on shared Linux hosts (8080/8081/9001/6060/2379 are very contended).
+# `scripts/check_ports.sh` still re-scans these and reallocates further if any
+# are occupied on the target box.
+#
 # Port allocation:
-#   master m1   api 8817   etcd 2378  etcd_peer 2390  etcd_client 2370  pprof 6062  monitor 8828
-#   master m2   api 8827   etcd 2379  etcd_peer 2391  etcd_client 2371  pprof 6072  monitor 8829
-#   master m3   api 8837   etcd 2380  etcd_peer 2392  etcd_client 2372  pprof 6082  monitor 8830
-#   router      http 9001  pprof 6061
-#   ps1         rpc 8081   raft_hb 8898  raft_rep 8899  pprof 6060   (uses [ps] below)
-#   ps2         rpc 8082   raft_hb 8900  raft_rep 8901  pprof 6063   (see config_single_host_ps2.toml)
-#   ps3         rpc 8083   raft_hb 8902  raft_rep 8903  pprof 6064   (see config_single_host_ps3.toml)
+#   master m1   api 18817   etcd 12378  etcd_peer 12390  etcd_client 12370  pprof 16062  monitor 18828
+#   master m2   api 18827   etcd 12379  etcd_peer 12391  etcd_client 12371  pprof 16072  monitor 18829
+#   master m3   api 18837   etcd 12380  etcd_peer 12392  etcd_client 12372  pprof 16082  monitor 18830
+#   router      http 19001  pprof 16061
+#   ps1         rpc 18081   raft_hb 18898  raft_rep 18899  pprof 16060   (uses [ps] below)
+#   ps2         rpc 18082   raft_hb 18900  raft_rep 18901  pprof 16063   (see config_single_host_ps2.toml)
+#   ps3         rpc 18083   raft_hb 18902  raft_rep 18903  pprof 16064   (see config_single_host_ps3.toml)
 
 [global]
     name = "vearch"
@@ -31,7 +36,7 @@
 
 [etcd]
     address = ["127.0.0.1"]
-    etcd_client_port = 2379
+    etcd_client_port = 12379
     user_name = "root"
     password = ""
 
@@ -43,51 +48,51 @@
 [[masters]]
     name = "m1"
     address = "127.0.0.1"
-    api_port = 8817
-    etcd_port = 2378
-    etcd_peer_port = 2390
-    etcd_client_port = 2370
+    api_port = 18817
+    etcd_port = 12378
+    etcd_peer_port = 12390
+    etcd_client_port = 12370
     cluster_state = "new"
-    pprof_port = 6062
-    monitor_port = 8828
+    pprof_port = 16062
+    monitor_port = 18828
 
 [[masters]]
     name = "m2"
     address = "127.0.0.1"
-    api_port = 8827
-    etcd_port = 2379
-    etcd_peer_port = 2391
-    etcd_client_port = 2371
+    api_port = 18827
+    etcd_port = 12379
+    etcd_peer_port = 12391
+    etcd_client_port = 12371
     cluster_state = "new"
-    pprof_port = 6072
-    monitor_port = 8829
+    pprof_port = 16072
+    monitor_port = 18829
 
 [[masters]]
     name = "m3"
     address = "127.0.0.1"
-    api_port = 8837
-    etcd_port = 2380
-    etcd_peer_port = 2392
-    etcd_client_port = 2372
+    api_port = 18837
+    etcd_port = 12380
+    etcd_peer_port = 12392
+    etcd_client_port = 12372
     cluster_state = "new"
-    pprof_port = 6082
-    monitor_port = 8830
+    pprof_port = 16082
+    monitor_port = 18830
 
 # ----- Router ------------------------------------------------------------
 
 [router]
-    port = 9001
-    pprof_port = 6061
+    port = 19001
+    pprof_port = 16061
     plugin_path = "plugin"
     allow_origins = ["http://localhost", "http://127.0.0.1"]
 
 # ----- PS (this section is for ps1; ps2/ps3 use separate files) ----------
 
 [ps]
-    rpc_port = 8081
+    rpc_port = 18081
     ps_heartbeat_timeout = 5
-    raft_heartbeat_port = 8898
-    raft_replicate_port = 8899
+    raft_heartbeat_port = 18898
+    raft_replicate_port = 18899
     heartbeat-interval = 200
     raft_retain_logs = 20000000
     raft_replica_concurrency = 1
@@ -97,7 +102,7 @@
     replica_auto_recover_time = 1800
     # 0=no anti-affinity (single host, all PSes share host_ip → anti-affinity infeasible).
     replica_anti_affinity_strategy = 0
-    pprof_port = 6060
+    pprof_port = 16060
     private = false
     flush_time_interval = 600
     flush_count_threshold = 200000

@@ -96,26 +96,66 @@ read_router_port() {
     ' "$CFG_MAIN"
 }
 
-# Dump the last 50 lines of one role's log, with a banner. Silent if the
-# log file doesn't exist yet (process didn't get far enough to write).
+# Dump diagnostic info for one role: pid liveness, nohup stdout/stderr capture,
+# and — most importantly — the per-role application log dir (vearch's
+# [global].log = "./logs" resolves to <run_dir>/logs/).
 dump_role_log() {
     local role="$1"
-    local log="$RUN_ROOT/$role/vearch.log"
-    echo "----- $role  ($log) -----"
-    if [[ -f "$log" ]]; then
-        tail -n 50 "$log" 2>/dev/null || echo "(could not read $log)"
+    local run_dir="$RUN_ROOT/$role"
+    echo "----- $role  (run_dir=$run_dir) -----"
+
+    # pid liveness
+    local pid_file="$run_dir/vearch.pid"
+    if [[ -f "$pid_file" ]]; then
+        local pid; pid=$(cat "$pid_file" 2>/dev/null || echo "?")
+        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+            echo "  pid $pid: ALIVE"
+        else
+            echo "  pid $pid: DEAD (process exited)"
+        fi
     else
-        echo "(log file does not exist yet)"
+        echo "  (no pid file — start_single_host_cluster.sh never recorded one)"
+    fi
+
+    # nohup-captured stdout/stderr (often only has Go init lines)
+    local nohup_log="$run_dir/vearch.log"
+    if [[ -f "$nohup_log" ]]; then
+        echo "  --- $nohup_log (last 30 lines) ---"
+        tail -n 30 "$nohup_log" 2>/dev/null | sed 's/^/    /'
+    else
+        echo "  (no nohup log at $nohup_log)"
+    fi
+
+    # vearch's real application log dir — [global].log = "./logs"
+    if [[ -d "$run_dir/logs" ]]; then
+        # Take the most-recently-modified .log files; tail each.
+        local logs
+        logs=$(find "$run_dir/logs" -maxdepth 3 -type f -name '*.log' 2>/dev/null \
+               | xargs -r ls -t 2>/dev/null | head -n 3)
+        if [[ -n "$logs" ]]; then
+            while IFS= read -r f; do
+                [[ -z "$f" ]] && continue
+                echo "  --- $f (last 40 lines) ---"
+                tail -n 40 "$f" 2>/dev/null | sed 's/^/    /'
+            done <<< "$logs"
+        else
+            echo "  (no *.log files under $run_dir/logs yet)"
+        fi
+    else
+        echo "  (no $run_dir/logs/ directory — process may have died before log init)"
     fi
     echo
 }
 
-# Dump logs for a space-separated list of roles.
+# Dump logs for a space-separated list of roles + a system-wide vearch ps.
 dump_logs() {
     echo
     echo "============================================================"
-    echo " diagnostic: last 50 lines of each role's log"
+    echo " diagnostic snapshot"
     echo "============================================================"
+    echo "--- system processes (ps -ef | grep vearch) ---"
+    ps -ef | grep -E '(^|[^a-zA-Z])vearch( |$)' | grep -v grep | sed 's/^/  /' || echo "  (no vearch processes found)"
+    echo
     for r in "$@"; do
         dump_role_log "$r"
     done
