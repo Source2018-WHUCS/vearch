@@ -53,14 +53,17 @@ CATALOG=(
     "ps1.raft_heartbeat|18898|main"
     "ps1.raft_replicate|18899|main"
     "ps1.pprof|16060|main"
+    "ps1.monitor|18086|main"
     "ps2.rpc|18082|ps2"
     "ps2.raft_heartbeat|18900|ps2"
     "ps2.raft_replicate|18901|ps2"
     "ps2.pprof|16063|ps2"
+    "ps2.monitor|18087|ps2"
     "ps3.rpc|18083|ps3"
     "ps3.raft_heartbeat|18902|ps3"
     "ps3.raft_replicate|18903|ps3"
     "ps3.pprof|16064|ps3"
+    "ps3.monitor|18088|ps3"
 )
 
 DRY_RUN=0

@@ -85,6 +85,10 @@
     # 0=no anti-affinity (single host, all PSes share host_ip → anti-affinity infeasible).
     replica_anti_affinity_strategy = 0
     pprof_port = 16060
+    # Set explicitly to dodge the hard-coded default 8818 — 3 PSes on the same
+    # host would all race for that one port and 2 of them log ERROR (harmless
+    # but noisy).
+    monitor_port = 18086
     private = false
     flush_time_interval = 600
     flush_count_threshold = 200000

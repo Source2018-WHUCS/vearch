@@ -260,6 +260,30 @@ if [[ $CLEAN -eq 1 ]] && [[ $DRY_RUN -eq 0 ]]; then
     esac
 fi
 
+# Pre-flight: refuse to scan/rewrite ports while a previous cluster is alive.
+# Otherwise port scan sees ports occupied by our OWN previous run, rewrites
+# config to new ports, and the start step sees pid files + alive procs and
+# skips — leaving the old cluster running on the OLD ports while config now
+# points to NEW ports. Health check then probes the wrong port and hangs.
+if [[ $DRY_RUN -eq 0 ]]; then
+    _alive_roles=()
+    for role in m1 router ps1 ps2 ps3; do
+        pid_file="$RUN_ROOT/$role/vearch.pid"
+        if [[ -f "$pid_file" ]] && kill -0 "$(cat "$pid_file" 2>/dev/null)" 2>/dev/null; then
+            _alive_roles+=("$role(pid=$(cat "$pid_file"))")
+        fi
+    done
+    if (( ${#_alive_roles[@]} > 0 )); then
+        echo "ERROR: detected residual cluster processes from a previous run:" >&2
+        printf "         %s\n" "${_alive_roles[@]}" >&2
+        echo "       refusing to port-scan / rewrite config while they are alive (would desync" >&2
+        echo "       config from running processes). Run one of:" >&2
+        echo "         bash $0 --stop           (stop processes, keep data on disk)" >&2
+        echo "         bash $0 --stop --clean   (stop + wipe $RUN_ROOT)" >&2
+        exit 7
+    fi
+fi
+
 # ---- step 1: check ports + (auto-rewrite or dry-run) ---------------------
 
 echo "============================================================"

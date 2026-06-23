@@ -55,6 +55,7 @@
     replica_auto_recover_time = 1800
     replica_anti_affinity_strategy = 0
     pprof_port = 16064
+    monitor_port = 18088
     private = false
     flush_time_interval = 600
     flush_count_threshold = 200000
