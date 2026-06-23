@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Run test/test_balancer.py against a remote, already-deployed Vearch cluster.
 #
-# Default target: JD test-s3 cluster
-#   master + router both at vearch.example.com
-#   master api on :8817, router http on :9001
-#   user = root
+# Default target: JD test-s3 cluster (K8s service style — no explicit port, :80)
+#   master: http://vearch.example.com
+#   router: http://vearch-router.example.com
+#   user  = root
 #
 # SECURITY NOTE
 #   This script includes the default password for the test-s3 cluster as a
@@ -17,7 +17,7 @@
 #                                                            # different test file
 #   bash scripts/run_tests_remote.sh -- -k TestBalancerConfig
 #                                                            # extra pytest args (after `--`)
-#   MASTER_URL=http://other:8817 ROUTER_URL=http://other:9001 PASSWORD=xxx \
+#   MASTER_URL=http://other ROUTER_URL=http://other PASSWORD=xxx \
 #     bash scripts/run_tests_remote.sh                       # point elsewhere
 #
 # Flags:
@@ -39,13 +39,12 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEST_DIR="$REPO_ROOT/test"
 
 # Cluster defaults (test-s3). Env vars override.
-DEFAULT_HOST="vearch.example.com"
-DEFAULT_MASTER_PORT="8817"
-DEFAULT_ROUTER_PORT="9001"
+DEFAULT_MASTER_URL="http://vearch.example.com"
+DEFAULT_ROUTER_URL="http://vearch-router.example.com"
 DEFAULT_PASSWORD="REDACTED_PASSWORD"
 
-MASTER_URL="${MASTER_URL:-http://${DEFAULT_HOST}:${DEFAULT_MASTER_PORT}}"
-ROUTER_URL="${ROUTER_URL:-http://${DEFAULT_HOST}:${DEFAULT_ROUTER_PORT}}"
+MASTER_URL="${MASTER_URL:-$DEFAULT_MASTER_URL}"
+ROUTER_URL="${ROUTER_URL:-$DEFAULT_ROUTER_URL}"
 PASSWORD="${PASSWORD:-$DEFAULT_PASSWORD}"
 USERNAME="root"
 
@@ -95,7 +94,9 @@ if (( PROBE == 1 )); then
     rm -f /tmp/_vearch_probe.$$
     if (( rc != 0 )); then
         echo "ERROR: curl failed (rc=$rc) — check VPN / DNS / network reachability" >&2
-        echo "  hint: try 'getent hosts $DEFAULT_HOST' and 'curl -v $MASTER_URL/cluster/health'" >&2
+        echo "  hint: try the following manually:" >&2
+        echo "    curl -v $MASTER_URL/cluster/health" >&2
+        echo "    getent hosts $(echo "$MASTER_URL" | sed -E 's,https?://([^/:]+).*,\1,')" >&2
         exit 3
     fi
     if [[ "$http" != "200" ]]; then
