@@ -206,10 +206,25 @@ func (ts *TaskScheduler) advance(ctx context.Context, t *MigrateTask) {
 		partition, err := ts.cli.Master().QueryPartition(ctx, t.PartitionID)
 		if err != nil {
 			// Retried next tick; logged so etcd flakiness is observable.
+			// Still check timeout — flaky etcd must not strand the task forever.
 			log.Warnf("[balancer] task %s QueryPartition failed at AddingMember: %s", t.ID, err.Error())
+			if ts.timedOut(t, cfg.AddMemberTimeoutSec) {
+				ts.fail(ctx, t, fmt.Errorf("add member timeout (query partition failing): %w", err))
+			}
 			return
 		}
 		if containsReplica(partition.Replicas, t.ToNodeID) {
+			ts.transitionTo(ctx, t, StepWaitingCaughtUp)
+			return
+		}
+		// /partition/<id> says ToNodeID is not yet a replica. It may simply
+		// be stale — MemberService.ChangeMember writes /space/<dbid>/<spaceid>
+		// synchronously, but /partition/<id> is refreshed asynchronously by
+		// the PS leader's registerMaster chain and can lag by seconds. Consult
+		// /space directly as the authoritative source before deciding to wait.
+		if present, ok := ts.replicaPresentInSpace(ctx, partition.DBId, t.SpaceID, t.PartitionID, t.ToNodeID); ok && present {
+			log.Infof("[balancer] task %s: /partition lags /space; treating AddNode as done (to=%d)",
+				t.ID, t.ToNodeID)
 			ts.transitionTo(ctx, t, StepWaitingCaughtUp)
 			return
 		}
@@ -272,11 +287,28 @@ func (ts *TaskScheduler) advance(ctx context.Context, t *MigrateTask) {
 	case StepRemovingMember:
 		partition, err := ts.cli.Master().QueryPartition(ctx, t.PartitionID)
 		if err != nil {
-			// Retried next tick.
+			// Retried next tick; still check timeout so a flaky etcd cannot
+			// strand the task indefinitely.
 			log.Warnf("[balancer] task %s QueryPartition failed at RemovingMember: %s", t.ID, err.Error())
+			if ts.timedOut(t, cfg.RemoveMemberTimeoutSec) {
+				ts.fail(ctx, t, fmt.Errorf("remove member timeout (query partition failing): %w", err))
+			}
 			return
 		}
 		if !containsReplica(partition.Replicas, t.FromNodeID) {
+			ts.transitionTo(ctx, t, StepDone)
+			ts.complete(ctx, t)
+			return
+		}
+		// /partition/<id> still shows FromNodeID. It may be a stale read —
+		// MemberService.ChangeMember updates /space/<dbid>/<spaceid> directly
+		// while /partition/<id> is refreshed asynchronously by the PS leader.
+		// Consult /space directly: if the remove is already reflected there
+		// the migration is effectively done; we must not hang waiting for
+		// the async chain to catch up.
+		if present, ok := ts.replicaPresentInSpace(ctx, partition.DBId, t.SpaceID, t.PartitionID, t.FromNodeID); ok && !present {
+			log.Infof("[balancer] task %s: /partition lags /space; treating RemoveNode as done (from=%d)",
+				t.ID, t.FromNodeID)
 			ts.transitionTo(ctx, t, StepDone)
 			ts.complete(ctx, t)
 			return
@@ -414,4 +446,44 @@ func containsReplica(replicas []entity.NodeID, id entity.NodeID) bool {
 		}
 	}
 	return false
+}
+
+// replicaPresentInSpace consults /space/<dbid>/<spaceid> as an authoritative
+// fallback for stale /partition/<id> reads.
+//
+// Background: MemberService.ChangeMember writes the new replica list to
+// /space/<dbid>/<spaceid> synchronously after the raft conf-change RPC
+// succeeds (see member_service.go's UpdateSpace call). The /partition/<id>
+// key is updated asynchronously by the PS leader's registerMaster chain and
+// can lag behind by seconds — or, if the PS leader's HandleRaftReplicaEvent
+// path is skipped (single-replica edge cases, leadership transitions during
+// the conf change), can lag indefinitely.
+//
+// Returns (present, ok) where:
+//   - present: whether nodeID appears in the partition's replica list per /space
+//   - ok:      true if the lookup succeeded; false on query error or if the
+//     partition is not found inside the space (caller should keep
+//     polling /partition in that case rather than trust this view)
+//
+// Callers should treat (ok=false) as "no information" and keep relying on
+// /partition + timeout. (ok=true, present=...) gives an authoritative answer.
+func (ts *TaskScheduler) replicaPresentInSpace(
+	ctx context.Context,
+	dbID entity.DBID, spaceID entity.SpaceID, partitionID entity.PartitionID,
+	nodeID entity.NodeID,
+) (present bool, ok bool) {
+	if dbID == 0 || spaceID == 0 {
+		return false, false
+	}
+	space, err := ts.cli.Master().QuerySpaceByID(ctx, dbID, spaceID)
+	if err != nil {
+		log.Warnf("[balancer] QuerySpaceByID(db=%d,space=%d) failed: %s", dbID, spaceID, err.Error())
+		return false, false
+	}
+	for _, sp := range space.Partitions {
+		if sp.Id == partitionID {
+			return containsReplica(sp.Replicas, nodeID), true
+		}
+	}
+	return false, false
 }
