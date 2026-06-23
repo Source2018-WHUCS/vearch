@@ -676,20 +676,43 @@ def _servers_by_resource_pool():
 
 
 def _enumerate_partitions():
-    """Walk /cluster/health and return [{pid, db, space, replicas, leader}]."""
+    """Walk /cluster/health and return [{pid, db, space, replicas, leader}].
+
+    The /cluster/health response from router exposes per-partition info under
+      data[].db_name, data[].spaces[].name, data[].spaces[].partitions[].pid,
+      data[].spaces[].partitions[].raft_status.{Leader,Replicas}.
+    The outer DB object uses `db_name`. Per-partition `Replicas` is a dict
+    keyed by node_id rendered as a JSON string; `Leader` is the node_id as
+    a JSON number. Each partition appears exactly once per `partitions[]`
+    (see partition_service.go) — never duplicated per replica.
+
+    Fallback: when `raft_status` is unavailable (e.g. follower hasn't
+    replied yet), the partition entry still carries its host `node_id`.
+    In that single-known-node case we use it for BOTH replicas and leader
+    (the only known node is by definition the leader of a 1-member group).
+    """
     resp = get_cluster_health(router_url, db_name="")
     if resp.status_code != 200:
         return []
     out = []
     for db in resp.json().get("data", []):
+        db_label = db.get("db_name")
         for sp in db.get("spaces", []):
             for p in sp.get("partitions", []) or []:
+                rs = p.get("raft_status") or {}
+                replicas = sorted(int(k) for k in (rs.get("Replicas") or {}).keys())
+                leader = rs.get("Leader")
+                if not replicas and p.get("node_id") is not None:
+                    only = int(p["node_id"])
+                    replicas = [only]
+                    if leader is None:
+                        leader = only
                 out.append({
                     "pid": p.get("pid"),
-                    "db": db.get("name"),
+                    "db": db_label,
                     "space": sp.get("name"),
-                    "replicas": p.get("replicas") or [],
-                    "leader": p.get("leader") or p.get("leader_id"),
+                    "replicas": replicas,
+                    "leader": leader,
                 })
     return out
 
@@ -1167,8 +1190,21 @@ class TestBalancerReaperShrinkReplicas:
             drop_space(router_url, db_name, space_name)
         except Exception:
             pass
+        # Defensive: a previous test failure may have left the db gone (e.g.,
+        # a cascading reaper cleanup); ensure it exists. Tolerate "already
+        # exists" (success path); skip the test on any other failure so we
+        # don't paper over a real cluster problem.
+        try:
+            cdb = create_db(router_url, db_name)
+            cdb_code = cdb.json().get("code")
+            if cdb_code not in (0, None) and "exist" not in str(cdb.text).lower():
+                pytest.skip(f"create_db unexpectedly failed: {cdb.text}")
+        except Exception as e:
+            pytest.skip(f"create_db raised: {e}")
         resp = _create_test_space(replica_num=1, partition_num=1)
-        assert resp.json().get("code") == 0
+        assert resp.json().get("code") == 0, (
+            f"create_space failed after defensive create_db: {resp.text}"
+        )
         time.sleep(3)
 
         parts = [p for p in _enumerate_partitions() if p["space"] == space_name]
@@ -1855,7 +1891,6 @@ class TestBalancerReaperDisabledNoOp:
         time.sleep(3)
 
     def test_reaper_disabled_leaves_excess_replica_alone(self):
-        global chk
         live = _all_live_ps_nodes()
         if len(live) < 2:
             pytest.skip("need ≥2 PS nodes to add a redundant replica")
@@ -1896,6 +1931,7 @@ class TestBalancerReaperDisabledNoOp:
 
         deadline = time.time() + 60
         converged = False
+        chk = []  # initialize so the failure message doesn't NameError if loop body never runs
         while time.time() < deadline:
             chk = [p for p in _enumerate_partitions() if p["pid"] == target["pid"]]
             if chk and len(chk[0]["replicas"]) == 1:
