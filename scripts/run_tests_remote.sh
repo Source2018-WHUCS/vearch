@@ -130,4 +130,6 @@ echo " running tests"
 echo "============================================================"
 cd "$TEST_DIR"
 # Default pytest flags; user-supplied extras (after --) append.
-python3 -m pytest "$TEST_FILE" -v --log-cli-level=INFO "${PYTEST_EXTRA[@]}"
+# ${arr[@]+"${arr[@]}"} guards against `set -u` complaining on an empty array
+# (bash < 4.4 treats empty-array access as "unbound variable").
+python3 -m pytest "$TEST_FILE" -v --log-cli-level=INFO ${PYTEST_EXTRA[@]+"${PYTEST_EXTRA[@]}"}
