@@ -39,6 +39,7 @@ file_for_key() {
 # scope is comma-separated list of file keys (main / ps2 / ps3).
 # Master + router ports appear in all 3 files; each ps appears in its own.
 # All ports are the +10000-shifted defaults from config/config_single_host*.toml.
+# Single-master topology — see config_single_host.toml header for why.
 CATALOG=(
     "m1.api|18817|main,ps2,ps3"
     "m1.etcd|12378|main,ps2,ps3"
@@ -46,18 +47,6 @@ CATALOG=(
     "m1.etcd_client|12370|main,ps2,ps3"
     "m1.pprof|16062|main,ps2,ps3"
     "m1.monitor|18828|main,ps2,ps3"
-    "m2.api|18827|main,ps2,ps3"
-    "m2.etcd|12379|main,ps2,ps3"
-    "m2.etcd_peer|12391|main,ps2,ps3"
-    "m2.etcd_client|12371|main,ps2,ps3"
-    "m2.pprof|16072|main,ps2,ps3"
-    "m2.monitor|18829|main,ps2,ps3"
-    "m3.api|18837|main,ps2,ps3"
-    "m3.etcd|12380|main,ps2,ps3"
-    "m3.etcd_peer|12392|main,ps2,ps3"
-    "m3.etcd_client|12372|main,ps2,ps3"
-    "m3.pprof|16082|main,ps2,ps3"
-    "m3.monitor|18830|main,ps2,ps3"
     "router.http|19001|main,ps2,ps3"
     "router.pprof|16061|main,ps2,ps3"
     "ps1.rpc|18081|main"

@@ -81,8 +81,8 @@ fi
 
 # ---- helpers --------------------------------------------------------------
 
-# Print "m1 m2 m3" api_port values (in order) from the [[masters]] blocks
-# of the main config file.
+# Print api_port values from the [[masters]] blocks of the main config
+# file (single-master topology — just emits m1's port).
 read_master_api_ports() {
     awk '
         /^\[\[masters\]\]/ { in_block=1; next }
@@ -252,8 +252,8 @@ if [[ $CLEAN -eq 1 ]] && [[ $DRY_RUN -eq 0 ]]; then
             rm -rf "$RUN_ROOT"
             ;;
         *)
-            # Custom RUN_ROOT — only remove sub-dirs we know we created
-            for sub in m1 m2 m3 router ps1 ps2 ps3; do
+            # Custom RUN_ROOT — only remove sub-dirs we know we created.
+            for sub in m1 router ps1 ps2 ps3; do
                 rm -rf "$RUN_ROOT/$sub"
             done
             ;;
@@ -283,40 +283,38 @@ MASTER_PORTS=( $(read_master_api_ports) )
 IFS=$_old_IFS
 ROUTER_PORT="$(read_router_port)"
 
-if [[ ${#MASTER_PORTS[@]} -lt 3 ]] || [[ -z "${ROUTER_PORT:-}" ]]; then
+if [[ ${#MASTER_PORTS[@]} -lt 1 ]] || [[ -z "${ROUTER_PORT:-}" ]]; then
     echo "ERROR: could not parse master/router ports from $CFG_MAIN" >&2
     exit 2
 fi
 
 M1_API="${MASTER_PORTS[0]}"
-M2_API="${MASTER_PORTS[1]}"
-M3_API="${MASTER_PORTS[2]}"
 
 echo
 echo "==> resolved ports after check_ports.sh:"
-printf "   m1.api      %s\n   m2.api      %s\n   m3.api      %s\n   router.http %s\n" \
-    "$M1_API" "$M2_API" "$M3_API" "$ROUTER_PORT"
+printf "   m1.api      %s\n   router.http %s\n" \
+    "$M1_API" "$ROUTER_PORT"
 
 # ---- step 3: start cluster + wait for health -----------------------------
 
 echo
 echo "============================================================"
-echo " step 2/4  starting 7 processes"
+echo " step 2/4  starting 5 processes"
 echo "============================================================"
 bash "$START_CLUSTER" start
 
 echo
 echo "============================================================"
-echo " step 3/4  waiting for master quorum (max 120s)"
+echo " step 3/4  waiting for master (max 120s)"
 echo "============================================================"
 if ! wait_for_master "$M1_API"; then
     echo "ERROR: master m1 (port $M1_API) did not become healthy within 120s" >&2
-    dump_logs m1 m2 m3
+    dump_logs m1 router ps1 ps2 ps3
     echo "cluster left running; inspect the logs above, then run:" >&2
     echo "  bash $0 --stop" >&2
     exit 3
 fi
-echo "master quorum ready on port $M1_API"
+echo "master ready on port $M1_API"
 
 echo
 echo "==> waiting for PS registration (max 60s)"
@@ -324,7 +322,7 @@ if ps_count=$(wait_for_ps_registration "$M1_API"); then
     echo "$ps_count PS nodes registered"
 else
     echo "WARN: <3 PS nodes registered within 60s; tests requiring >=3 PS will skip" >&2
-    dump_logs ps1 ps2 ps3
+    dump_logs m1 router ps1 ps2 ps3
 fi
 
 # ---- step 4: print summary + (optional) run tests ------------------------

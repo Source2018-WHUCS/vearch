@@ -70,10 +70,10 @@ master_api_port() {
 }
 
 # (role, config_file, extra_flags)
+# Single-master topology: see config_single_host.toml header for the bug
+# in vearch config.go:316 that forces us to use only 1 master.
 declare -a INSTANCES=(
     "m1     $CFG_MAIN  -master=m1   master"
-    "m2     $CFG_MAIN  -master=m2   master"
-    "m3     $CFG_MAIN  -master=m3   master"
     "router $CFG_MAIN               router"
     "ps1    $CFG_MAIN               ps"
     "ps2    $CFG_PS2                ps"
@@ -117,7 +117,7 @@ start_all() {
         log_file="$run_dir/vearch.log"
         local port
         case "$name" in
-            m1|m2|m3) port=$(master_api_port "$name") ;;
+            m1)       port=$(master_api_port "$name") ;;
             *)        port=$(resolve_role_port "$name") ;;
         esac
         echo "[start] $name -> $run_dir (port ${port:-?})"
@@ -125,9 +125,9 @@ start_all() {
             > "$log_file" 2>&1 &
         echo $! > "$pid_file"
 
-        # masters need to be up before ps/router connect — pace the start
+        # master needs to be up before ps/router connect — pace the start
         case "$name" in
-            m1|m2|m3) sleep 3 ;;
+            m1) sleep 3 ;;
             router|ps1|ps2|ps3) sleep 1 ;;
         esac
     done
@@ -167,7 +167,7 @@ status() {
         pid_file="$RUN_ROOT/$name/vearch.pid"
         local port
         case "$name" in
-            m1|m2|m3) port=$(master_api_port "$name") ;;
+            m1)       port=$(master_api_port "$name") ;;
             *)        port=$(resolve_role_port "$name") ;;
         esac
         port="${port:-?}"

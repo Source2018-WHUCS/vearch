@@ -1,4 +1,4 @@
-# PS3 config — single-host cluster
+# PS3 config — single-host cluster (1 master mode; see config_single_host.toml header)
 #
 # Same as ps2 file but with [ps] ports shifted for ps3.
 #
@@ -20,7 +20,7 @@
 
 [etcd]
     address = ["127.0.0.1"]
-    etcd_client_port = 12379
+    etcd_client_port = 12378
     user_name = "root"
     password = ""
 
@@ -34,28 +34,6 @@
     cluster_state = "new"
     pprof_port = 16062
     monitor_port = 18828
-
-[[masters]]
-    name = "m2"
-    address = "127.0.0.1"
-    api_port = 18827
-    etcd_port = 12379
-    etcd_peer_port = 12391
-    etcd_client_port = 12371
-    cluster_state = "new"
-    pprof_port = 16072
-    monitor_port = 18829
-
-[[masters]]
-    name = "m3"
-    address = "127.0.0.1"
-    api_port = 18837
-    etcd_port = 12380
-    etcd_peer_port = 12392
-    etcd_client_port = 12372
-    cluster_state = "new"
-    pprof_port = 16082
-    monitor_port = 18830
 
 [router]
     port = 19001

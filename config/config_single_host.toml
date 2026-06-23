@@ -1,18 +1,22 @@
-# Single-host cluster config (3 master + 1 router + 1 PS)
+# Single-host cluster config (1 master + 1 router + 1 PS)
 #
-# Layout: all 7 processes run on 127.0.0.1 with distinct ports.
+# Why only 1 master:
+# Vearch has a bug at internal/config/config.go:316 that makes embedded etcd
+# fail to bootstrap when 3 masters run on the same host with different
+# etcd_peer_ports — the InitialCluster string uses the local master's port
+# for ALL peer URLs, so no peer can ever reach another. We work around it
+# by running a single-master cluster (etcd bootstraps as a 1-node cluster,
+# quorum=1, no peer dialing needed).
+#
+# Layout: all 5 processes run on 127.0.0.1 with distinct ports.
 # Each process runs in its own working dir (see scripts/start_single_host_cluster.sh)
 # so the relative `data` path resolves to per-process disk space.
 #
 # All ports are shifted +10000 from upstream defaults to dodge common service
-# collisions on shared Linux hosts (8080/8081/9001/6060/2379 are very contended).
-# `scripts/check_ports.sh` still re-scans these and reallocates further if any
-# are occupied on the target box.
+# collisions on shared Linux hosts.
 #
 # Port allocation:
 #   master m1   api 18817   etcd 12378  etcd_peer 12390  etcd_client 12370  pprof 16062  monitor 18828
-#   master m2   api 18827   etcd 12379  etcd_peer 12391  etcd_client 12371  pprof 16072  monitor 18829
-#   master m3   api 18837   etcd 12380  etcd_peer 12392  etcd_client 12372  pprof 16082  monitor 18830
 #   router      http 19001  pprof 16061
 #   ps1         rpc 18081   raft_hb 18898  raft_rep 18899  pprof 16060   (uses [ps] below)
 #   ps2         rpc 18082   raft_hb 18900  raft_rep 18901  pprof 16063   (see config_single_host_ps2.toml)
@@ -22,7 +26,7 @@
     name = "vearch"
     resource_name = "default"
     # Relative path: each process resolves it against its own cwd, so the
-    # 3 masters / router / ps1 each get isolated on-disk data.
+    # master / router / ps1 each get isolated on-disk data.
     data = ["./datas"]
     log = "./logs"
     level = "info"
@@ -36,14 +40,14 @@
 
 [etcd]
     address = ["127.0.0.1"]
-    etcd_client_port = 12379
+    # Must match the single master's etcd_port below (m1 = 12378).
+    etcd_client_port = 12378
     user_name = "root"
     password = ""
 
-# ----- Masters -----------------------------------------------------------
-# Three master entries, each on 127.0.0.1 with unique ports.
-# All 3 master processes load this same file; the -master=mX flag tells each
-# process which entry applies to itself.
+# ----- Master (single node) ---------------------------------------------
+# Only one [[masters]] entry to avoid the multi-master / single-host bug
+# in vearch config.go:316. etcd bootstraps as a 1-member cluster.
 
 [[masters]]
     name = "m1"
@@ -55,28 +59,6 @@
     cluster_state = "new"
     pprof_port = 16062
     monitor_port = 18828
-
-[[masters]]
-    name = "m2"
-    address = "127.0.0.1"
-    api_port = 18827
-    etcd_port = 12379
-    etcd_peer_port = 12391
-    etcd_client_port = 12371
-    cluster_state = "new"
-    pprof_port = 16072
-    monitor_port = 18829
-
-[[masters]]
-    name = "m3"
-    address = "127.0.0.1"
-    api_port = 18837
-    etcd_port = 12380
-    etcd_peer_port = 12392
-    etcd_client_port = 12372
-    cluster_state = "new"
-    pprof_port = 16082
-    monitor_port = 18830
 
 # ----- Router ------------------------------------------------------------
 
