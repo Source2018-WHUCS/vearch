@@ -1817,15 +1817,27 @@ class TestBalancerChangeReplicaHook:
                 f"partition {p['pid']} should have 2 replicas, got {p['replicas']}"
             )
 
-        # The hook should pick free_items[0] for at least one partition.
+        # tie-tolerant assertion: when multiple "free" nodes share the
+        # lowest current_score (very common in lightly-loaded clusters
+        # where score is dominated by partition_count which can be 0 for
+        # several nodes), any of them is a valid pick. Asserting one
+        # specific node would be a coin-flip test.
         all_added = {n for _, nodes in added_per_partition for n in nodes}
-        assert expected_pick in all_added, (
-            f"score-based hook should have picked node {expected_pick} "
-            f"(lowest current_score among free); actual additions: {added_per_partition}"
+        lowest_score = free_items[0]["current_score"]
+        acceptable_picks = {
+            it["node_id"] for it in free_items
+            if it["current_score"] == lowest_score
+        }
+        assert all_added & acceptable_picks, (
+            f"score-based hook should pick at least one node from the "
+            f"lowest-score-among-free set {acceptable_picks} "
+            f"(min current_score = {lowest_score}); "
+            f"actual additions: {added_per_partition}"
         )
         logger.info(
             f"[PASS] TestBalancerChangeReplicaHook.test_change_replica_add_uses_score_based_picker "
-            f"(low-score node {expected_pick} was picked for ChangeReplica)"
+            f"(picker chose from lowest-score set {acceptable_picks}, "
+            f"actual: {sorted(all_added)})"
         )
 
     def teardown_class(self):
