@@ -88,6 +88,55 @@ func (ts *TaskScheduler) LoadFromEtcd(ctx context.Context) error {
 	return nil
 }
 
+/*
+SyncFromEtcd loads any persisted task not already in our in-memory inflight,
+so the master holding the STM scheduler lock on this tick can advance tasks
+that were submitted to a different master.
+
+Multi-master HA hazard this addresses: every master's TaskScheduler keeps an
+in-memory `inflight` map populated by local Submit + startup LoadFromEtcd. The
+scheduler STM lock rotates between masters; if the lock-holder is NOT the one
+that received Submit, its AdvanceAll iterates an empty (for that task)
+inflight and the task stays at its current step indefinitely. Calling
+SyncFromEtcd before AdvanceAll on every tick guarantees the lock-holder sees
+every active task regardless of which master originally accepted it.
+
+Idempotent: tasks already in local inflight are skipped — in-memory state is
+authoritative (may have advanced past what's persisted between transitions).
+Terminal tasks in etcd are also skipped (complete()/fail() deletes them, but
+we tolerate brief overlap windows).
+*/
+func (ts *TaskScheduler) SyncFromEtcd(ctx context.Context) error {
+	_, values, err := ts.cli.Master().Store.PrefixScan(ctx, entity.PrefixMigrateTask)
+	if err != nil {
+		return err
+	}
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	picked := 0
+	for _, v := range values {
+		t := &MigrateTask{}
+		if err := json.Unmarshal(v, t); err != nil {
+			log.Warnf("[balancer] sync: unmarshal MigrateTask failed: %s", err.Error())
+			continue
+		}
+		if t.Step.IsTerminal() {
+			continue
+		}
+		if _, exists := ts.inflight[t.ID]; exists {
+			continue
+		}
+		ts.inflight[t.ID] = t
+		ts.taskTracker.Add(t)
+		picked++
+		log.Infof("[balancer] sync: picked up orphan task %s at step %s", t.ID, t.Step)
+	}
+	if picked > 0 {
+		log.Infof("[balancer] sync: %d orphan task(s) picked up from etcd", picked)
+	}
+	return nil
+}
+
 // Submit creates and persists a new task.
 func (ts *TaskScheduler) Submit(ctx context.Context, op MigrateOp) (*MigrateTask, error) {
 	now := time.Now().UnixMilli()
