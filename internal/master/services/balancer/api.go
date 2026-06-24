@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vearch/vearch/v3/internal/client"
@@ -42,6 +43,14 @@ func (b *Balancer) RegisterAPI(r gin.IRouter) {
 }
 
 func (b *Balancer) handleGetConfig(c *gin.Context) {
+	/*
+		Multi-master read consistency: each master's cfgHolder caches the last
+		ReloadConfigFromEtcd snapshot. PUT on master X updates X's cache and
+		etcd; if the next GET round-robins to master Y, Y's cache is stale
+		until its cron tick reloads. Pull the latest from etcd on every read
+		so writes are observable across masters.
+	*/
+	b.ReloadConfigFromEtcd(c.Request.Context())
 	c.JSON(http.StatusOK, b.cfg.Get())
 }
 
@@ -65,7 +74,18 @@ func (b *Balancer) handleUpdateConfig(c *gin.Context) {
 }
 
 func (b *Balancer) handleSnapshot(c *gin.Context) {
-	snap, err := b.builder.Build(c.Request.Context())
+	ctx := c.Request.Context()
+	/*
+		Multi-master: each master's tracker.inflight is populated only by
+		local Submit + the scheduler-cron SyncFromEtcd. Between cron ticks
+		(30s), a recently submitted task on another master is invisible here.
+		Force a sync so inflight_count reflects the etcd-persisted truth on
+		every read.
+	*/
+	if err := b.scheduler.SyncFromEtcd(ctx); err != nil {
+		log.Warnf("[balancer] /snapshot: SyncFromEtcd failed (returning stale view): %s", err.Error())
+	}
+	snap, err := b.builder.Build(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -92,6 +112,13 @@ func (b *Balancer) handleSnapshot(c *gin.Context) {
 }
 
 func (b *Balancer) handleListTasks(c *gin.Context) {
+	/*
+		Same multi-master read-consistency concern as /snapshot: tracker is
+		populated per-master, so we sync from etcd before serving.
+	*/
+	if err := b.scheduler.SyncFromEtcd(c.Request.Context()); err != nil {
+		log.Warnf("[balancer] /tasks: SyncFromEtcd failed (returning stale view): %s", err.Error())
+	}
 	c.JSON(http.StatusOK, b.tracker.AllInflight())
 }
 
@@ -205,19 +232,40 @@ func (b *Balancer) setEnabled(ctx context.Context, enabled bool) error {
 }
 
 func (b *Balancer) handleReaperTrigger(c *gin.Context) {
+	/*
+		Multi-master: in a 3-master HA cluster the request lands on a random
+		master via LB. The previous "try-once" pattern dropped the trigger
+		when the receiving master did not hold the reaper STM lock at that
+		moment, which made /reaper/trigger effectively unreliable when called
+		through a round-robin LB.
+
+		Spawn a background goroutine that retries lock acquisition for up to
+		~90s (covers the 60s lock TTL plus margin). The HTTP response returns
+		immediately so callers do not block. Tests poll the cluster state to
+		observe the effect of RunOnce; ~90s is well within their tolerance.
+	*/
 	go func() {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+		defer cancel()
 		b.ReloadConfigFromEtcd(ctx)
-		if err := AcquireSTMLock(ctx, b.cli, LockKeyReaper, 60); err != nil {
-			if IsSkip(err) {
-				log.Warnf("[balancer:reaper] manual trigger skipped: another runner holds the lock")
-			} else {
-				log.Errorf("[balancer:reaper] manual trigger lock acquire failed: %s", err.Error())
+		for {
+			err := AcquireSTMLock(ctx, b.cli, LockKeyReaper, 60)
+			if err == nil {
+				break
 			}
-			return
+			if !IsSkip(err) {
+				log.Errorf("[balancer:reaper] manual trigger lock acquire failed: %s", err.Error())
+				return
+			}
+			select {
+			case <-ctx.Done():
+				log.Warnf("[balancer:reaper] manual trigger gave up after 90s; another master held the lock the entire time")
+				return
+			case <-time.After(2 * time.Second):
+			}
 		}
 		if err := b.reaper.RunOnce(ctx); err != nil {
-			log.Errorf("[balancer:reaper] manual trigger failed: %s", err.Error())
+			log.Errorf("[balancer:reaper] manual trigger run failed: %s", err.Error())
 		}
 	}()
 	c.JSON(http.StatusOK, gin.H{"ok": true})

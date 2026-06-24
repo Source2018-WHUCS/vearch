@@ -205,28 +205,30 @@ func registerBalancerJobs(ctx context.Context, ms *Server, bal *balancer.Balance
 
 	/*
 		Scheduler loop.
-		STM lock ensures only one master advances inflight tasks at a time;
-		otherwise multi-master deployments would issue concurrent ChangeMember
-		calls and corrupt the task state machine.
 
-		SyncFromEtcd is called after lock acquisition so the lock-holder sees
-		every active task regardless of which master accepted the Submit. Each
-		master's in-memory inflight is populated only by local Submit; without
-		this sync, a task submitted to master A would never advance while the
-		scheduler lock rotates to master B/C.
+		STM lock ensures only one master at a time runs AdvanceAll (writes),
+		otherwise concurrent ChangeMember calls would corrupt the task state
+		machine.
+
+		SyncFromEtcd runs OUTSIDE the lock so every master (lock-holder or not)
+		keeps its local inflight map and tracker in sync with etcd-persisted
+		state on every tick. This is required for read-side handlers (/snapshot,
+		/tasks, /config) to return consistent state regardless of which master
+		the request lands on, and for Submit dedup to catch cross-master
+		duplicates. SyncFromEtcd is read-only on etcd; locking is unnecessary.
 	*/
 	go runBalancerCron(ctx, "scheduler", func() time.Duration {
 		return 30 * time.Second
 	}, func() {
 		bal.ReloadConfigFromEtcd(ctx)
+		if err := bal.Scheduler().SyncFromEtcd(ctx); err != nil {
+			log.Warnf("[balancer:scheduler] SyncFromEtcd failed: %s", err.Error())
+		}
 		if err := balancer.AcquireSTMLock(ctx, cli, balancer.LockKeyScheduler, 60); err != nil {
 			if !balancer.IsSkip(err) {
 				log.Errorf("[balancer:scheduler] lock acquire failed: %s", err.Error())
 			}
 			return
-		}
-		if err := bal.Scheduler().SyncFromEtcd(ctx); err != nil {
-			log.Warnf("[balancer:scheduler] SyncFromEtcd failed: %s", err.Error())
 		}
 		bal.Scheduler().AdvanceAll(ctx)
 	})

@@ -89,9 +89,9 @@ func (ts *TaskScheduler) LoadFromEtcd(ctx context.Context) error {
 }
 
 /*
-SyncFromEtcd loads any persisted task not already in our in-memory inflight,
-so the master holding the STM scheduler lock on this tick can advance tasks
-that were submitted to a different master.
+SyncFromEtcd reconciles the local in-memory inflight map with the etcd-persisted
+truth, so the master holding the STM scheduler lock (and any read-side handler)
+can see the full set of active tasks regardless of which master accepted Submit.
 
 Multi-master HA hazard this addresses: every master's TaskScheduler keeps an
 in-memory `inflight` map populated by local Submit + startup LoadFromEtcd. The
@@ -101,19 +101,23 @@ inflight and the task stays at its current step indefinitely. Calling
 SyncFromEtcd before AdvanceAll on every tick guarantees the lock-holder sees
 every active task regardless of which master originally accepted it.
 
-Idempotent: tasks already in local inflight are skipped — in-memory state is
-authoritative (may have advanced past what's persisted between transitions).
-Terminal tasks in etcd are also skipped (complete()/fail() deletes them, but
-we tolerate brief overlap windows).
+Two-way reconcile:
+  - ADD: tasks in etcd but not in local inflight → load into local + tracker.
+  - REMOVE: tasks in local inflight but no longer in etcd (lock-holder completed
+    or failed them, deleting the etcd key) → evict from local + tracker.
+
+In-memory state for tasks present in both etcd and local is left untouched —
+the in-memory copy may have advanced past what's persisted between transitions
+(transitionTo writes etcd asynchronously). Terminal tasks in etcd are skipped
+(complete()/fail() delete them, but we tolerate brief overlap windows).
 */
 func (ts *TaskScheduler) SyncFromEtcd(ctx context.Context) error {
 	_, values, err := ts.cli.Master().Store.PrefixScan(ctx, entity.PrefixMigrateTask)
 	if err != nil {
 		return err
 	}
-	ts.mu.Lock()
-	defer ts.mu.Unlock()
-	picked := 0
+
+	etcdTasks := make(map[string]*MigrateTask, len(values))
 	for _, v := range values {
 		t := &MigrateTask{}
 		if err := json.Unmarshal(v, t); err != nil {
@@ -123,22 +127,53 @@ func (ts *TaskScheduler) SyncFromEtcd(ctx context.Context) error {
 		if t.Step.IsTerminal() {
 			continue
 		}
-		if _, exists := ts.inflight[t.ID]; exists {
+		etcdTasks[t.ID] = t
+	}
+
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+
+	picked := 0
+	for id, t := range etcdTasks {
+		if _, exists := ts.inflight[id]; exists {
 			continue
 		}
-		ts.inflight[t.ID] = t
+		ts.inflight[id] = t
 		ts.taskTracker.Add(t)
 		picked++
 		log.Infof("[balancer] sync: picked up orphan task %s at step %s", t.ID, t.Step)
 	}
-	if picked > 0 {
-		log.Infof("[balancer] sync: %d orphan task(s) picked up from etcd", picked)
+
+	removed := 0
+	for id, t := range ts.inflight {
+		if _, in := etcdTasks[id]; in {
+			continue
+		}
+		delete(ts.inflight, id)
+		ts.taskTracker.Remove(t)
+		removed++
+		log.Infof("[balancer] sync: removed stale task %s (gone from etcd)", id)
+	}
+
+	if picked > 0 || removed > 0 {
+		log.Infof("[balancer] sync: %d picked up, %d removed", picked, removed)
 	}
 	return nil
 }
 
 // Submit creates and persists a new task.
 func (ts *TaskScheduler) Submit(ctx context.Context, op MigrateOp) (*MigrateTask, error) {
+	/*
+		Cross-master dedup: a task for the same partition_id may have been
+		submitted to a different master and only persisted in etcd. Refresh our
+		local inflight from etcd before the dedup check below so we observe such
+		tasks. Non-fatal: if the sync fails we proceed with a possibly stale
+		view rather than rejecting a legitimate Submit.
+	*/
+	if err := ts.SyncFromEtcd(ctx); err != nil {
+		log.Warnf("[balancer] submit: pre-sync failed (continuing with stale view): %s", err.Error())
+	}
+
 	now := time.Now().UnixMilli()
 	t := &MigrateTask{
 		ID:             "mt-" + uuid.NewString()[:12],
@@ -266,11 +301,13 @@ func (ts *TaskScheduler) advance(ctx context.Context, t *MigrateTask) {
 			ts.transitionTo(ctx, t, StepWaitingCaughtUp)
 			return
 		}
-		// /partition/<id> says ToNodeID is not yet a replica. It may simply
-		// be stale — MemberService.ChangeMember writes /space/<dbid>/<spaceid>
-		// synchronously, but /partition/<id> is refreshed asynchronously by
-		// the PS leader's registerMaster chain and can lag by seconds. Consult
-		// /space directly as the authoritative source before deciding to wait.
+		/*
+			/partition/<id> says ToNodeID is not yet a replica. It may simply
+			be stale — MemberService.ChangeMember writes /space/<dbid>/<spaceid>
+			synchronously, but /partition/<id> is refreshed asynchronously by
+			the PS leader's registerMaster chain and can lag by seconds. Consult
+			/space directly as the authoritative source before deciding to wait.
+		*/
 		if present, ok := ts.replicaPresentInSpace(ctx, partition.DBId, t.SpaceID, t.PartitionID, t.ToNodeID); ok && present {
 			log.Infof("[balancer] task %s: /partition lags /space; treating AddNode as done (to=%d)",
 				t.ID, t.ToNodeID)
@@ -336,8 +373,10 @@ func (ts *TaskScheduler) advance(ctx context.Context, t *MigrateTask) {
 	case StepRemovingMember:
 		partition, err := ts.cli.Master().QueryPartition(ctx, t.PartitionID)
 		if err != nil {
-			// Retried next tick; still check timeout so a flaky etcd cannot
-			// strand the task indefinitely.
+			/*
+				Retried next tick; still check timeout so a flaky etcd cannot
+				strand the task indefinitely.
+			*/
 			log.Warnf("[balancer] task %s QueryPartition failed at RemovingMember: %s", t.ID, err.Error())
 			if ts.timedOut(t, cfg.RemoveMemberTimeoutSec) {
 				ts.fail(ctx, t, fmt.Errorf("remove member timeout (query partition failing): %w", err))
@@ -349,12 +388,14 @@ func (ts *TaskScheduler) advance(ctx context.Context, t *MigrateTask) {
 			ts.complete(ctx, t)
 			return
 		}
-		// /partition/<id> still shows FromNodeID. It may be a stale read —
-		// MemberService.ChangeMember updates /space/<dbid>/<spaceid> directly
-		// while /partition/<id> is refreshed asynchronously by the PS leader.
-		// Consult /space directly: if the remove is already reflected there
-		// the migration is effectively done; we must not hang waiting for
-		// the async chain to catch up.
+		/*
+			/partition/<id> still shows FromNodeID. It may be a stale read —
+			MemberService.ChangeMember updates /space/<dbid>/<spaceid> directly
+			while /partition/<id> is refreshed asynchronously by the PS leader.
+			Consult /space directly: if the remove is already reflected there
+			the migration is effectively done; we must not hang waiting for
+			the async chain to catch up.
+		*/
 		if present, ok := ts.replicaPresentInSpace(ctx, partition.DBId, t.SpaceID, t.PartitionID, t.FromNodeID); ok && !present {
 			log.Infof("[balancer] task %s: /partition lags /space; treating RemoveNode as done (from=%d)",
 				t.ID, t.FromNodeID)
@@ -497,25 +538,27 @@ func containsReplica(replicas []entity.NodeID, id entity.NodeID) bool {
 	return false
 }
 
-// replicaPresentInSpace consults /space/<dbid>/<spaceid> as an authoritative
-// fallback for stale /partition/<id> reads.
-//
-// Background: MemberService.ChangeMember writes the new replica list to
-// /space/<dbid>/<spaceid> synchronously after the raft conf-change RPC
-// succeeds (see member_service.go's UpdateSpace call). The /partition/<id>
-// key is updated asynchronously by the PS leader's registerMaster chain and
-// can lag behind by seconds — or, if the PS leader's HandleRaftReplicaEvent
-// path is skipped (single-replica edge cases, leadership transitions during
-// the conf change), can lag indefinitely.
-//
-// Returns (present, ok) where:
-//   - present: whether nodeID appears in the partition's replica list per /space
-//   - ok:      true if the lookup succeeded; false on query error or if the
-//     partition is not found inside the space (caller should keep
-//     polling /partition in that case rather than trust this view)
-//
-// Callers should treat (ok=false) as "no information" and keep relying on
-// /partition + timeout. (ok=true, present=...) gives an authoritative answer.
+/*
+replicaPresentInSpace consults /space/<dbid>/<spaceid> as an authoritative
+fallback for stale /partition/<id> reads.
+
+Background: MemberService.ChangeMember writes the new replica list to
+/space/<dbid>/<spaceid> synchronously after the raft conf-change RPC
+succeeds (see member_service.go's UpdateSpace call). The /partition/<id>
+key is updated asynchronously by the PS leader's registerMaster chain and
+can lag behind by seconds — or, if the PS leader's HandleRaftReplicaEvent
+path is skipped (single-replica edge cases, leadership transitions during
+the conf change), can lag indefinitely.
+
+Returns (present, ok) where:
+  - present: whether nodeID appears in the partition's replica list per /space
+  - ok:      true if the lookup succeeded; false on query error or if the
+    partition is not found inside the space (caller should keep
+    polling /partition in that case rather than trust this view)
+
+Callers should treat (ok=false) as "no information" and keep relying on
+/partition + timeout. (ok=true, present=...) gives an authoritative answer.
+*/
 func (ts *TaskScheduler) replicaPresentInSpace(
 	ctx context.Context,
 	dbID entity.DBID, spaceID entity.SpaceID, partitionID entity.PartitionID,
