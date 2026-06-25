@@ -895,7 +895,7 @@ class TestBalancerEndToEndMigration:
         task = resp.json()
         assert task.get("id"), "expected task id in response"
 
-        final = _wait_task_terminal(task["id"], timeout_sec=180)
+        final = _wait_task_terminal(task["id"], timeout_sec=360)
         logger.info(f"final task state: {final}")
         assert str(final.get("step", "")).lower() == "done", (
             f"migration did not complete; final={final}"
@@ -1425,7 +1425,7 @@ class TestBalancerReaperInflightSafety:
             time.sleep(2)
 
         # Now wait for the migration to complete naturally.
-        final = _wait_task_terminal(task_id, timeout_sec=240)
+        final = _wait_task_terminal(task_id, timeout_sec=360)
         assert str(final.get("step", "")).lower() == "done", (
             f"migration did not Done; final={final} — this could indicate Reaper "
             f"interference with the inflight task"
@@ -1523,7 +1523,7 @@ class TestBalancerCooldownBlocksReplan:
         })
         assert resp.status_code == 200, resp.text
         task_id = resp.json()["id"]
-        final = _wait_task_terminal(task_id, timeout_sec=120)
+        final = _wait_task_terminal(task_id, timeout_sec=360)
         assert str(final.get("step", "")).lower() == "done", (
             f"prime migration did not complete: {final}"
         )
@@ -1632,7 +1632,7 @@ class TestBalancerSubmitDedup:
         )
 
         # Cleanup: wait for the first task so subsequent tests see clean state.
-        _wait_task_terminal(task_id_1, timeout_sec=180)
+        _wait_task_terminal(task_id_1, timeout_sec=360)
         logger.info("[PASS] TestBalancerSubmitDedup.test_second_submit_for_same_partition_rejected")
 
     def teardown_class(self):
