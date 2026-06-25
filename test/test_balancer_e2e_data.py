@@ -136,23 +136,34 @@ def _wait_task_terminal(task_id, timeout_sec=300, poll_sec=3):
     """
     Wait for the task to reach a terminal state.
 
-    Edge case: when /tasks no longer contains the task, the scheduler has
-    already deleted its etcd key (complete() or fail() runs after the
-    Step transition). Between two polls the task may step
-    RemovingMember -> Done -> deleted faster than poll_sec, so the last
-    observed snapshot is *not* terminal. Infer the final state from the
-    last observed step: Failed if we saw it failing, otherwise Done (the
-    only other way the etcd key disappears).
+    When /tasks no longer contains the task, the scheduler has deleted the
+    etcd key (complete()/fail() are the only paths). Require TWO consecutive
+    misses before declaring disappearance — a transient HTTP / JSON blip
+    would otherwise be misinterpreted as Done and mask real failures.
+
+    If the last observed step was Failed, return that; otherwise treat the
+    confirmed disappearance as Done.
     """
     deadline = time.time() + timeout_sec
     last = None
+    consecutive_misses = 0
     while time.time() < deadline:
-        tasks = _get("/tasks").json()
-        found = next((t for t in tasks if t.get("id") == task_id), None)
+        try:
+            tasks = _get("/tasks").json()
+            found = next((t for t in tasks if t.get("id") == task_id), None)
+        except Exception:
+            consecutive_misses += 1
+            time.sleep(poll_sec)
+            continue
         if found is None:
-            if last is not None and str(last.get("step", "")).lower() in ("failed", "5"):
-                return last
-            return {"id": task_id, "step": "Done", "_inferred_from_disappearance": True}
+            consecutive_misses += 1
+            if consecutive_misses >= 2:
+                if last is not None and str(last.get("step", "")).lower() in ("failed", "5"):
+                    return last
+                return {"id": task_id, "step": "Done", "_inferred_from_disappearance": True}
+            time.sleep(poll_sec)
+            continue
+        consecutive_misses = 0
         last = found
         if str(found.get("step", "")).lower() in ("done", "failed", "4", "5"):
             return found

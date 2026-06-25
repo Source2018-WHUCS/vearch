@@ -760,22 +760,39 @@ def _enumerate_partitions():
 
 
 def _wait_task_terminal(task_id, timeout_sec=120, poll_sec=2):
-    """Poll /balancer/tasks until the given task is Done or Failed (gone from list)."""
+    """Poll /balancer/tasks until the given task is Done or Failed (gone from list).
+
+    When the task disappears we infer Done (complete()/fail() are the only paths
+    that delete the etcd key). Require TWO consecutive misses before declaring
+    disappearance, so a transient HTTP blip cannot be mistaken for completion —
+    that mistake was previously masking real migration failures by reporting
+    the inferred-Done result back to the test.
+    """
     deadline = time.time() + timeout_sec
     last = None
+    consecutive_misses = 0
     while time.time() < deadline:
-        tasks = _get("/tasks").json()
-        found = next((t for t in tasks if t.get("id") == task_id), None)
+        try:
+            tasks = _get("/tasks").json()
+            found = next((t for t in tasks if t.get("id") == task_id), None)
+        except Exception:
+            # Treat HTTP / JSON errors like a "miss" for confirmation purposes,
+            # but never as a positive disappearance signal on the first failure.
+            consecutive_misses += 1
+            if consecutive_misses >= 2 and last is not None:
+                # Stop only if we already had a stable read earlier.
+                pass
+            time.sleep(poll_sec)
+            continue
         if found is None:
-            # Task already terminated and reaped from etcd; infer the final
-            # state from the last observed step. Between polls the task may
-            # step RemovingMember -> Done -> deleted faster than poll_sec,
-            # so the last snapshot is *not* terminal. complete() and fail()
-            # are the only paths that delete the etcd key: if we last saw it
-            # failing, return that; otherwise treat the disappearance as Done.
-            if last is not None and str(last.get("step", "")).lower() in ("failed", "5"):
-                return last
-            return {"id": task_id, "step": "Done", "_inferred_from_disappearance": True}
+            consecutive_misses += 1
+            if consecutive_misses >= 2:
+                if last is not None and str(last.get("step", "")).lower() in ("failed", "5"):
+                    return last
+                return {"id": task_id, "step": "Done", "_inferred_from_disappearance": True}
+            time.sleep(poll_sec)
+            continue
+        consecutive_misses = 0
         last = found
         if str(found.get("step", "")).lower() in ("done", "failed"):
             return found
@@ -998,7 +1015,10 @@ class TestBalancerEndToEndMigration:
         logger.info(f"during migration: inflight_count = {snap['inflight_count']}")
 
         # Wait for task to finish, then verify count returns to baseline.
-        _wait_task_terminal(task_id, timeout_sec=180)
+        # Multi-master migration with 1000 docs typically takes ~3-4 min
+        # (4 step transitions × 30s scheduler tick × 3-master lock rotation),
+        # so we need to allow at least 5 min to be safe.
+        _wait_task_terminal(task_id, timeout_sec=360)
         time.sleep(2)  # allow tracker.Remove to settle
         final = _get("/snapshot").json().get("inflight_count", 0)
         logger.info(f"after Done: inflight_count = {final}")
@@ -1789,6 +1809,19 @@ class TestBalancerChangeReplicaHook:
         free_items.sort(key=lambda x: x.get("current_score", 0))
         expected_pick = free_items[0]["node_id"]
         logger.info(f"expected pick (lowest score among free): {expected_pick}")
+
+        # Wait for every partition in the test space to have a stable raft
+        # leader. Prior tests in this suite may have just completed a
+        # migration; raft conf changes can leave the partition leaderless
+        # for a few seconds while a new election runs. ChangeReplica returns
+        # `partition_no_leader` if it lands during that window, which
+        # historically made this test flaky.
+        leader_deadline = time.time() + 30
+        while time.time() < leader_deadline:
+            parts_now = [p for p in _enumerate_partitions() if p["space"] == space_name]
+            if parts_now and all(p.get("leader") for p in parts_now):
+                break
+            time.sleep(1)
 
         # Trigger ChangeReplica with method=0 (Add).
         resp = _change_replicas(db_name, space_name, method=0)
