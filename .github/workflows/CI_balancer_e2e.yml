@@ -1,0 +1,93 @@
+name: CI Balancer E2E (with data)
+
+on:
+  push:
+    branches:
+      - master
+      - "feat_*"
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+jobs:
+  balancer-e2e-with-data:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runs-on: ubuntu-latest
+            docker-arch: ""
+          - platform: linux/arm64
+            runs-on: ubuntu-latest
+            docker-arch: "--platform linux/arm64"
+    runs-on: ${{ matrix.runs-on }}
+
+    env:
+      TARGET_PLATFORM: ${{ matrix.platform }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set cluster env
+      uses: ./.github/actions/set_cluster_env
+      with:
+        build-type: github
+
+    - name: Wait for balancer routes
+      # The composite action returns when docker-compose `up -d` finishes,
+      # which can be earlier than the master's HTTP listener (and embedded
+      # etcd, and balancer wiring) being fully ready. Poll /balancer/config
+      # for up to ~2 min so the first test isn't a flaky cold-start failure.
+      run: |
+        for i in $(seq 1 60); do
+          if curl -s -f -u root:secret http://127.0.0.1:8817/balancer/config > /dev/null; then
+            echo "balancer routes ready after $((i * 2))s"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "ERROR: balancer routes did not come up within 120s" >&2
+        docker ps -a
+        docker-compose -f cloud/docker-compose.yml logs --tail=200 master1 || true
+        exit 1
+
+    - name: Run end-to-end balancer tests with real document data
+      # Complements test_balancer.py (control-plane only) by exercising
+      # the migration / reaper / picker paths with 1000 real vector
+      # documents on the partitions. Catches integration regressions
+      # that empty-partition tests cannot:
+      #   - data loss across migration
+      #   - search consistency after replica change
+      #   - picker score divergence once data_bytes is non-zero
+      #   - reaper trims excess replica without doc-count drift
+      #
+      # A full migration on a 3-master cluster cycles through 4 step
+      # transitions × 30s scheduler tick + lock rotation, so the
+      # test_migration step alone takes ~3-4 min wall clock. The full
+      # class typically completes in ~5 min.
+      run: |
+        cd test
+        pytest test_balancer_e2e_data.py -v --log-cli-level=INFO
+
+    - name: Dump cluster state on failure
+      if: failure()
+      run: |
+        echo "===== /balancer/tasks ====="
+        curl -s -u root:secret http://127.0.0.1:8817/balancer/tasks || true
+        echo
+        echo "===== /balancer/snapshot ====="
+        curl -s -u root:secret http://127.0.0.1:8817/balancer/snapshot || true
+        echo
+        echo "===== /cluster/health?detail=true ====="
+        curl -s -u root:secret 'http://127.0.0.1:9001/cluster/health?detail=true' || true
+        echo
+        echo "===== docker ps ====="
+        docker ps -a
+        echo
+        echo "===== master1 logs (tail 300) ====="
+        docker-compose -f cloud/docker-compose.yml logs --tail=300 master1 || true
+
+    - name: Clean cluster
+      if: always()
+      run: |
+        docker-compose -f cloud/docker-compose.yml --profile cluster down -v || true
