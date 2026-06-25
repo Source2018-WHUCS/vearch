@@ -1,24 +1,20 @@
 #!/usr/bin/env bash
 # Run test/test_balancer.py against a remote, already-deployed Vearch cluster.
 #
-# Default target: JD test-s3 cluster (K8s service style — no explicit port, :80)
-#   master: http://vearch.example.com
-#   router: http://vearch-router.example.com
-#   user  = root
-#
-# SECURITY NOTE
-#   This script includes the default password for the test-s3 cluster as a
-#   convenience for the team. DO NOT use it for prod credentials. Override via
-#   the PASSWORD env var, and rotate the test-s3 password if leaked.
+# Required env vars:
+#   MASTER_URL   e.g. http://vearch-master:8817
+#   ROUTER_URL   e.g. http://vearch-router:9001
+#   PASSWORD     cluster admin password (matches [global].signkey in config.toml)
+#   USERNAME     optional, defaults to "root"
 #
 # Usage:
-#   bash scripts/run_tests_remote.sh                         # default: test-s3, full suite
-#   bash scripts/run_tests_remote.sh --test test_cluster_master.py
-#                                                            # different test file
-#   bash scripts/run_tests_remote.sh -- -k TestBalancerConfig
-#                                                            # extra pytest args (after `--`)
-#   MASTER_URL=http://other ROUTER_URL=http://other PASSWORD=xxx \
-#     bash scripts/run_tests_remote.sh                       # point elsewhere
+#   MASTER_URL=... ROUTER_URL=... PASSWORD=... \
+#       bash scripts/run_tests_remote.sh                       # full suite
+#   MASTER_URL=... ROUTER_URL=... PASSWORD=... \
+#       bash scripts/run_tests_remote.sh --test test_balancer_e2e_data.py
+#   MASTER_URL=... ROUTER_URL=... PASSWORD=... \
+#       bash scripts/run_tests_remote.sh -- -k TestBalancerConfig
+#                                                              # extra pytest args (after `--`)
 #
 # Flags:
 #   --test FILE          test file under test/ to run (default test_balancer.py)
@@ -38,15 +34,23 @@ fi
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEST_DIR="$REPO_ROOT/test"
 
-# Cluster defaults (test-s3). Env vars override.
-DEFAULT_MASTER_URL="http://vearch.example.com"
-DEFAULT_ROUTER_URL="http://vearch-router.example.com"
-DEFAULT_PASSWORD="REDACTED_PASSWORD"
+# Required env vars: MASTER_URL, ROUTER_URL, PASSWORD.
+# We deliberately do NOT carry default credentials in this script — they
+# would otherwise persist in git history of any public fork.
 
-MASTER_URL="${MASTER_URL:-$DEFAULT_MASTER_URL}"
-ROUTER_URL="${ROUTER_URL:-$DEFAULT_ROUTER_URL}"
-PASSWORD="${PASSWORD:-$DEFAULT_PASSWORD}"
-USERNAME="root"
+if [[ -z "${MASTER_URL:-}" ]] || [[ -z "${ROUTER_URL:-}" ]] || [[ -z "${PASSWORD:-}" ]]; then
+    cat >&2 <<'USAGE'
+ERROR: MASTER_URL, ROUTER_URL, and PASSWORD env vars are all required.
+
+Example:
+    MASTER_URL=http://your-master:8817 \
+    ROUTER_URL=http://your-router:9001 \
+    PASSWORD=your-cluster-password \
+        bash scripts/run_tests_remote.sh
+USAGE
+    exit 2
+fi
+USERNAME="${USERNAME:-root}"
 
 TEST_FILE="test_balancer.py"
 PROBE=1
