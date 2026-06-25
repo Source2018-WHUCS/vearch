@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cubefs/cubefs/depends/tiglabs/raft"
 	"github.com/cubefs/cubefs/depends/tiglabs/raft/proto"
 	"github.com/google/uuid"
 	"github.com/vearch/vearch/v3/internal/client"
@@ -535,48 +534,31 @@ func (ts *TaskScheduler) isReplicaCaughtUp(ctx context.Context, t *MigrateTask) 
 	if err != nil {
 		return false, err
 	}
+	/*
+		detail_info=true is REQUIRED here: the PS PartitionInfoHandler only
+		populates PartitionInfo.RaftStatus when OpType_GET is set (see
+		handler_admin.go::buildPartitionInfo). Without it, info.RaftStatus is
+		nil and the nil-check below silently returns (false, nil) on every
+		tick — the task stays in WaitingCaughtUp until CaughtUpTimeoutSec
+		(default 30min) fires, then fails as "caughtUp timeout".
+	*/
 	info, err := client.PartitionInfo(server.RpcAddr(), t.PartitionID, true)
 	if err != nil {
-		log.Infof("[balancer:debug] task=%s PartitionInfo err=%s", t.ID, err.Error())
 		return false, err
 	}
-	if info == nil {
-		log.Infof("[balancer:debug] task=%s info is nil", t.ID)
+	if info == nil || info.RaftStatus == nil {
 		return false, nil
 	}
-	if info.RaftStatus == nil {
-		log.Infof("[balancer:debug] task=%s info.RaftStatus is nil (addr=%s pid=%d)",
-			t.ID, server.RpcAddr(), t.PartitionID)
-		return false, nil
-	}
-	log.Infof("[balancer:debug] task=%s addr=%s pid=%d locked_leader=%d to_node=%d "+
-		"raft.Leader=%d raft.Replicas_keys=%v",
-		t.ID, server.RpcAddr(), t.PartitionID, t.LockedLeaderID, t.ToNodeID,
-		info.RaftStatus.Leader, replicaKeys(info.RaftStatus.Replicas))
 	leaderReplica, ok := info.RaftStatus.Replicas[info.RaftStatus.Leader]
 	if !ok {
-		log.Infof("[balancer:debug] task=%s leader key %d NOT in Replicas map",
-			t.ID, info.RaftStatus.Leader)
 		return false, nil
 	}
 	target, ok := info.RaftStatus.Replicas[t.ToNodeID]
 	if !ok || leaderReplica.Match == 0 {
-		log.Infof("[balancer:debug] task=%s target_in_map=%v leader.Match=%d",
-			t.ID, ok, leaderReplica.Match)
 		return false, nil
 	}
-	caughtUp := target.Match >= leaderReplica.Match*99/100
-	log.Infof("[balancer:debug] task=%s leader.Match=%d target.Match=%d caughtUp=%v",
-		t.ID, leaderReplica.Match, target.Match, caughtUp)
-	return caughtUp, nil
-}
-
-func replicaKeys(m map[uint64]*raft.ReplicaStatus) []uint64 {
-	keys := make([]uint64, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
+	// 99% of leader Match counts as caught up.
+	return target.Match >= leaderReplica.Match*99/100, nil
 }
 
 func (ts *TaskScheduler) tryRollbackNewReplica(ctx context.Context, t *MigrateTask) {
