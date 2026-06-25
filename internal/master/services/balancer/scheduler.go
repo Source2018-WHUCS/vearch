@@ -26,6 +26,7 @@ import (
 	"github.com/vearch/vearch/v3/internal/entity"
 	"github.com/vearch/vearch/v3/internal/pkg/log"
 	json "github.com/vearch/vearch/v3/internal/pkg/vjson"
+	"github.com/vearch/vearch/v3/internal/proto/vearchpb"
 )
 
 /*
@@ -348,11 +349,21 @@ func (ts *TaskScheduler) advance(ctx context.Context, t *MigrateTask) {
 		caughtUp, err := ts.isReplicaCaughtUp(ctx, t)
 		if err != nil {
 			/*
-				Persistent errors here (e.g. partition_not_exist when the space
-				was dropped, or PS RPC failures) must still honor the timeout,
-				otherwise the task stays in WaitingCaughtUp forever. Mirrors
-				the AddingMember / RemovingMember error paths.
+				Distinguish permanent errors from transient ones. PARTITION_NOT_EXIST
+				means the partition was deleted (typically by a test cleanup that
+				dropped the space) — it will never come back, so failing now avoids
+				holding the task open for the full CaughtUpTimeoutSec (default 30min)
+				and unnecessarily inflating inflight_count for downstream callers.
+				All other errors (RPC blips, etc.) fall through to the timeout-honoring
+				branch in case they recover.
 			*/
+			if isPermanentMigrationError(err) {
+				log.Errorf("[balancer] task %s permanent error in WaitingCaughtUp: %s",
+					t.ID, err.Error())
+				ts.tryRollbackNewReplica(ctx, t)
+				ts.fail(ctx, t, fmt.Errorf("partition gone: %w", err))
+				return
+			}
 			log.Warnf("[balancer] task %s check caughtUp failed: %s", t.ID, err.Error())
 			if ts.timedOut(t, cfg.CaughtUpTimeoutSec) {
 				ts.tryRollbackNewReplica(ctx, t)
@@ -559,6 +570,27 @@ func (ts *TaskScheduler) isReplicaCaughtUp(ctx context.Context, t *MigrateTask) 
 	}
 	// 99% of leader Match counts as caught up.
 	return target.Match >= leaderReplica.Match*99/100, nil
+}
+
+/*
+isPermanentMigrationError returns true for errors that will never resolve on
+retry — currently just PARTITION_NOT_EXIST (the space was dropped). Callers
+should fail the task immediately on these instead of waiting for the
+step-specific timeout (30 min for CaughtUp) to expire.
+*/
+func isPermanentMigrationError(err error) bool {
+	if err == nil {
+		return false
+	}
+	vErr, ok := err.(*vearchpb.VearchErr)
+	if !ok {
+		return false
+	}
+	e := vErr.GetError()
+	if e == nil {
+		return false
+	}
+	return e.Code == vearchpb.ErrorEnum_PARTITION_NOT_EXIST
 }
 
 func (ts *TaskScheduler) tryRollbackNewReplica(ctx context.Context, t *MigrateTask) {
