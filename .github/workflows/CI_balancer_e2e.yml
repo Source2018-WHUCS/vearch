@@ -1,4 +1,4 @@
-name: CI Balancer E2E (with data)
+name: CI Balancer (full)
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  balancer-e2e-with-data:
+  balancer-full:
     strategy:
       fail-fast: false
       matrix:
@@ -51,11 +51,19 @@ jobs:
         docker-compose -f cloud/docker-compose.yml logs --tail=200 master1 || true
         exit 1
 
-    - name: Run end-to-end balancer tests with real document data
-      # Complements test_balancer.py (control-plane only) by exercising
-      # the migration / reaper / picker paths with 1000 real vector
-      # documents on the partitions. Catches integration regressions
-      # that empty-partition tests cannot:
+    - name: Run balancer control-plane tests (test_balancer.py)
+      # Exercises the MigrateTask state machine, picker, reaper, multi-master
+      # synchronization, and HTTP API surface on EMPTY partitions. ~55 tests,
+      # finishes in 10-15 min. Runs first so it observes a clean cluster
+      # without test_balancer_e2e_data's residual ts_e2e_db.
+      run: |
+        cd test
+        pytest test_balancer.py -v --log-cli-level=INFO
+
+    - name: Run balancer end-to-end tests with real document data (test_balancer_e2e_data.py)
+      # Complements test_balancer.py by exercising migration / reaper / picker
+      # paths against partitions that hold 1000 real vector documents.
+      # Catches integration regressions empty-partition tests cannot:
       #   - data loss across migration
       #   - search consistency after replica change
       #   - picker score divergence once data_bytes is non-zero
