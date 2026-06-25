@@ -347,14 +347,31 @@ func (ts *TaskScheduler) advance(ctx context.Context, t *MigrateTask) {
 
 		caughtUp, err := ts.isReplicaCaughtUp(ctx, t)
 		if err != nil {
-			log.Warnf("[balancer] check caughtUp failed: %s", err.Error())
+			/*
+				Persistent errors here (e.g. partition_not_exist when the space
+				was dropped, or PS RPC failures) must still honor the timeout,
+				otherwise the task stays in WaitingCaughtUp forever. Mirrors
+				the AddingMember / RemovingMember error paths.
+			*/
+			log.Warnf("[balancer] task %s check caughtUp failed: %s", t.ID, err.Error())
+			if ts.timedOut(t, cfg.CaughtUpTimeoutSec) {
+				ts.tryRollbackNewReplica(ctx, t)
+				ts.fail(ctx, t, fmt.Errorf("caughtUp timeout (check failing): %w", err))
+			}
 			return
 		}
 		if caughtUp {
 			partition, err := ts.cli.Master().QueryPartition(ctx, t.PartitionID)
 			if err != nil {
-				// Retried next tick.
+				/*
+					Same reasoning: a flaky QueryPartition here must not strand
+					the task indefinitely.
+				*/
 				log.Warnf("[balancer] task %s QueryPartition failed at WaitingCaughtUp(caughtUp): %s", t.ID, err.Error())
+				if ts.timedOut(t, cfg.CaughtUpTimeoutSec) {
+					ts.tryRollbackNewReplica(ctx, t)
+					ts.fail(ctx, t, fmt.Errorf("caughtUp timeout (query partition failing): %w", err))
+				}
 				return
 			}
 			if partition.LeaderID != t.LockedLeaderID {
