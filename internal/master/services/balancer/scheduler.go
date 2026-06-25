@@ -101,15 +101,22 @@ inflight and the task stays at its current step indefinitely. Calling
 SyncFromEtcd before AdvanceAll on every tick guarantees the lock-holder sees
 every active task regardless of which master originally accepted it.
 
-Two-way reconcile:
+Three-way reconcile:
   - ADD: tasks in etcd but not in local inflight → load into local + tracker.
   - REMOVE: tasks in local inflight but no longer in etcd (lock-holder completed
     or failed them, deleting the etcd key) → evict from local + tracker.
+  - ADVANCE: tasks present in both, with etcd Step strictly newer than local Step
+    → overwrite local with etcd state. Required because the previous lock-holder
+    transitions a task (e.g. Pending → AddingMember) and persists to etcd, but
+    other masters' local copies stay at the old step. When the STM lock rotates,
+    the new lock-holder would otherwise rerun the prior step's side effects
+    (e.g. preAdd reaches `target already has replica` and the task is failed
+    spuriously). The guard `etcd.Step > local.Step` prevents regression in the
+    brief window where the lock-holder has updated in-memory but not yet
+    persisted (transitionTo writes etcd after the in-memory update).
 
-In-memory state for tasks present in both etcd and local is left untouched —
-the in-memory copy may have advanced past what's persisted between transitions
-(transitionTo writes etcd asynchronously). Terminal tasks in etcd are skipped
-(complete()/fail() delete them, but we tolerate brief overlap windows).
+Terminal tasks in etcd are skipped (complete()/fail() delete them, but we
+tolerate brief overlap windows).
 */
 func (ts *TaskScheduler) SyncFromEtcd(ctx context.Context) error {
 	_, values, err := ts.cli.Master().Store.PrefixScan(ctx, entity.PrefixMigrateTask)
@@ -134,8 +141,19 @@ func (ts *TaskScheduler) SyncFromEtcd(ctx context.Context) error {
 	defer ts.mu.Unlock()
 
 	picked := 0
+	advanced := 0
 	for id, t := range etcdTasks {
-		if _, exists := ts.inflight[id]; exists {
+		if local, exists := ts.inflight[id]; exists {
+			if int(t.Step) > int(local.Step) {
+				etcdTask := t
+				oldStep := local.Step
+				ts.taskTracker.UpdateTask(local, func(task *MigrateTask) {
+					*task = *etcdTask
+				})
+				advanced++
+				log.Infof("[balancer] sync: advanced task %s from step %s to %s (etcd ahead of local)",
+					id, oldStep, etcdTask.Step)
+			}
 			continue
 		}
 		ts.inflight[id] = t
@@ -155,8 +173,8 @@ func (ts *TaskScheduler) SyncFromEtcd(ctx context.Context) error {
 		log.Infof("[balancer] sync: removed stale task %s (gone from etcd)", id)
 	}
 
-	if picked > 0 || removed > 0 {
-		log.Infof("[balancer] sync: %d picked up, %d removed", picked, removed)
+	if picked > 0 || removed > 0 || advanced > 0 {
+		log.Infof("[balancer] sync: %d picked up, %d removed, %d advanced", picked, removed, advanced)
 	}
 	return nil
 }
