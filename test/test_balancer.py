@@ -767,8 +767,15 @@ def _wait_task_terminal(task_id, timeout_sec=120, poll_sec=2):
         tasks = _get("/tasks").json()
         found = next((t for t in tasks if t.get("id") == task_id), None)
         if found is None:
-            # Task already terminated and reaped from etcd; treat as Done.
-            return last or {"id": task_id, "step": "Done"}
+            # Task already terminated and reaped from etcd; infer the final
+            # state from the last observed step. Between polls the task may
+            # step RemovingMember -> Done -> deleted faster than poll_sec,
+            # so the last snapshot is *not* terminal. complete() and fail()
+            # are the only paths that delete the etcd key: if we last saw it
+            # failing, return that; otherwise treat the disappearance as Done.
+            if last is not None and str(last.get("step", "")).lower() in ("failed", "5"):
+                return last
+            return {"id": task_id, "step": "Done", "_inferred_from_disappearance": True}
         last = found
         if str(found.get("step", "")).lower() in ("done", "failed"):
             return found

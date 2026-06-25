@@ -133,13 +133,26 @@ def _live_ps_nodes():
 
 
 def _wait_task_terminal(task_id, timeout_sec=300, poll_sec=3):
+    """
+    Wait for the task to reach a terminal state.
+
+    Edge case: when /tasks no longer contains the task, the scheduler has
+    already deleted its etcd key (complete() or fail() runs after the
+    Step transition). Between two polls the task may step
+    RemovingMember -> Done -> deleted faster than poll_sec, so the last
+    observed snapshot is *not* terminal. Infer the final state from the
+    last observed step: Failed if we saw it failing, otherwise Done (the
+    only other way the etcd key disappears).
+    """
     deadline = time.time() + timeout_sec
     last = None
     while time.time() < deadline:
         tasks = _get("/tasks").json()
         found = next((t for t in tasks if t.get("id") == task_id), None)
         if found is None:
-            return last or {"id": task_id, "step": "Done"}
+            if last is not None and str(last.get("step", "")).lower() in ("failed", "5"):
+                return last
+            return {"id": task_id, "step": "Done", "_inferred_from_disappearance": True}
         last = found
         if str(found.get("step", "")).lower() in ("done", "failed", "4", "5"):
             return found
