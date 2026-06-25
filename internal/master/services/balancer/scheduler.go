@@ -534,7 +534,7 @@ func (ts *TaskScheduler) isReplicaCaughtUp(ctx context.Context, t *MigrateTask) 
 	if err != nil {
 		return false, err
 	}
-	info, err := client.PartitionInfo(server.RpcAddr(), t.PartitionID, false)
+	info, err := client.PartitionInfo(server.RpcAddr(), t.PartitionID, true)
 	if err != nil {
 		return false, err
 	}
