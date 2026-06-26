@@ -946,8 +946,11 @@ class TestBalancerEndToEndMigration:
         task_id = resp.json()["id"]
 
         # Poll once per second, record step transitions.
+        # 360 s covers the worst-case multi-master cadence: 4 step transitions
+        # at ~60 s each (30 s scheduler tick × STM lock rotation between
+        # 3 masters means the lock-holder advances a step once per ~60 s).
         steps_observed = []
-        deadline = time.time() + 180
+        deadline = time.time() + 360
         while time.time() < deadline:
             tasks = _get("/tasks").json()
             found = next((t for t in tasks if t.get("id") == task_id), None)
